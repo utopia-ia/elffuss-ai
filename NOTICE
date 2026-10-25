@@ -29,6 +29,10 @@ post-processing, the rotated crop and the CTC decoding of PaddleOCR
 (https://github.com/PaddlePaddle/PaddleOCR), Apache License 2.0. No PaddleOCR code
 is copied.
 
+Used only to draw test fixtures, never served:
+  Archivo (tests/fonts/archivo-latin.woff2) - The Archivo Project Authors - SIL Open
+    Font License 1.1, see tests/fonts/OFL-Archivo.txt.
+
 Model weights are not part of this repository and are not redistributed. The apps
 download them from their original Hugging Face repositories at a pinned revision.
 Their licences are listed in registry/tasks.json and on each page.

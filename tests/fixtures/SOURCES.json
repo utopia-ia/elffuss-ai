@@ -1,5 +1,464 @@
 {
   "schema": 1,
   "rules": "Every file under tests/fixtures/ (except broker/ and these lists) is listed here with its sha256, its licence and where it comes from. Only CC0-1.0, public-domain or own-work. A photo needs its page URL and author; own work names the script that makes it; a golden reference names the model id, the pinned revision and the backend it came from. None may match tests/fixtures/denylist-runonweb-samples.sha256.",
-  "files": []
+  "files": [
+    {
+      "path": "tests/fixtures/ocr/carpeta.expected.json",
+      "sha256": "44e48ff4570100da0b05e3414c2778a2748a4df5db3b60945cb4709c6f1e429a",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "what the JSON export of carpeta/ must be (without build, device, scores and boxes)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta.expected.md",
+      "sha256": "02e7199ccfc870667b41b686f6d95aabb2e178eb5b97ccf2773af2af891c789a",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "what the Markdown export of carpeta/ must be"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta.expected.zip.txt",
+      "sha256": "f7aa1207b013a77c86157320a918b0d4660c3093cfd4cbe61f7eed777fb9e3b1",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "the file list the ZIP export of carpeta/ must have"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/.DS_Store",
+      "sha256": "6cc25f23fd83e53bcef33ad6c71d36f6659dbe2ad6c2346630dffe40fca3e1de",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/escaneos/carta.tif",
+      "sha256": "5c205bb94cb4fe7c53e7de4a1691945254de32f79b3e6c35d54cd13e7374a138",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/facturas/2026/FEBRERO.JPG",
+      "sha256": "17df2a23032445a019eb81ac56b8f3f65967c92e7d57e483e9c928682d31f077",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/facturas/2026/enero.png",
+      "sha256": "4e44a258419a5525d3caae2e69ee06436027fbfdc84c6609a80828b781c1cb32",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/fotos/Thumbs.db",
+      "sha256": "0549aa1cd7a699eb4cfafd3c34f322efcfdb0805f894b07113d505a65a0bea6f",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/fotos/escaneo.heic",
+      "sha256": "4e3df25166abfa8600cf094feb7be01a6182ce53a04b9b69ee66ca575fdb8638",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/fotos/rota.png",
+      "sha256": "dd4993ef0123e740d1a079403ac37c2232bf43df214cdcd9150aba72096a3a2b",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/leeme.txt",
+      "sha256": "2d62e057d91e95ef0ddf5839a0d1ef70ef12bb381e1e9215e00c8246b4dda38c",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/notas/acta.pdf",
+      "sha256": "7226d9b7dbfc2bffe9e7a9aa8d49ca48724f13e00f58c249cf6e920011d15e58",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/carpeta/notas/vacio.png",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a file of the test folder (images, PDF, TIFF, broken, empty, hidden and unsupported files)"
+    },
+    {
+      "path": "tests/fixtures/ocr/exclamacion.png",
+      "sha256": "de0e1cf0258f619dfa3439eae971dcefa284262b12273259415b0af3a946dfec",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "a sentence with «¡», which the model cannot write; compared with its golden reference"
+    },
+    {
+      "path": "tests/fixtures/ocr/expected.json",
+      "sha256": "7e265c4a720adcb3018239f553d356556d18ca0791c7968e06c7449fbc0f9e3f",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "the expected texts of the single images"
+    },
+    {
+      "path": "tests/fixtures/ocr/factura.png",
+      "sha256": "4e44a258419a5525d3caae2e69ee06436027fbfdc84c6609a80828b781c1cb32",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "Spanish invoice; its text must come out exactly, on WebGPU and on WebAssembly"
+    },
+    {
+      "path": "tests/fixtures/ocr/foto-factura.jpg",
+      "sha256": "286c1e35c07baa358d0f14f2967233166a2c4d0f8ec72be0bd2852c79953f528",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "text rendered with the Archivo font (SIL OFL 1.1)"
+      },
+      "purpose": "the invoice as a poor photo (turned, noise, JPEG); character error rate at most 2 %"
+    },
+    {
+      "path": "tests/fixtures/ocr/golden-exclamacion.txt",
+      "sha256": "7295928527dc2858afca5a9ce3306c14cc792f7189fc332f0b5902faf3c1c45a",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/ocr.spec.mjs",
+        "author": "UtopiaIA",
+        "note": "what the model reads in exclamacion.png; written by the browser test with ELFFUSS_AI_WRITE_GOLDEN=1"
+      },
+      "model": "ocr/pp-ocrv6-small",
+      "revision": "b8f84f0b80c529de40b4fbb3544b84fa7233a513",
+      "revisions": {
+        "det": "28fe5895c24fd108c19eb3e8479f4ab385fbfc62",
+        "rec": "b8f84f0b80c529de40b4fbb3544b84fa7233a513"
+      },
+      "device": "wasm",
+      "purpose": "reference output for exclamacion.png (the model has no «¡»)"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/bl-g3-1d.tif",
+      "sha256": "0f33ae5d8a034daefe286eeef9f88da7daf3465f69b3fbc68ea96142960fdd3f",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/bl-g3-2d.tif",
+      "sha256": "c2dd3947001215c8a1a9ec3c9237068cd79f23fba3aa1179d0e52fdf0d5b5427",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/bl-g3-fill.tif",
+      "sha256": "3a9c807a41e1ba5bd84e42a5318df57b7211fc71b81155bea0d6588362290ca6",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/bl-g3-strips.tif",
+      "sha256": "301226a042bc0b3307de0489d930aae953e4374c6107ee57855b051c75a61714",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/bl-g4-lsb.tif",
+      "sha256": "a334ee0dba60a57f0d7e0145bb645c78b0e1518de22910474875c4573a6fe239",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/bl-g4.tif",
+      "sha256": "f66a27ab809ff71e5c4634ae9f5e6557abec014c02e5892d52a9f1f3a711040f",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/bl-packbits.tif",
+      "sha256": "70e165738bca34f3c12ad9cb7ae1cd81af7a45dc3631fd6a31fa3f6b5dffe551",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/co-be2.tif",
+      "sha256": "2fc3bbc1d0af5899b5534f565559d3d1bcd5719154eada82f89c73e77f97f34e",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/co-jpeg-rgba.tif",
+      "sha256": "d17c321685d066845f00db6bcce026b98fc6861a88e071990a76d96a56416a66",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/co-jpeg.tif",
+      "sha256": "d150c3dd33df83123ea87981a34523b927753b42db40110cb2ec770ff80bdb05",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/co-palette-rgba.tif",
+      "sha256": "43e0144d047b7d8e0be96b34566407cc3d42e906758402f1fff4b812a9de6543",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/co-palette.tif",
+      "sha256": "78ba475a3fc600f965b8dd0b28c11b027360a90551991287ee20ec58f99d0550",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/co-sep.tif",
+      "sha256": "83534c2b0dccadd5f3da5f69bfd42b74e3de599a8d6a82428f3adf97e82457da",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/co-tiles.tif",
+      "sha256": "c22222defff10ed10bb167620e946d7b10f002e245d71998e9c6efed5ed7761b",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/g16-lzw2.tif",
+      "sha256": "3561757d5b582e98a88f75c4df8cb2169826406a51a0651a8825a4ccd282ef56",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/gr-be.tif",
+      "sha256": "0c8112d76627a69981f7a008b2d61c53984abda0d02f9d421eaf1715a1d26bbf",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/gr-jpeg-rgba.tif",
+      "sha256": "79d265aaeee6e6fdec8a6b7661213e537b1fd059a3ddb88874f1d0489546e91c",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/gr-jpeg.tif",
+      "sha256": "6d890b5d4c1103deb3c30a0e8a574586ed270918f47bfd784dde05f3163eadb3",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/gr-lzw2.tif",
+      "sha256": "59872f4c4bcdbf3ce0bac37788de30c70e54c197846b11a6fdbf9da9b7658633",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/gr-orient6.tif",
+      "sha256": "09856da155efe4989322cea0e95500b8d65efd9da684ee48b11e7c7f55a6a86a",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/gr-tiles.tif",
+      "sha256": "95a3418212368a29192857ae78b8c1c3bcf119ce94a5a5093e90a316d519c0ea",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/gr-zip2.tif",
+      "sha256": "fcfe99238bd315537c11dc0b3e5510360128de926a6934b2b4e193efbc27776f",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/ocr/tiff/multi.tif",
+      "sha256": "94a3c878c2e914a27312949191eb12cfa734807319a52b3751e90a9f2c37f87e",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/make-fixtures.mjs",
+        "author": "UtopiaIA",
+        "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
+      },
+      "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    }
+  ]
 }

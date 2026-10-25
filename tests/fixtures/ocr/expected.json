@@ -1,0 +1,26 @@
+{
+  "factura.png": {
+    "text": "FACTURA Nº 2026/0147\nPanadería La Espiga, S. L.\nCalle del Olmo 12, 3º A, 28801 Alcalá de Henares\nConcepto: revisión anual del horno de leña\n¿Incluye desplazamiento? Sí, dentro de la zona.\nImporte: 1.234,56 € (IVA incluido)\n«Gracias por su confianza»\nÑandú, pingüino y cigüeña · ÁÉÍÓÚÜ",
+    "lines": [
+      "FACTURA Nº 2026/0147",
+      "Panadería La Espiga, S. L.",
+      "Calle del Olmo 12, 3º A, 28801 Alcalá de Henares",
+      "Concepto: revisión anual del horno de leña",
+      "¿Incluye desplazamiento? Sí, dentro de la zona.",
+      "Importe: 1.234,56 € (IVA incluido)",
+      "«Gracias por su confianza»",
+      "Ñandú, pingüino y cigüeña",
+      "· ÁÉÍÓÚÜ"
+    ],
+    "width": 1600,
+    "height": 1000
+  },
+  "foto-factura.jpg": {
+    "text": "FACTURA Nº 2026/0147\nPanadería La Espiga, S. L.\nCalle del Olmo 12, 3º A, 28801 Alcalá de Henares\nConcepto: revisión anual del horno de leña\n¿Incluye desplazamiento? Sí, dentro de la zona.\nImporte: 1.234,56 € (IVA incluido)\n«Gracias por su confianza»\nÑandú, pingüino y cigüeña · ÁÉÍÓÚÜ",
+    "maxCharacterErrorRate": 0.02
+  },
+  "exclamacion.png": {
+    "written": "¡Hola! ¿Qué tal?",
+    "reference": "golden-exclamacion.txt"
+  }
+}
