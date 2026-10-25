@@ -407,12 +407,20 @@ export default [
       const ctx = await cameraContext(t, { y4m: video });
       const page = await openApp(t, ctx, site, '/');
       const s = t.strings[site.site].es;
-      await page.click(sel.camera);
+      // Count the requests for a camera: two quick clicks must open one camera, not two.
+      await page.evaluate(() => {
+        const md = navigator.mediaDevices;
+        const ask = md.getUserMedia.bind(md);
+        globalThis.__cameraAsks = 0;
+        md.getUserMedia = c => { globalThis.__cameraAsks++; return ask(c); };
+      });
+      await page.dblclick(sel.camera);
       await page.waitForFunction(() => {
         const v = document.querySelector('[data-role="video"]');
         return !v.hidden && v.readyState >= 2 && v.videoWidth > 0;
       }, null, { timeout: 60000 });
       let f = await facts(page);
+      t.equal(await page.evaluate(() => globalThis.__cameraAsks), 1, 'two quick clicks ask for one camera');
       t.equal(f.status, s['camera.ready'], 'camera ready');
       t.equal([f.cameraHidden, f.stopHidden, f.primaryDisabled], [true, false, false], 'Stop offered, primary ready');
       await page.click(sel.primary);

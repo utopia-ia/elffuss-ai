@@ -48,6 +48,8 @@ const state = {
   mode: 'none',     // 'image' | 'camera'
   file: null,       // the chosen File
   imageUrl: null,   // its object URL, shown on the stage
+  opening: false,   // the camera is being asked for (one request at a time)
+  picks: 0,         // how many images were chosen (one chosen while asking wins over the camera)
   stream: null,     // the camera, while it is open
   tracks: [],       // the tracks of the last camera (they end when it stops)
   live: false,      // frames are being analysed
@@ -122,6 +124,7 @@ function render() {
 function chooseFile(file) {
   if (!file) return;
   stopCamera({ keepFrame: false });
+  state.picks++;
   state.mode = 'image';
   state.file = file;
   state.last = null;
@@ -150,11 +153,19 @@ async function detectFile(signal) {
 
 // ── the camera ───────────────────────────────────────────────────────────────
 async function startCamera() {
-  if (state.stream || shell.busy) return;
+  if (state.stream || state.opening || shell.busy) return;
+  state.opening = true;
+  try { await showCamera(); } finally { state.opening = false; }
+}
+
+/** Open the camera and show its picture on the stage. */
+async function showCamera() {
   shell.setStatus(t('camera.asking'));
+  const picks = state.picks;
   let stream;
   try { stream = await openCamera(navigator.mediaDevices); }
-  catch (err) { shell.setStatus(t(cameraErrorKey(err))); return; }
+  catch (err) { if (state.picks === picks) shell.setStatus(t(cameraErrorKey(err))); return; }
+  if (state.picks !== picks) { stopStream(stream); return; } // an image was chosen meanwhile
   state.mode = 'camera';
   state.stream = stream;
   state.tracks = stream.getTracks();
