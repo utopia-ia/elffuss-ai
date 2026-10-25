@@ -50,4 +50,8 @@ export class Ocr extends Task {
  */
 export const ocr = oneShot(Ocr);
 
+/**
+ * Helpers to compare a result with a reference: `normalizeText(s)` (NFC, single
+ * spaces, trimmed lines) and `characterErrorRate(hypothesis, reference)`.
+ */
 export { normalizeText, characterErrorRate } from './order.js';
