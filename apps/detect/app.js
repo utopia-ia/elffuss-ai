@@ -104,7 +104,8 @@ function render() {
   const last = state.last;
   const shown = last ? visible(last.result.objects, threshold()) : [];
   if (last) {
-    drawOverlay(el.overlay, { width: last.result.width, height: last.result.height, objects: shown, name: nameOf, score: scoreText, palette: readPalette() });
+    const displayWidth = el.overlay.getBoundingClientRect().width || last.result.width;
+    drawOverlay(el.overlay, { width: last.result.width, height: last.result.height, objects: shown, name: nameOf, score: scoreText, palette: readPalette(), displayWidth });
   } else clearOverlay();
   el.summary.textContent = last ? `${shown.length === 1 ? t('result.one') : t('result.many', { n: shown.length })} · ${shell.deviceLabel(last.device)}` : '';
   el.note.hidden = !last?.fallback;
@@ -269,6 +270,9 @@ el.threshold.addEventListener('input', () => { showThreshold(); render(); });
 el.json.addEventListener('click', downloadJson);
 el.png.addEventListener('click', () => { downloadPng(); });
 addEventListener('pagehide', () => stopCamera({ keepFrame: false }));
+// The labels keep a readable size when the picture is shown at another size.
+let resizing = 0;
+addEventListener('resize', () => { cancelAnimationFrame(resizing); resizing = requestAnimationFrame(() => { if (state.last && !state.live) render(); }); });
 
 shell.onPrimary(async ({ signal }) => {
   if (state.stream) return detectLive(signal);

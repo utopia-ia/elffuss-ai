@@ -25,10 +25,11 @@ export function readPalette(root = document.documentElement) {
  * Paint boxes and their labels on a 2D context of the image's size.
  * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} g
  * @param {{ width: number, height: number, objects: { label: string, score: number, box: object }[],
- *   name: (label: string) => string, score: (n: number) => string, palette: ReturnType<typeof readPalette> }} o
+ *   name: (label: string) => string, score: (n: number) => string, palette: ReturnType<typeof readPalette>,
+ *   displayWidth?: number }} o `displayWidth`: how wide the image is shown, so labels stay readable
  */
-export function paint(g, { width, height, objects, name, score, palette }) {
-  const { line, font } = drawingScale(width);
+export function paint(g, { width, height, objects, name, score, palette, displayWidth = width }) {
+  const { line, font } = drawingScale(width, displayWidth);
   const slots = colourSlots(objects, palette.slots.length);
   g.save();
   g.lineWidth = line;

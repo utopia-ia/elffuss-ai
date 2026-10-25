@@ -51,6 +51,10 @@ test('one colour slot per class, in the order the classes appear', () => {
 test('the drawing scales with the image, and labels stay inside it', () => {
   assert.deepEqual(drawingScale(960), { line: 3, font: 21 });
   assert.deepEqual(drawingScale(100), { line: 2, font: 12 });
+  // Shown at a third of its size (a phone): 2 and 12 pixels on the screen at least.
+  assert.deepEqual(drawingScale(960, 320), { line: 6, font: 36 });
+  assert.deepEqual(drawingScale(960, 1920), { line: 3, font: 21 }, 'shown larger: the image\'s own scale');
+  assert.deepEqual(drawingScale(960, 0), { line: 3, font: 21 }, 'not shown: the image\'s own scale');
   // Room above the box: the label sits on top of it.
   assert.deepEqual(chipRect({ xmin: 50, ymin: 100, xmax: 200, ymax: 300 }, 80, 20, 960, 720), { x: 50, y: 72, w: 94, h: 28 });
   // No room above: just inside the top edge.

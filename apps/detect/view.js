@@ -64,9 +64,14 @@ export function colourSlots(objects, slots) {
   });
 }
 
-/** Line width and font size of the drawing, relative to the image's width. */
-export function drawingScale(width) {
-  return { line: Math.max(2, Math.round(width / 320)), font: Math.max(12, Math.round(width / 45)) };
+/**
+ * Line width and font size of the drawing, in pixels of the image: relative to
+ * its width, and never thinner than 2 nor smaller than 12 pixels on the screen
+ * when the image is shown `displayWidth` pixels wide.
+ */
+export function drawingScale(width, displayWidth = width) {
+  const k = displayWidth > 0 ? width / displayWidth : 1;
+  return { line: Math.max(Math.ceil(2 * k), Math.round(width / 320)), font: Math.max(Math.ceil(12 * k), Math.round(width / 45)) };
 }
 
 /**
