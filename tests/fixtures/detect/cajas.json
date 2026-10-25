@@ -1,0 +1,10 @@
+{
+  "image": "foto.jpg",
+  "width": 960,
+  "height": 720,
+  "note": "Drawn by hand on foto.jpg: the smallest box around everything visible of each animal, tails included, in pixels of the image.",
+  "boxes": [
+    { "label": "dog", "box": { "xmin": 375, "ymin": 111, "xmax": 524, "ymax": 465 } },
+    { "label": "cat", "box": { "xmin": 495, "ymin": 205, "xmax": 600, "ymax": 535 } }
+  ]
+}
