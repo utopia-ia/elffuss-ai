@@ -7,8 +7,9 @@ This repository includes or adapts third-party software.
 
 runonweb (https://github.com/midudev/runonweb.ai, commit 878f193)
   Copyright (c) 2026 Miguel Ángel Durán. MIT License, see LICENSES/MIT-runonweb.txt.
-  Adapted in sdk/core/device.js, sdk/core/queue.js, sdk/core/tf-env.js and
-  sdk/core/ort-env.js. Each file says which parts, and where they come from.
+  Adapted in sdk/core/device.js, sdk/core/queue.js, sdk/core/tf-env.js,
+  sdk/core/ort-env.js and sdk/ocr/dict.js. Each file says which parts, and where
+  they come from.
 
 Served with the sites from vendor/, unmodified unless noted. Each licence file is
 kept and served next to its files; vendor/manifest.json pins every byte.
@@ -22,6 +23,11 @@ kept and served next to its files; vendor/manifest.json pins every byte.
     Bundled decoders: OpenJPEG (BSD-2-Clause), PDFium JBIG2 (BSD-3-Clause), qcms (MIT).
     Standard fonts: Foxit (BSD-3-Clause, PDFium Authors) and Liberation (SIL Open Font
     License 1.1). ICC profile: CC0 1.0.
+
+The OCR in sdk/ocr/det.js, sdk/ocr/crop.js and sdk/ocr/rec.js follows the DB
+post-processing, the rotated crop and the CTC decoding of PaddleOCR
+(https://github.com/PaddlePaddle/PaddleOCR), Apache License 2.0. No PaddleOCR code
+is copied.
 
 Model weights are not part of this repository and are not redistributed. The apps
 download them from their original Hugging Face repositories at a pinned revision.

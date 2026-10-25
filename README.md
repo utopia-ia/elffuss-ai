@@ -26,7 +26,7 @@ four tasks land one by one (`docs/app-contract.md` says what each must do).
 | `@elffuss/ai/remove-bg` | Remove the background of an image (transparent PNG) | [cutout.elffuss.com](https://cutout.elffuss.com/) | to be written (`./remove-bg/sizes` exists) |
 | `@elffuss/ai/depth` | Depth map of a photo | [depth.elffuss.com](https://depth.elffuss.com/) | to be written (`./depth/sizes` exists) |
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | to be written (`./detect/sizes` exists) |
-| `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | to be written (`./ocr/sizes` exists) |
+| `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
 <!-- modules:end -->
 
 Every module is plain ES modules, no build step, no dependencies: the runtimes
