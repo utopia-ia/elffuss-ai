@@ -1,0 +1,337 @@
+{
+  "schema": 1,
+  "tasks": {
+    "remove-bg": {
+      "default": "remove-bg/ben2"
+    },
+    "depth": {
+      "default": "depth/depth-anything-v2-small"
+    },
+    "detect": {
+      "default": "detect/rfdetr-nano"
+    },
+    "ocr": {
+      "default": "ocr/pp-ocrv6-small"
+    }
+  },
+  "models": {
+    "remove-bg/ben2": {
+      "task": "remove-bg",
+      "name": {
+        "es": "BEN2",
+        "en": "BEN2"
+      },
+      "license": "MIT",
+      "author": "onnx-community",
+      "base": {
+        "name": "BEN2",
+        "author": "PramaLLC",
+        "url": "https://huggingface.co/PramaLLC/BEN2",
+        "license": "MIT"
+      },
+      "flag": null,
+      "redistributes": false,
+      "runtime": "transformers.js",
+      "pipeline": "background-removal",
+      "parts": {
+        "main": {
+          "repo": "onnx-community/BEN2-ONNX",
+          "revision": "c552aa82688edce09f0ac9d2e31ad53d9d629010",
+          "license": "MIT",
+          "author": "onnx-community",
+          "files": {
+            "config.json": {
+              "size": 80,
+              "gitOid": "e9af0a97ef02994d19bb4db53a372995de815a3b"
+            },
+            "onnx/model_fp16.onnx": {
+              "size": 219121675,
+              "sha256": "dfdc25f421f32a0d1268e0f2ff2153d340e8f1d52d3dd16f5dc33c1ce85cedf1"
+            },
+            "preprocessor_config.json": {
+              "size": 391,
+              "gitOid": "825398cfd94a348babce456f2bcc8422c9bebb93"
+            },
+            "README.md": {
+              "size": 1148,
+              "gitOid": "0eceee7bcad4ca446e10fda7239db56340a74012"
+            }
+          }
+        }
+      },
+      "devices": {
+        "wasm": [
+          {
+            "dtype": "fp16",
+            "files": [
+              "main:config.json",
+              "main:preprocessor_config.json",
+              "main:onnx/model_fp16.onnx"
+            ],
+            "bytes": 219122146
+          }
+        ]
+      },
+      "notes": {
+        "es": null,
+        "en": null
+      }
+    },
+    "depth/depth-anything-v2-small": {
+      "task": "depth",
+      "name": {
+        "es": "Depth Anything V2 Small",
+        "en": "Depth Anything V2 Small"
+      },
+      "license": "Apache-2.0",
+      "author": "onnx-community",
+      "base": {
+        "name": "Depth Anything V2 Small",
+        "author": "depth-anything",
+        "url": "https://huggingface.co/depth-anything/Depth-Anything-V2-Small",
+        "license": "Apache-2.0"
+      },
+      "flag": null,
+      "redistributes": false,
+      "runtime": "transformers.js",
+      "pipeline": "depth-estimation",
+      "parts": {
+        "main": {
+          "repo": "onnx-community/depth-anything-v2-small",
+          "revision": "4472b7362082ad9968fee890ca0f1e5aca36b93d",
+          "license": "Apache-2.0",
+          "author": "onnx-community",
+          "files": {
+            "config.json": {
+              "size": 38,
+              "gitOid": "e6abe62678884ee132d00225851fd4b79c943edb"
+            },
+            "onnx/model_fp16.onnx": {
+              "size": 49642442,
+              "sha256": "2df6223f206b5164e21f664ace61dabeb9bb6a49b8b5a3e00510b4807d0f5b04"
+            },
+            "onnx/model_quantized.onnx": {
+              "size": 27258801,
+              "sha256": "fcf51f1b230362b28690bb9d1809bf0431f29cad20534e3f589bd7285547f20d"
+            },
+            "onnx/model.onnx": {
+              "size": 99060839,
+              "sha256": "afb6a5c28f3b6bf1618c6e43f02073ef9dfdc70e937502d51603e57b0a1df10c"
+            },
+            "preprocessor_config.json": {
+              "size": 461,
+              "gitOid": "a75aa1ee872be3855a1d40c3050dbea9063e411f"
+            },
+            "quantize_config.json": {
+              "size": 3154,
+              "gitOid": "ec1fa8352001a3be24b2a83cd113adbc569db710"
+            },
+            "README.md": {
+              "size": 1578,
+              "gitOid": "6268a6fa5337256427b73c53d0415b89c6e34ce5"
+            }
+          }
+        }
+      },
+      "devices": {
+        "webgpu": [
+          {
+            "when": "shader-f16",
+            "dtype": "fp16",
+            "files": [
+              "main:config.json",
+              "main:preprocessor_config.json",
+              "main:onnx/model_fp16.onnx"
+            ],
+            "bytes": 49642941
+          },
+          {
+            "dtype": "fp32",
+            "files": [
+              "main:config.json",
+              "main:preprocessor_config.json",
+              "main:onnx/model.onnx"
+            ],
+            "bytes": 99061338
+          }
+        ],
+        "wasm": [
+          {
+            "dtype": "q8",
+            "files": [
+              "main:config.json",
+              "main:preprocessor_config.json",
+              "main:onnx/model_quantized.onnx"
+            ],
+            "bytes": 27259300
+          }
+        ]
+      },
+      "notes": {
+        "es": null,
+        "en": null
+      }
+    },
+    "detect/rfdetr-nano": {
+      "task": "detect",
+      "name": {
+        "es": "RF-DETR Nano",
+        "en": "RF-DETR Nano"
+      },
+      "license": "Apache-2.0",
+      "author": "onnx-community",
+      "base": {
+        "name": "RF-DETR Nano",
+        "author": "Roboflow",
+        "url": "https://github.com/roboflow/rf-detr",
+        "license": "Apache-2.0"
+      },
+      "flag": null,
+      "redistributes": false,
+      "runtime": "transformers.js",
+      "pipeline": "object-detection",
+      "parts": {
+        "main": {
+          "repo": "onnx-community/rfdetr_nano-ONNX",
+          "revision": "eae21cee0687a91bcf9fa071605c48d7705d2d91",
+          "license": "Apache-2.0",
+          "author": "onnx-community",
+          "files": {
+            "config.json": {
+              "size": 3213,
+              "gitOid": "cd809c8a1eaacdc58e40035aa5afd9546bb13837"
+            },
+            "onnx/model_quantized.onnx": {
+              "size": 28826010,
+              "sha256": "2981aa0a57781c0f1a5be171c3fded504c38fe8611326bc5e3d0f8a2e9a57085"
+            },
+            "preprocessor_config.json": {
+              "size": 444,
+              "gitOid": "a869dc719b16da228d0eae815a8ad4414ff7ddcc"
+            },
+            "README.md": {
+              "size": 772,
+              "gitOid": "89f26217d1157f98f441fd9fea00e47a7a772fa2"
+            }
+          }
+        }
+      },
+      "devices": {
+        "wasm": [
+          {
+            "dtype": "q8",
+            "files": [
+              "main:config.json",
+              "main:preprocessor_config.json",
+              "main:onnx/model_quantized.onnx"
+            ],
+            "bytes": 28829667
+          }
+        ]
+      },
+      "notes": {
+        "es": null,
+        "en": null
+      }
+    },
+    "ocr/pp-ocrv6-small": {
+      "task": "ocr",
+      "name": {
+        "es": "PP-OCRv6 small",
+        "en": "PP-OCRv6 small"
+      },
+      "license": "Apache-2.0",
+      "author": "PaddlePaddle",
+      "base": {
+        "name": "PP-OCRv6",
+        "author": "PaddlePaddle",
+        "url": "https://github.com/PaddlePaddle/PaddleOCR",
+        "license": "Apache-2.0"
+      },
+      "flag": null,
+      "redistributes": false,
+      "runtime": "onnxruntime-web",
+      "pipeline": null,
+      "parts": {
+        "det": {
+          "repo": "PaddlePaddle/PP-OCRv6_small_det_onnx",
+          "revision": "28fe5895c24fd108c19eb3e8479f4ab385fbfc62",
+          "license": "Apache-2.0",
+          "author": "PaddlePaddle",
+          "files": {
+            "inference.json": {
+              "size": 229307,
+              "gitOid": "c3805787b0f6dc65189991f52c0a2ca757918113"
+            },
+            "inference.onnx": {
+              "size": 9880512,
+              "sha256": "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"
+            },
+            "inference.yml": {
+              "size": 885,
+              "gitOid": "9ce7e05c2621f968d47d4011c04c30cbd91be173"
+            },
+            "README.md": {
+              "size": 16076,
+              "gitOid": "6a9d4ebb8a51cbc5032591c7e414eb7d225523dc"
+            }
+          }
+        },
+        "rec": {
+          "repo": "PaddlePaddle/PP-OCRv6_small_rec_onnx",
+          "revision": "b8f84f0b80c529de40b4fbb3544b84fa7233a513",
+          "license": "Apache-2.0",
+          "author": "PaddlePaddle",
+          "files": {
+            "inference.json": {
+              "size": 208004,
+              "gitOid": "89267025ba75ceca5c06787979079406a9d92591"
+            },
+            "inference.onnx": {
+              "size": 21159378,
+              "sha256": "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
+            },
+            "inference.yml": {
+              "size": 150579,
+              "gitOid": "f1887595d177511e6af56fabd0baa25756d33bd8"
+            },
+            "README.md": {
+              "size": 16585,
+              "gitOid": "1a37eb559d6575f4cd03c8685fcc96cceba3bbb6"
+            }
+          }
+        }
+      },
+      "devices": {
+        "webgpu": [
+          {
+            "dtype": "fp32",
+            "files": [
+              "det:inference.onnx",
+              "det:inference.yml",
+              "rec:inference.onnx",
+              "rec:inference.yml"
+            ],
+            "bytes": 31191354
+          }
+        ],
+        "wasm": [
+          {
+            "dtype": "fp32",
+            "files": [
+              "det:inference.onnx",
+              "det:inference.yml",
+              "rec:inference.onnx",
+              "rec:inference.yml"
+            ],
+            "bytes": 31191354
+          }
+        ]
+      },
+      "notes": {
+        "es": "El diccionario del modelo no tiene el signo «¡»: el resto de letras y signos del español sí están.",
+        "en": "The model dictionary has no «¡» (inverted exclamation mark); every other Spanish letter and sign is in it."
+      }
+    }
+  }
+}

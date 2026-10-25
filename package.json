@@ -7,6 +7,10 @@
   "license": "Apache-2.0",
   "exports": {
     "./core": "./sdk/core/index.js",
+    "./remove-bg/sizes": "./sdk/remove-bg/sizes.js",
+    "./depth/sizes": "./sdk/depth/sizes.js",
+    "./detect/sizes": "./sdk/detect/sizes.js",
+    "./ocr/sizes": "./sdk/ocr/sizes.js",
     "./package.json": "./package.json"
   },
   "sideEffects": false,
