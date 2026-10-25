@@ -48,6 +48,7 @@ test('the probe only accepts a real adapter', async () => {
   assert.equal((await probeWebGPU({ gpu: null })).available, false);
   assert.equal((await probeWebGPU({ gpu: fake(null) })).reason, 'no-adapter');
   assert.equal((await probeWebGPU({ gpu: fake({ info: { isFallbackAdapter: true }, features: new Set() }) })).reason, 'fallback-adapter');
+  assert.equal((await probeWebGPU({ gpu: fake({ info: { vendor: 'google', architecture: 'swiftshader', isFallbackAdapter: false }, features: new Set() }) })).reason, 'software-adapter');
   const ok = await probeWebGPU({ gpu: fake({ info: { isFallbackAdapter: false }, features: new Set(['shader-f16']) }) });
   assert.deepEqual(ok, { available: true, shaderF16: true, fallbackAdapter: false });
   assert.equal((await probeWebGPU({ gpu: { requestAdapter: async () => { throw new Error('x'); } } })).reason, 'adapter-error');

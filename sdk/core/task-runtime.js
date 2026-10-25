@@ -25,8 +25,10 @@ import { PINS } from './runtime-pins.js';
  * @typedef {{ model?: string, device?: import('./device.js').DeviceRequest, registry?: import('./registry.js').Registry,
  *   registryUrl?: string, runtime: import('./runtimes.js').RuntimeUrls, test?: TestFlags | null }} LoadOptions
  * @typedef {{ pins?: Partial<typeof PINS>, failLoad?: boolean, failRun?: boolean }} TestFlags
- *   Test builds only: `pins` replaces the expected runtime versions (to prove the check fails),
- *   `failLoad`/`failRun` make the next load or run fail inside the runtime.
+ *   Test builds only: `pins` replaces the expected runtime versions (to prove the check fails);
+ *   `failLoad` asks impl.load to create a session from bytes that are not a model, and `failRun`
+ *   asks impl.run to feed the model an input of an impossible shape, both inside the runtime.
+ *   The Task passes each of them to the first load or run only.
  * @typedef {{ model: string, task: string, device: 'webgpu'|'wasm', dtype: string, fromStore: boolean, bytes: number, files: string[] }} LoadInfo
  */
 
@@ -40,9 +42,11 @@ import { PINS } from './runtime-pins.js';
  */
 export async function loadTask(impl, opts, { store, onProgress, memo = createVerifiedMemo(), log }) {
   const registry = opts.registry || await loadRegistry(opts.registryUrl);
+  if (!opts.model && impl.task == null) throw new AiError('not-in-registry', 'a model id is needed');
   const modelId = opts.model || defaultModelId(registry, impl.task);
   const model = getModel(registry, modelId);
-  if (model.task !== impl.task) throw new AiError('not-in-registry', `${modelId} is not a ${impl.task} model`);
+  // impl.task null accepts any model (diagnostic implementations such as the test smoke).
+  if (impl.task != null && model.task !== impl.task) throw new AiError('not-in-registry', `${modelId} is not a ${impl.task} model`);
   const probe = await probeWebGPU();
   const choice = chooseVariant(model, opts.device || 'auto', probe);
   const files = variantFiles(model, choice.variant);
@@ -58,7 +62,6 @@ export async function loadTask(impl, opts, { store, onProgress, memo = createVer
   progress.status(missing ? 'downloading' : 'loading', { missing });
   const pins = { ...PINS, ...(opts.test?.pins || {}) };
   const ctx = new TaskContext({ registry, modelId, model, choice, files, store, progress, memo, cached, runtime: opts.runtime, pins, test: opts.test || null, log });
-  if (opts.test?.failLoad) throw new AiError('run-failed', 'test hook: load failed on purpose');
   let state;
   try {
     state = await impl.load(ctx);

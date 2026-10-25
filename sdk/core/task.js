@@ -45,7 +45,7 @@ const anySignal = signals => {
 
 export class Task {
   #spec; #opts; #store; #ownStore = false; #host = null; #impl = null; #local = null;
-  #loading = null; #info = null; #queue = createQueue(); #disposed = false; #broken = null;
+  #loading = null; #info = null; #queue = createQueue(); #disposed = false; #broken = null; #failRunUsed = false; #failLoadUsed = false;
 
   /**
    * @param {TaskSpec} spec
@@ -91,7 +91,9 @@ export class Task {
       throwIfAborted(sig);
       const registry = this.#opts.registry || await loadRegistry(this.#opts.registryUrl);
       const modelId = this.#opts.model || defaultModelId(registry, this.#spec.task);
-      const opts = { model: modelId, device: this.#opts.device, registryUrl: this.#opts.registryUrl, registry: this.#opts.registry, runtime: await this.#runtime(registry, modelId), test: this.#opts.test || null };
+      let test = this.#opts.test || null;
+      if (test) { test = { ...test, failLoad: Boolean(test.failLoad) && !this.#failLoadUsed }; if (this.#opts.test.failLoad) this.#failLoadUsed = true; }
+      const opts = { model: modelId, device: this.#opts.device, registryUrl: this.#opts.registryUrl, registry: this.#opts.registry, runtime: await this.#runtime(registry, modelId), test };
       const onProgress = this.#opts.onProgress;
       if (this.#opts.worker) {
         if (!this.#host) this.#host = createWorkerHost({ workerUrl: this.#spec.workerUrl, store: this.#storeClient(), onCspViolation: this.#opts.onCspViolation });
@@ -127,7 +129,12 @@ export class Task {
       throwIfAborted(sig);
       await this.load({ signal: sig });
       const prepared = await (this.#spec.prepare || toTransferable)(input);
-      const runOpts = this.#opts.test ? { ...opts, test: this.#opts.test } : opts;
+      // Test builds: `failRun` breaks the first run only, inside the runtime; later runs must work.
+      let runOpts = opts;
+      if (this.#opts.test) {
+        runOpts = { ...opts, test: { ...this.#opts.test, failRun: Boolean(this.#opts.test.failRun) && !this.#failRunUsed } };
+        if (this.#opts.test.failRun) this.#failRunUsed = true;
+      }
       if (this.#opts.worker) {
         try {
           return await this.#host.run(prepared.value, runOpts, { transfer: prepared.transfer, signal: sig, onProgress: this.#opts.onProgress });

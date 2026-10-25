@@ -35,8 +35,10 @@ export function probeWebGPU({ gpu, force = false } = {}) {
     try {
       const adapter = await api.requestAdapter();
       if (!adapter) return { available: false, shaderF16: false, fallbackAdapter: false, reason: 'no-adapter' };
-      const fallbackAdapter = Boolean(adapter.info?.isFallbackAdapter ?? adapter.isFallbackAdapter);
-      if (fallbackAdapter) return { available: false, shaderF16: false, fallbackAdapter: true, reason: 'fallback-adapter' };
+      const info = adapter.info || {};
+      const software = /swiftshader|llvmpipe|lavapipe|software|warp/i.test(`${info.vendor || ''} ${info.architecture || ''} ${info.description || ''}`);
+      const fallbackAdapter = Boolean(info.isFallbackAdapter ?? adapter.isFallbackAdapter) || software;
+      if (fallbackAdapter) return { available: false, shaderF16: false, fallbackAdapter: true, reason: software ? 'software-adapter' : 'fallback-adapter' };
       return { available: true, shaderF16: Boolean(adapter.features?.has?.('shader-f16')), fallbackAdapter: false };
     } catch {
       return { available: false, shaderF16: false, fallbackAdapter: false, reason: 'adapter-error' };
