@@ -1,0 +1,21 @@
+  <h1>{{t:title}}</h1>
+  <p>{{t:intro}}</p>
+  <label class="drop">
+    <span>{{t:drop}}</span>
+    <input class="visually-hidden" type="file" accept="{{v:accept}}" data-input="files">
+  </label>
+  <figure class="stage" data-role="preview" hidden>
+    <img data-role="preview-image" alt="{{t:preview.alt}}">
+    <figcaption data-role="chosen"></figcaption>
+  </figure>
+  <p data-role="model">{{html:modelLine}}</p>
+  <p class="actions">
+    <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
+    <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>
+  </p>
+  <progress hidden></progress>
+  <p class="status" role="status" aria-live="polite"></p>
+  <section class="result" hidden>
+    <h2>{{t:result.title}}</h2>
+  </section>
+{{html:storage}}
