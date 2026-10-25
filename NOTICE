@@ -3,6 +3,21 @@ Copyright 2026 UtopiaIA
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
+This repository includes third-party software.
+
+Served with the sites from vendor/, unmodified unless noted. Each licence file is
+kept and served next to its files; vendor/manifest.json pins every byte.
+  Transformers.js 4.3.1 (@huggingface/transformers) - Hugging Face - Apache License 2.0.
+    At build time the two import specifiers of dist/transformers.web.min.js are rewritten
+    to point at the bundled ONNX Runtime Web. Nothing else changes.
+  ONNX Runtime Web 1.30.0 (onnxruntime-web) - Microsoft Corporation - MIT License.
+    The npm package has no licence file: LICENSE.txt and ThirdPartyNotices.txt are taken
+    from the v1.30.0 tag of github.com/microsoft/onnxruntime.
+  PDF.js 6.4.299 (pdfjs-dist) - Mozilla Foundation - Apache License 2.0.
+    Bundled decoders: OpenJPEG (BSD-2-Clause), PDFium JBIG2 (BSD-3-Clause), qcms (MIT).
+    Standard fonts: Foxit (BSD-3-Clause, PDFium Authors) and Liberation (SIL Open Font
+    License 1.1). ICC profile: CC0 1.0.
+
 Model weights are not part of this repository and are not redistributed. The apps
 download them from their original Hugging Face repositories at a pinned revision.
 Their licences are listed in registry/tasks.json and on each page.

@@ -54,7 +54,7 @@ export function staticRules() {
       re: /\b\d+(?:[.,]\d+)?\s*(?:[GT]i?B)\b[^\n]{0,40}\b(?:R[A]M|VR[A]M|memory|memoria|quota|cuota|unified|wired|techo|ceiling)\b|\b(?:R[A]M|VR[A]M|memory|memoria|quota|cuota|unified|wired|techo|ceiling)\b[^\n]{0,40}\b\d+(?:[.,]\d+)?\s*[GT]i?B\b/i,
       bait: ['needs 16 ', 'GB of R', 'AM'].join(''), clean: 'the model is a 31 MB download' },
     { id: 'timing', what: 'absolute times or speeds in prose and comments', scope: 'prose',
-      re: /\b\d+(?:[.,]\d+)?\s*(?:ms|milliseconds?|milisegundos?|seconds?|segundos?|secs?|minutes?|minutos?|mins?|hours?|horas?)\b|\b\d+(?:[.,]\d+)?\s*(?:tokens?\/s|tok\/s|it\/s|fps)\b/i,
+      re: /\b\d+(?:[.,]\d+)?\s*(?:ms|milliseconds?|milisegundos?|seconds?|segundos?|secs?|minutes?|minutos?|mins?|hours?|horas?)(?=$|[\s.,;:)!?'"])|\b\d+(?:[.,]\d+)?\s*(?:tokens?\/s|tok\/s|it\/s|fps)\b/i,
       bait: ['loads in 3 ', 'seconds'].join(''), clean: 'loads once, then it is kept in this browser' },
     { id: 'internal', what: 'internal project names', scope: 'all',
       re: /\bt[2]t\b|token[ -]t[o][ -]token|\bclon[a]gent\b|\butopi[a]-labs\b|\bcl[a]ude\b|\banthr[o]pic\b/i,
@@ -212,8 +212,13 @@ export function sweepFiles(base, files, rules, { vendorOk = new Map(), label = '
     const sha = vendorOk.get(f);
     const third = sha && createHash('sha256').update(buf).digest('hex') === sha;
     if (third) vendored++;
-    if (isBinary(f, buf) || third) {
-      binaries += third ? 0 : 1;
+    if (third) {
+      // Third-party code: only what would identify this machine applies.
+      for (const x of sweepBinary(buf, rules.filter(r => r.id === 'user-name' || r.id === 'host-name'))) findings.push({ file: label + f, ...x });
+      continue;
+    }
+    if (isBinary(f, buf)) {
+      binaries++;
       for (const x of sweepBinary(buf, rules)) findings.push({ file: label + f, ...x });
       continue;
     }
