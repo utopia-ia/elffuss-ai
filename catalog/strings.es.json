@@ -1,0 +1,11 @@
+{
+  "title": "Herramientas",
+  "description": "Todas las herramientas de Elffuss: quitar el fondo, leer texto, detectar objetos y mapas de profundidad, en tu navegador.",
+  "intro": "Herramientas pequeñas que funcionan en tu navegador. Cada una descarga su modelo la primera vez y lo guarda en este navegador.",
+  "section.tools": "Herramientas",
+  "section.apps": "Apps de Elffuss",
+  "card.model": "Modelo: {model}, de {author} ({license}). {size}.",
+  "card.stored": "Ya está en este navegador",
+  "card.open": "Abrir",
+  "apps.source": "Las apps de Elffuss, como se describen en elffuss.com."
+}

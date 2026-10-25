@@ -1,0 +1,10 @@
+{
+  "title": "Leer texto",
+  "description": "Saca el texto de fotos, escaneos y PDF, también de carpetas enteras. Todo se procesa en tu navegador.",
+  "intro": "Saca el texto de imágenes y PDF. Puedes soltar una carpeta entera, con sus subcarpetas.",
+  "drop": "Suelta aquí imágenes, PDF o una carpeta, o pulsa para elegir archivos",
+  "action.run": "Leer texto",
+  "action.downloadAndRun": "Descargar el modelo ({size}) y leer texto",
+  "catalog.name": "Leer texto",
+  "catalog.line": "Saca el texto de fotos, escaneos y PDF, también de carpetas enteras."
+}

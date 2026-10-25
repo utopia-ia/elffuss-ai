@@ -1,0 +1,10 @@
+{
+  "title": "Depth map",
+  "description": "Works out what is near and what is far in a photo. Everything is processed in your browser.",
+  "intro": "Works out what is near and what is far in a photo.",
+  "drop": "Drop an image here, paste it, or click to choose one",
+  "action.run": "Make the depth map",
+  "action.downloadAndRun": "Download the model ({size}) and make the depth map",
+  "catalog.name": "Depth map",
+  "catalog.line": "Works out what is near and what is far in a photo."
+}

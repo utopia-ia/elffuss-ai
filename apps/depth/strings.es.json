@@ -1,0 +1,10 @@
+{
+  "title": "Profundidad",
+  "description": "Calcula qué está cerca y qué está lejos en una foto. Todo se procesa en tu navegador.",
+  "intro": "Calcula qué está cerca y qué está lejos en una foto.",
+  "drop": "Suelta aquí una imagen, pégala o pulsa para elegirla",
+  "action.run": "Calcular la profundidad",
+  "action.downloadAndRun": "Descargar el modelo ({size}) y calcular la profundidad",
+  "catalog.name": "Profundidad",
+  "catalog.line": "Calcula qué está cerca y qué está lejos en una foto."
+}

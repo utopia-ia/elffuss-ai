@@ -1,0 +1,11 @@
+{
+  "title": "Tools",
+  "description": "Every Elffuss tool: remove backgrounds, read text, detect objects and depth maps, in your browser.",
+  "intro": "Small tools that work in your browser. Each one downloads its model the first time and keeps it in this browser.",
+  "section.tools": "Tools",
+  "section.apps": "Elffuss apps",
+  "card.model": "Model: {model}, by {author} ({license}). {size}.",
+  "card.stored": "Already in this browser",
+  "card.open": "Open",
+  "apps.source": "The Elffuss apps, as elffuss.com describes them."
+}

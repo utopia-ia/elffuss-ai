@@ -1,0 +1,10 @@
+{
+  "title": "Read text",
+  "description": "Gets the text out of photos, scans and PDFs, even whole folders. Everything is processed in your browser.",
+  "intro": "Gets the text out of images and PDFs. You can drop a whole folder, with its subfolders.",
+  "drop": "Drop images, PDFs or a folder here, or click to choose files",
+  "action.run": "Read text",
+  "action.downloadAndRun": "Download the model ({size}) and read text",
+  "catalog.name": "Read text",
+  "catalog.line": "Gets the text out of photos, scans and PDFs, even whole folders."
+}

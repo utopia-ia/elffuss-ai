@@ -1,0 +1,11 @@
+{
+  "site": "depth",
+  "host": "depth.elffuss.com",
+  "testPort": 8794,
+  "task": "depth",
+  "models": ["depth/depth-anything-v2-small"],
+  "camera": false,
+  "pdfjs": false,
+  "accept": "image/*",
+  "status": "scaffold"
+}

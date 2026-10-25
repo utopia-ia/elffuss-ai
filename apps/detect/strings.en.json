@@ -1,0 +1,10 @@
+{
+  "title": "Detect objects",
+  "description": "Finds people, cars, animals and up to 80 kinds of objects, also with your camera. Everything is processed in your browser.",
+  "intro": "Finds people, cars, animals and up to 80 kinds of objects in a photo or with your camera.",
+  "drop": "Drop an image here, paste it, or click to choose one",
+  "action.run": "Detect objects",
+  "action.downloadAndRun": "Download the model ({size}) and detect objects",
+  "catalog.name": "Detect objects",
+  "catalog.line": "Finds people, cars, animals and up to 80 kinds of objects, also with your camera."
+}

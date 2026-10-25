@@ -1,0 +1,10 @@
+{
+  "title": "Quitar el fondo",
+  "description": "Deja solo la persona o el objeto y te da un PNG con transparencia. Todo se procesa en tu navegador.",
+  "intro": "Deja solo la persona o el objeto y te da un PNG con transparencia.",
+  "drop": "Suelta aquí una imagen, pégala o pulsa para elegirla",
+  "action.run": "Quitar el fondo",
+  "action.downloadAndRun": "Descargar el modelo ({size}) y quitar el fondo",
+  "catalog.name": "Quitar el fondo",
+  "catalog.line": "Deja solo la persona o el objeto y te da un PNG con transparencia."
+}

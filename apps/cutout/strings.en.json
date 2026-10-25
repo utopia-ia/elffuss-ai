@@ -1,0 +1,10 @@
+{
+  "title": "Remove background",
+  "description": "Keeps the person or the object and gives you a transparent PNG. Everything is processed in your browser.",
+  "intro": "Keeps the person or the object and gives you a transparent PNG.",
+  "drop": "Drop an image here, paste it, or click to choose one",
+  "action.run": "Remove the background",
+  "action.downloadAndRun": "Download the model ({size}) and remove the background",
+  "catalog.name": "Remove background",
+  "catalog.line": "Keeps the person or the object and gives you a transparent PNG."
+}

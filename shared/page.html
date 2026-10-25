@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="{{v:lang}}">
+<head>
+<meta charset="utf-8">
+{{html:cspMeta}}<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t:title}} · Elffuss</title>
+<meta name="description" content="{{t:description}}">
+<link rel="canonical" href="{{v:canonical}}">
+<link rel="alternate" hreflang="es" href="{{v:urlEs}}">
+<link rel="alternate" hreflang="en" href="{{v:urlEn}}">
+<link rel="stylesheet" href="{{v:base}}shared/tokens.css">
+<link rel="stylesheet" href="{{v:base}}shared/layout.css">
+<link rel="stylesheet" href="{{v:base}}{{v:css}}">
+<link rel="stylesheet" href="{{v:base}}shared/elffuss-look.css">
+{{html:script}}</head>
+<body>
+<header>
+  <a class="brand" href="{{v:home}}">Elffuss · {{t:title}}</a>
+  <nav>
+    <a href="{{v:catalogUrl}}">{{t:nav.tools}}</a>
+    <a href="https://elffuss.com/">Elffuss</a>
+    <a href="{{v:otherLangUrl}}" hreflang="{{v:otherLang}}" lang="{{v:otherLang}}">{{t:nav.otherLang}}</a>
+  </nav>
+</header>
+<main>
+{{html:main}}
+</main>
+<footer>
+{{html:footer}}
+</footer>
+</body>
+</html>

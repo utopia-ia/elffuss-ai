@@ -1,0 +1,6 @@
+{
+  "site": "tools",
+  "host": "tools.elffuss.com",
+  "testPort": 8790,
+  "catalog": true
+}

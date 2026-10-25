@@ -1,0 +1,10 @@
+{
+  "title": "Detectar objetos",
+  "description": "Encuentra personas, coches, animales y hasta 80 tipos de objetos, también con la cámara. Todo se procesa en tu navegador.",
+  "intro": "Encuentra personas, coches, animales y hasta 80 tipos de objetos en una foto o con la cámara.",
+  "drop": "Suelta aquí una imagen, pégala o pulsa para elegirla",
+  "action.run": "Detectar objetos",
+  "action.downloadAndRun": "Descargar el modelo ({size}) y detectar objetos",
+  "catalog.name": "Detectar objetos",
+  "catalog.line": "Encuentra personas, coches, animales y hasta 80 tipos de objetos, también con la cámara."
+}

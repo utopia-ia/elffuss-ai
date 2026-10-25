@@ -1,0 +1,11 @@
+{
+  "site": "detect",
+  "host": "detect.elffuss.com",
+  "testPort": 8793,
+  "task": "detect",
+  "models": ["detect/rfdetr-nano"],
+  "camera": true,
+  "pdfjs": false,
+  "accept": "image/*",
+  "status": "scaffold"
+}

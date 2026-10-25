@@ -1,0 +1,11 @@
+{
+  "site": "ocr",
+  "host": "ocr.elffuss.com",
+  "testPort": 8792,
+  "task": "ocr",
+  "models": ["ocr/pp-ocrv6-small"],
+  "camera": false,
+  "pdfjs": true,
+  "accept": "image/*,application/pdf",
+  "status": "scaffold"
+}

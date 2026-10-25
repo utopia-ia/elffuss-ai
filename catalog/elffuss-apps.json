@@ -1,0 +1,53 @@
+{
+  "source": "Wording taken from the home page of elffuss.com (its list of apps), unchanged.",
+  "apps": [
+    {
+      "id": "claw",
+      "url": "https://claw.elffuss.com",
+      "name": {
+        "es": "Claw",
+        "en": "Claw"
+      },
+      "line": {
+        "es": "Construye pequeñas apps desde un chat",
+        "en": "Builds small apps from a chat"
+      }
+    },
+    {
+      "id": "code",
+      "url": "https://code.elffuss.com",
+      "name": {
+        "es": "Code",
+        "en": "Code"
+      },
+      "line": {
+        "es": "Edita tu proyecto contigo",
+        "en": "Edits your project with you"
+      }
+    },
+    {
+      "id": "translator",
+      "url": "https://translator.elffuss.com",
+      "name": {
+        "es": "Translator",
+        "en": "Translator"
+      },
+      "line": {
+        "es": "Traduce una conversación en voz alta",
+        "en": "Translates a conversation aloud"
+      }
+    },
+    {
+      "id": "copilot",
+      "url": "https://copilot.elffuss.com",
+      "name": {
+        "es": "Copiloto",
+        "en": "Copilot"
+      },
+      "line": {
+        "es": "Convierte una llamada en una ficha",
+        "en": "Turns a call into a customer record"
+      }
+    }
+  ]
+}
