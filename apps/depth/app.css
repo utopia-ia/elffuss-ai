@@ -1,1 +1,6 @@
-/* Layout of the depth site only (see shared/README.md). Empty until the site is built. */
+/* Layout of the depth site only (see shared/README.md): the chosen photo, and the cards of the result. */
+main > figure { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+main > figure > img { display: block; max-width: 100%; max-height: 40vh; width: auto; height: auto; }
+.result .card > img { display: block; max-width: 100%; height: auto; }
+.result .card > canvas { display: block; width: 100%; height: auto; }
+.result .actions label { display: flex; align-items: center; gap: 0.5rem; }

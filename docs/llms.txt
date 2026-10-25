@@ -5,7 +5,7 @@
 ## Tools
 
 - [Remove background](https://cutout.elffuss.com/en/): Keeps the person or the object and gives you a transparent PNG. Model: BEN2 by PramaLLC (MIT). Download: 219 MB, once per browser.
-- [Depth map](https://depth.elffuss.com/en/): Works out what is near and what is far in a photo. Model: Depth Anything V2 Small by depth-anything (Apache-2.0). Download: 27 to 99 MB, once per browser.
+- [Depth map](https://depth.elffuss.com/en/): Works out what is near and what is far in a photo, with a colour map, a 3D view and PNG downloads. Model: Depth Anything V2 Small by depth-anything (Apache-2.0). Download: 27 to 99 MB, once per browser.
 - [Detect objects](https://detect.elffuss.com/en/): Finds people, cars, animals and up to 80 kinds of objects, also with your camera. Model: RF-DETR Nano by Roboflow (Apache-2.0). Download: 29 MB, once per browser.
 - [Read text](https://ocr.elffuss.com/en/): Gets the text out of photos, scans and PDFs, even whole folders. Model: PP-OCRv6 by PaddlePaddle (Apache-2.0). Download: 31 MB, once per browser.
 - [Every tool](https://tools.elffuss.com/en/): the catalog.
