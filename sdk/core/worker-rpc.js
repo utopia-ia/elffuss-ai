@@ -33,7 +33,12 @@ export function serveTask(impl, { port = globalThis } = {}) {
   const store = createWorkerStore(port);
   const queue = createQueue();
   let loaded = null;
+  // Progress goes to the call in progress: the load's statuses to the load, and
+  // what ctx.report() says during a run to that run (the page has forgotten
+  // the load's call by then).
+  let current = null;
   const post = (m, transfer) => port.postMessage(m, transfer || []);
+  const onProgress = p => { if (current != null) post({ type: 'progress', id: current, progress: p }); };
   globalThis.addEventListener?.('securitypolicyviolation', e => post({
     type: 'csp-violation',
     violation: { directive: e.effectiveDirective || e.violatedDirective || '', blocked: String(e.blockedURI || ''), sample: String(e.sample || '').slice(0, 80), where: 'worker' },
@@ -43,7 +48,10 @@ export function serveTask(impl, { port = globalThis } = {}) {
     if (!d || typeof d.type !== 'string') return;
     if (d.type === 'load') {
       try {
-        if (!loaded) loaded = await loadTask(impl, d.opts || {}, { store, onProgress: p => post({ type: 'progress', id: d.id, progress: p }) });
+        if (!loaded) {
+          current = d.id;
+          try { loaded = await loadTask(impl, d.opts || {}, { store, onProgress }); } finally { if (current === d.id) current = null; }
+        }
         post({ type: 'result', id: d.id, value: loaded.info });
       } catch (err) {
         post({ type: 'error', id: d.id, error: serializeError(toAiError(err)) });
@@ -53,7 +61,10 @@ export function serveTask(impl, { port = globalThis } = {}) {
     if (d.type === 'run') {
       try {
         if (!loaded) throw new AiError('run-failed', 'the task is not loaded');
-        const out = await queue.run(() => impl.run(loaded.state, d.input, d.opts || {}, loaded.ctx));
+        const out = await queue.run(async () => {
+          current = d.id;
+          try { return await impl.run(loaded.state, d.input, d.opts || {}, loaded.ctx); } finally { if (current === d.id) current = null; }
+        });
         const { value, transfer } = runResult(out);
         post({ type: 'result', id: d.id, value }, transfer);
       } catch (err) {
