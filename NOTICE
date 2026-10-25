@@ -3,7 +3,12 @@ Copyright 2026 UtopiaIA
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This repository includes third-party software.
+This repository includes or adapts third-party software.
+
+runonweb (https://github.com/midudev/runonweb.ai, commit 878f193)
+  Copyright (c) 2026 Miguel Ángel Durán. MIT License, see LICENSES/MIT-runonweb.txt.
+  Adapted in sdk/core/device.js, sdk/core/queue.js, sdk/core/tf-env.js and
+  sdk/core/ort-env.js. Each file says which parts, and where they come from.
 
 Served with the sites from vendor/, unmodified unless noted. Each licence file is
 kept and served next to its files; vendor/manifest.json pins every byte.

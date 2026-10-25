@@ -5,7 +5,8 @@
 //  1. no Hub host or resolve path outside sdk/core/hub-url.js;
 //  2. every literal shaped like a model id exists in tasks.json (fails, does not warn);
 //  3. no literal starts with the owner of a registry repo outside registry/;
-//  4. the branch revision of the Hub appears nowhere but in the hub-url test.
+//  4. the branch revision of the Hub appears nowhere but in the tests of the
+//     rewrite to the pinned commit (hub-url and store-fetch).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -57,10 +58,11 @@ test('3. no literal starts with the owner of a registry repo outside registry/',
   assert.deepEqual(hits, []);
 });
 
-test('4. the branch revision of the Hub is spelled only in the hub-url test', () => {
+test('4. the branch revision of the Hub is spelled only in the rewrite tests', () => {
   const needle = [resolveSeg, 'main'].join('');
   const files = execFileSync('/usr/bin/git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8' })
     .split('\n').filter(f => f && !f.startsWith('vendor/') && existsSync(join(ROOT, f)) && TEXT.test(f));
-  const hits = files.filter(f => f !== 'tests/unit/hub-url.test.mjs' && readFileSync(join(ROOT, f), 'utf8').includes(needle));
+  const allowed = new Set(['tests/unit/hub-url.test.mjs', 'tests/unit/store-fetch.test.mjs']);
+  const hits = files.filter(f => !allowed.has(f) && readFileSync(join(ROOT, f), 'utf8').includes(needle));
   assert.deepEqual(hits, []);
 });
