@@ -1,1 +1,8 @@
-/* Layout of the ocr site only (see shared/README.md). Empty until the site is built. */
+/* Layout of the ocr site only (see shared/README.md): the list of files and
+   each file's card, its pages, and the page with its boxes. */
+.files { display: flex; flex-direction: column; gap: 1rem; margin: 0; padding: 0; }
+.files > li { display: block; }
+.card > section { display: flex; flex-direction: column; gap: 0.5rem; }
+.card pre { margin: 0; max-width: 100%; overflow-x: auto; }
+.card ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+.card .stage { width: 100%; }
