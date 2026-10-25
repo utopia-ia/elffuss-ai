@@ -43,6 +43,11 @@ const anySignal = signals => {
   return ac.signal;
 };
 
+/**
+ * Base class of the task modules: one model, loaded once, runs one after another.
+ * A task module passes its spec (task name, Worker URL, implementation) and the
+ * caller's options.
+ */
 export class Task {
   #spec; #opts; #store; #ownStore = false; #host = null; #impl = null; #local = null;
   #loading = null; #info = null; #queue = createQueue(); #disposed = false; #broken = null; #failRunUsed = false; #failLoadUsed = false;
