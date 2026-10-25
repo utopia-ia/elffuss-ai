@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "rules": "Every file under tests/fixtures/ (except broker/ and these lists) is listed here with its sha256, its licence and where it comes from. Only CC0-1.0, public-domain or own-work. A photo needs its page URL and author; own work names the script that makes it; a golden reference names the model id, the pinned revision and the backend it came from. None may match tests/fixtures/denylist-runonweb-samples.sha256.",
+  "files": []
+}
