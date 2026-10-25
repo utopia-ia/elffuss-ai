@@ -51,11 +51,8 @@ export function resampleWeights(inSize, outSize) {
   return { start, count, weights, ksize };
 }
 
-/**
- * Resample one channel of an interleaved image into a plane: horizontal pass
- * into `tmp` (h × ow), vertical pass into `out` (oh × ow).
- */
-function resampleChannel(src, w, h, stride, offset, ow, oh, H, V, tmp, out) {
+/** Horizontal pass of one channel of an interleaved image into `tmp` (h rows of ow). */
+function horizontalPass(src, w, h, stride, offset, ow, H, tmp) {
   for (let y = 0; y < h; y++) {
     const row = y * w;
     for (let x = 0; x < ow; x++) {
@@ -65,14 +62,24 @@ function resampleChannel(src, w, h, stride, offset, ow, oh, H, V, tmp, out) {
       tmp[y * ow + x] = acc;
     }
   }
-  out.fill(0);
-  for (let y = 0; y < oh; y++) {
-    const s = V.start[y], n = V.count[y], k = y * V.ksize, o = y * ow;
-    for (let i = 0; i < n; i++) {
-      const wgt = V.weights[k + i], r = (s + i) * ow;
-      for (let x = 0; x < ow; x++) out[o + x] += tmp[r + x] * wgt;
-    }
+  return tmp;
+}
+
+/** Vertical pass for output row `y`, from the horizontal pass `tmp`, into `row` (ow values). */
+function verticalRow(tmp, ow, V, y, row) {
+  row.fill(0);
+  const s = V.start[y], n = V.count[y], k = y * V.ksize;
+  for (let i = 0; i < n; i++) {
+    const wgt = V.weights[k + i], r = (s + i) * ow;
+    for (let x = 0; x < ow; x++) row[x] += tmp[r + x] * wgt;
   }
+  return row;
+}
+
+/** Resample one channel of an interleaved image into the plane `out` (oh × ow). */
+function resampleChannel(src, w, h, stride, offset, ow, oh, H, V, tmp, out) {
+  horizontalPass(src, w, h, stride, offset, ow, H, tmp);
+  for (let y = 0; y < oh; y++) verticalRow(tmp, ow, V, y, out.subarray(y * ow, (y + 1) * ow));
   return out;
 }
 
@@ -165,11 +172,17 @@ export function maskToAlpha(mask, mw, mh, ow, oh) {
     const v = logits ? 1 / (1 + Math.exp(-mask[i])) : mask[i];
     src[i] = v < 0 ? 0 : v > 1 ? 1 : v;
   }
-  const plane = resamplePlane(src, mw, mh, ow, oh);
+  // Row by row into bytes: a large photo never holds a float copy of its whole alpha.
+  const V = resampleWeights(mh, oh);
+  const tmp = horizontalPass(src, mw, mh, 1, 0, ow, resampleWeights(mw, ow), new Float32Array(mh * ow));
+  const row = new Float32Array(ow);
   const alpha = new Uint8Array(ow * oh);
-  for (let i = 0; i < plane.length; i++) {
-    const v = plane[i];
-    alpha[i] = Math.round((v < 0 ? 0 : v > 1 ? 1 : v) * 255);
+  for (let y = 0; y < oh; y++) {
+    verticalRow(tmp, ow, V, y, row);
+    for (let x = 0, o = y * ow; x < ow; x++) {
+      const v = row[x];
+      alpha[o + x] = Math.round((v < 0 ? 0 : v > 1 ? 1 : v) * 255);
+    }
   }
   return alpha;
 }

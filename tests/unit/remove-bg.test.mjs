@@ -97,6 +97,11 @@ test('the mask comes back at the image size; logits get a sigmoid; broken masks 
   const big = maskToAlpha(new Float32Array(1024 * 1024).fill(1), 1024, 1024, 960, 640);
   assert.equal(big.length, 960 * 640);
   assert.ok(big.every(v => v === 255));
+  // Row by row it gives exactly what a whole-plane resample rounded to bytes gives.
+  const mw = 37, mh = 23, ow = 101, oh = 59;
+  const src = Float32Array.from({ length: mw * mh }, (_, i) => ((i * 7919) % 101) / 100);
+  const plane = resamplePlane(src, mw, mh, ow, oh);
+  assert.deepEqual([...maskToAlpha(src, mw, mh, ow, oh)], [...plane].map(v => Math.round(Math.min(1, Math.max(0, v)) * 255)));
 });
 
 test('the alpha goes on the pixels, keeping the transparency the image already had', () => {
