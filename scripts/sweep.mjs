@@ -188,6 +188,35 @@ function vendorExceptions(root) {
   return ok;
 }
 
+/**
+ * The same exception inside a build: <site>/vendor/<pkg>/<file> must match the
+ * manifest, and the rewritten Transformers.js copy must be exactly the rewrite of
+ * the vendored file (checked by redoing it).
+ */
+async function distVendorExceptions(root) {
+  const ok = vendorExceptions(root);
+  const out = new Map();
+  for (const [k, v] of ok) out.set(k, v);
+  try {
+    const { rewriteTransformers } = await import('./lib/rewrite-transformers.mjs');
+    const { ORT_VARIANTS, transformersDir, ortSpecifierFromTransformers } = await import('../sdk/core/runtimes.js');
+    const { VENDOR_DIRS } = await import('../sdk/core/runtime-pins.js');
+    const src = readFileSync(join(root, 'vendor', VENDOR_DIRS.transformers, 'dist', 'transformers.web.min.js'), 'utf8');
+    for (const variant of Object.keys(ORT_VARIANTS)) {
+      const dir = `vendor/${transformersDir(variant)}`;
+      out.set(`${dir}/transformers.web.min.js`, createHash('sha256').update(rewriteTransformers(src, ortSpecifierFromTransformers(variant))).digest('hex'));
+      out.set(`${dir}/LICENSE`, ok.get(`vendor/${VENDOR_DIRS.transformers}/LICENSE`));
+    }
+  } catch { /* no vendor yet */ }
+  return out;
+}
+
+/** Map a build's file to its key in the vendor exceptions: <site>/vendor/… → vendor/…. */
+export function distVendorKey(rel) {
+  const i = rel.indexOf('/vendor/');
+  return i >= 0 ? rel.slice(i + 1) : null;
+}
+
 function listRepoFiles(root) {
   const out = execFileSync(GIT, ['-C', root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 64 << 20 });
   return [...new Set(out.split('\0').filter(Boolean))].filter(f => existsSync(join(root, f)));
@@ -204,12 +233,12 @@ function listDir(dir, base = dir) {
 }
 
 /** Sweep a list of files under `base`. */
-export function sweepFiles(base, files, rules, { vendorOk = new Map(), label = '' } = {}) {
+export function sweepFiles(base, files, rules, { vendorOk = new Map(), label = '', keyOf = f => f } = {}) {
   const findings = [];
   let binaries = 0, texts = 0, vendored = 0;
   for (const f of files) {
     const buf = readFileSync(join(base, f));
-    const sha = vendorOk.get(f);
+    const sha = vendorOk.get(keyOf(f));
     const third = sha && createHash('sha256').update(buf).digest('hex') === sha;
     if (third) vendored++;
     if (third) {
@@ -261,7 +290,7 @@ export function selfTest(rules) {
   return failures;
 }
 
-function main(argv) {
+async function main(argv) {
   const args = new Set(argv);
   const release = args.has('--release');
   if (release && !process.env.ELFFUSS_SWEEP_PRIVATE) {
@@ -284,9 +313,9 @@ function main(argv) {
   const dists = distIdx >= 0 ? [argv[distIdx + 1]] : (release && existsSync(join(ROOT, 'dist')) ? [join(ROOT, 'dist')] : []);
   for (const d of dists) {
     if (!d || !existsSync(d) || !statSync(d).isDirectory()) { console.error('--dist needs an existing directory'); return 1; }
-    const files = listDir(d);
-    const r = sweepFiles(d, files, rules, { label: 'dist:' });
-    console.log(`dist: ${files.length} files (${r.counts.texts} text, ${r.counts.binaries} binary)`);
+    const files = listDir(d).filter(f => !f.split('/').some(p => p.startsWith('._')));
+    const r = sweepFiles(d, files, rules, { label: 'dist:', vendorOk: await distVendorExceptions(ROOT), keyOf: distVendorKey });
+    console.log(`dist: ${files.length} files (${r.counts.texts} text, ${r.counts.binaries} binary, ${r.counts.vendored} vendored and matching the manifest)`);
     all.push(...r.findings);
   }
   if (args.has('--git') || release) {
@@ -306,5 +335,5 @@ function main(argv) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  process.exitCode = main(process.argv.slice(2));
+  main(process.argv.slice(2)).then(c => { process.exitCode = c; }, e => { console.error('✗ ' + (e.message || e)); process.exitCode = 1; });
 }
