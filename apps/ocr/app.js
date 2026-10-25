@@ -73,7 +73,11 @@ function onTaskProgress(p) {
   if (p.status === 'ready') { if (state.last) progress(state.last); return; }
   shell.onProgress(p);
 }
-const runner = shell.taskRunner(o => new Ocr({ ...o, onProgress: onTaskProgress }));
+// In test builds a failure asked for in the query (?test-fail=…) fires once per
+// page: the task made for the one retry on WASM after a failure on WebGPU is a
+// new task, and it must run clean, as it would after a real WebGPU failure.
+let made = 0;
+const runner = shell.taskRunner(o => new Ocr({ ...o, test: o.test && made++ ? { ...o.test, failRun: false, failLoad: false } : o.test, onProgress: onTaskProgress }));
 
 async function read(input, { signal, maxSide }) {
   const { result, device, fallback } = await runner.run(input, { signal, maxSide });
