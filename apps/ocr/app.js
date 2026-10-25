@@ -278,7 +278,8 @@ async function readAll({ signal }) {
     signal.removeEventListener('abort', onAbort);
     state.reading = false;
     state.pause = null;
-    for (const it of state.items) fillCard(it);
+    // Finished files were drawn as they finished; only the ones left to read change back.
+    for (const it of state.items) if (it.status === 'pending') fillCard(it);
     if (els.progress) els.progress.hidden = true;
     refreshExports();
   }
