@@ -128,7 +128,12 @@ that the core loads and runs the model on the expected backend through the store
 with no download on reload, explicit backends, Worker replacement, version pins,
 integrity, cancel and quota. A site's spec covers the same through its real page
 where the UI is involved: the primary button's label before and after, the
-result, the device it reports, and the fallback.
+result, the device it reports, and the fallback. For the fallback, open the
+page with `?test-fail=run`: with device `auto` on WebGPU the first run fails
+inside the runtime and the retry on WASM runs without the hook, so the result
+carries `fallback`; on WASM alone the error shows and the next click works. The
+primary button's label is refreshed from the store just after the button is
+enabled again, so wait for it rather than reading it at once.
 
 Run them:
 
