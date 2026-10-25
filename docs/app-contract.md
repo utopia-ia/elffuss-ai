@@ -140,7 +140,7 @@ ELFFUSS_AI_CACHE=<cache dir> ELFFUSS_PLAYWRIGHT_DIR=<node_modules with playwrigh
 ## 4. Not to be changed by a site
 
 `sdk/core/`, `shared/` (except adding texts through the site's own strings),
-`registry/` (the registry changes only through `registry/source.mjs` and the
-generator, with the founder's say), `vendor/`, `deploy/`, `scripts/` and the
-harness files other than the site's own spec. If a site needs something there,
+`registry/` (the registry changes only through `registry/source.mjs` and its
+generator, as a reviewed change of its own), `vendor/`, `deploy/`, `scripts/`
+and the harness files other than the site's own spec. If a site needs something there,
 it is a change of its own, with its own tests.
