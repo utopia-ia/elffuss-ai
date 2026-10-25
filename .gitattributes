@@ -1,0 +1,12 @@
+# Third-party runtimes are stored byte for byte: no line-ending conversion, ever.
+vendor/** -text linguist-vendored
+*.wasm binary
+*.bcmap binary
+*.pfb binary
+*.ttf binary
+*.icc binary
+*.png binary
+*.jpg binary
+*.pdf binary
+*.woff2 binary
+*.onnx binary

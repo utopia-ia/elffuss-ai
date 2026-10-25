@@ -1,0 +1,8 @@
+Elffuss AI
+Copyright 2026 UtopiaIA
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Model weights are not part of this repository and are not redistributed. The apps
+download them from their original Hugging Face repositories at a pinned revision.
+Their licences are listed in registry/tasks.json and on each page.

@@ -1,0 +1,26 @@
+{
+  "name": "@elffuss/ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Task modules for the browser: background removal, OCR, object detection and depth, on WebGPU or WebAssembly.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    "./core": "./sdk/core/index.js",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"tests/unit/*.test.mjs\"",
+    "test:browser": "node tests/browser/run.mjs",
+    "build": "node scripts/build.mjs",
+    "registry": "node scripts/build-registry.mjs",
+    "vendor:check": "node scripts/vendor.mjs --check",
+    "docs": "node scripts/build-docs.mjs",
+    "nginx": "node deploy/build-nginx.mjs",
+    "sweep": "node scripts/sweep.mjs"
+  }
+}

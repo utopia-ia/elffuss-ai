@@ -1,0 +1,12 @@
+/* Fallback values for the colour variables. elffuss-look.css, written by the UI
+   session, may redefine them. This is the only file with colours written out. */
+:root {
+  --bg: #303752;
+  --bg2: #39415f;
+  --bg3: #424b6c;
+  --line: #4b5578;
+  --fg: #f1eff7;
+  --muted: #b6bccb;
+  --accent: #d9b27a;
+  --accent2: #8272ff;
+}
