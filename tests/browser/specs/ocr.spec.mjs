@@ -103,7 +103,9 @@ export default [
       await t.noCsp(page);
       t.noPageErrors();
       t.networkClean(site);
-      t.note(`${r.device}; ${f.pages[0].lines.length} lines`);
+      const side = await page.evaluate(() => globalThis.__elffuss.ocr.readSide);
+      t.ok(side === 4000 || side === 2560, `pages are read up to ${side} pixels`);
+      t.note(`${r.device}; ${f.pages[0].lines.length} lines; pages up to ${side} px`);
     },
   },
   {

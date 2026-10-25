@@ -19,7 +19,7 @@ own `inference.yml`.
   Latin and Chinese character list: á é í ó ú ü ñ and their capitals, ¿, « », €,
   º, ª, ·. The list has no «¡», so the model cannot write it; the page says so.
 - **Pipeline:** the detector's input keeps the shortest side at least 736 pixels
-  and the longest under 4000, in multiples of 32; its probability map becomes
+  and the longest under 4000 (the model's limit), in multiples of 32; its probability map becomes
   boxes as PaddleOCR's DB post-processing does; each box is cropped upright with a
   perspective transform; each strip is read on its own (so a line reads the same
   whatever else is on the page) and decoded with greedy CTC. Lines the recogniser
@@ -59,10 +59,17 @@ reads the files one after another, page by page, in natural path order. While a
 page is read, the next one is decoded, so at most two decoded pages are alive at
 once, and only text and boxes are kept: no images, no thumbnails.
 
+The detector's working memory grows with the pixels of its input, and a
+WebAssembly heap never gives memory back, so the site reads a page with its
+longest side scaled down to at most 4000 pixels in browsers that report a large
+device memory, and to at most 2560 in the rest (and in those that do not say).
+Boxes are always given in the page's own pixels.
+
 - A file that cannot be opened or decoded is reported on its card and the
   reading goes on.
-- A page that makes the reader fail is read once more, scaled down to 2560
-  pixels; if it fails again it is reported as too large.
+- A page that makes the reader fail is read once more, scaled down further
+  (2560 pixels, or 1600 where 2560 was already the limit); if it fails again it
+  is reported as too large.
 - With the backend chosen automatically, a failure on WebGPU is repeated once on
   WebAssembly, which is then used for the rest; the page says so.
 - A failure of the model store or of the model stops the reading, keeping what

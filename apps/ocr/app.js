@@ -20,6 +20,16 @@ import { drawPage, clearPage } from './overlay.js';
 /** The tool's name in the documents it writes. */
 const TOOL = 'ocr.elffuss.com';
 
+/**
+ * Longest side a page is read at. The detector's working memory grows with the
+ * pixels of its input, and a WebAssembly heap never shrinks: browsers that
+ * report a large device memory read up to the detector's own limit; the rest,
+ * and those that do not say, up to 2560 pixels. A page that fails is read once
+ * more, smaller still.
+ */
+const READ_SIDE = (globalThis.navigator?.deviceMemory ?? 0) >= 8 ? 4000 : 2560;
+const RETRY_SIDE = READ_SIDE > 2560 ? 2560 : 1600;
+
 const shell = await createShell();
 const { t, lang, els, config, model, modelId } = shell;
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -263,7 +273,7 @@ async function readAll({ signal }) {
       read,
       onProgress: progress,
       onItem: item => { fillCard(item); refreshExports(); },
-    }, { signal, paused: () => (state.pause ? waitWhilePaused() : undefined) }));
+    }, { signal, paused: () => (state.pause ? waitWhilePaused() : undefined), maxSide: READ_SIDE, retrySide: RETRY_SIDE }));
   } finally {
     signal.removeEventListener('abort', onAbort);
     state.reading = false;
@@ -376,6 +386,7 @@ if (config.testHooks) {
     items: () => state.items.map(i => ({ path: i.path, status: finalStatus(i), reason: i.reason ?? null, error: i.error ?? null, kind: i.kind, type: i.type, pages: (i.pages || []).map(p => ({ page: p.page, text: p.text ?? null, error: p.error ?? null, lines: p.lines?.length ?? 0 })) })),
     documents,
     pause, resume,
+    readSide: READ_SIDE,
   };
 }
 setControls();
