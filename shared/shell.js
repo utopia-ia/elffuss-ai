@@ -21,6 +21,7 @@ import { createStoreClient } from '../sdk/core/store-client.js';
 import { loadRegistry, getModel, variantFiles, resolveRef } from '../sdk/core/registry.js';
 import { probeWebGPU, chooseVariant } from '../sdk/core/device.js';
 import { AiError, isAiError, toAiError } from '../sdk/core/errors.js';
+import { createTaskRunner } from './runner.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const mb = bytes => (bytes / 1e6 < 10 ? (Math.round(bytes / 1e5) / 10) : Math.round(bytes / 1e6));
@@ -148,33 +149,12 @@ export async function createShell({ config: cfg = config } = {}) {
      * @param {(opts: object) => { run: Function, dispose: Function, device: string|null }} factory
      */
     taskRunner(factory) {
-      let task = null;
-      let device = requested;
-      const make = () => (task ||= factory(shell.taskOptions({ device })));
-      return {
-        get task() { return task; },
-        async run(input, opts = {}) {
-          const tk = make();
-          try {
-            const result = await tk.run(input, opts);
-            diagnostics.device = tk.device;
-            return { result, device: tk.device, fallback: null };
-          } catch (err) {
-            const e = toAiError(err);
-            if (requested !== 'auto' || device !== 'auto' || tk.device !== 'webgpu' || e.code === 'aborted' || e.code.startsWith('store-') || e.code === 'integrity') throw e;
-            await tk.dispose();
-            task = null;
-            device = 'wasm';
-            const again = make();
-            const result = await again.run(input, opts);
-            const fallback = { from: 'webgpu', reason: e.code };
-            diagnostics.device = again.device;
-            diagnostics.fallback = fallback;
-            return { result, device: again.device, fallback };
-          }
-        },
-        async dispose() { const tk = task; task = null; await tk?.dispose(); },
-      };
+      return createTaskRunner({
+        requested,
+        factory,
+        options: device => shell.taskOptions({ device }),
+        onDevice: (device, fallback) => { diagnostics.device = device; diagnostics.fallback = fallback; },
+      });
     },
 
     /** Label the primary button from what the store has. */
