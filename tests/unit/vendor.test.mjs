@@ -6,6 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { check, readManifest, SPECS } from '../../scripts/vendor.mjs';
 import { rewriteTransformers, ORT_IMPORTS } from '../../scripts/lib/rewrite-transformers.mjs';
 import { PINS, VENDOR_DIRS } from '../../sdk/core/runtime-pins.js';
@@ -49,4 +50,13 @@ test('runtime URLs stay under /vendor/ of the same origin', () => {
   for (const v of [u.ortBundle, u.ortMjs, u.ortWasm, u.transformers, ...Object.values(u.pdfjs)]) assert.match(v, /^\/vendor\//);
   assert.match(u.transformers, /\+ort1\.30\.0-wasm\//);
   assert.throws(() => runtimeUrls({ variant: 'jsep' }));
+});
+
+test('every pinned file is committed, not left out by an ignore rule', () => {
+  const tracked = new Set(execFileSync('/usr/bin/git', ['-C', new URL('.', root).pathname, 'ls-files', 'vendor'], { encoding: 'utf8' }).split('\n').filter(Boolean));
+  const m = readManifest();
+  for (const [id, e] of Object.entries(m.packages)) {
+    for (const p of Object.keys({ ...e.files, ...e.licenses })) assert.ok(tracked.has(`vendor/${id}/${p}`), `vendor/${id}/${p} is not committed`);
+  }
+  assert.ok(tracked.has('vendor/manifest.json'));
 });
