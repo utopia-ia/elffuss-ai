@@ -8,7 +8,7 @@
 | `@elffuss/ai/core` | Model store client, backend choice, pinned runtimes, registry, Worker host, errors, progress | every site | in use |
 | `@elffuss/ai/remove-bg` | Remove the background of an image (transparent PNG) | [cutout.elffuss.com](https://cutout.elffuss.com/) | to be written (`./remove-bg/sizes` exists) |
 | `@elffuss/ai/depth` | Depth map of a photo | [depth.elffuss.com](https://depth.elffuss.com/) | to be written (`./depth/sizes` exists) |
-| `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | to be written (`./detect/sizes` exists) |
+| `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | to be written (`./ocr/sizes` exists) |
 
 ## API reference

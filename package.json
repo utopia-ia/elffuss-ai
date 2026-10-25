@@ -9,6 +9,7 @@
     "./core": "./sdk/core/index.js",
     "./remove-bg/sizes": "./sdk/remove-bg/sizes.js",
     "./depth/sizes": "./sdk/depth/sizes.js",
+    "./detect": "./sdk/detect/index.js",
     "./detect/sizes": "./sdk/detect/sizes.js",
     "./ocr/sizes": "./sdk/ocr/sizes.js",
     "./package.json": "./package.json"
