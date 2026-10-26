@@ -3,7 +3,7 @@
 //
 // Hugging Face, for the browser tests. Every request the browser makes to the
 // Hub goes through a Playwright route that vets and counts it: a pinned file of
-// the registry is continued to a local HTTPS server that streams it from the
+// a variant of the registry is continued to a local HTTPS server that streams it from the
 // weight cache (with Range, ETag and the CORS headers the model store needs);
 // anything else gets 404 and is recorded, and the test fails on it. The URLs
 // the browser sees are the production ones, so the store's keys are too.
@@ -17,7 +17,7 @@ import { Transform } from 'node:stream';
 import { existsSync, statSync, createReadStream, mkdirSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
-import { registryUrls } from '../../sdk/core/registry.js';
+import { toolFiles } from '../../sdk/core/registry.js';
 import { parsePinnedUrl, HUB_ORIGIN } from '../../sdk/core/hub-url.js';
 import { cachePath } from '../../scripts/fetch-weights.mjs';
 
@@ -37,7 +37,9 @@ export function testCertificate(dir) {
  * @param {{ cache: string, registry: object, port: number }} o
  */
 export async function startHub({ cache, registry, port }) {
-  const allowed = new Map(registryUrls(registry).map(u => [new URL(u.url).pathname, u]));
+  // Only the files of the registry's variants: the store never asks for anything else
+  // of a tool (the rest of each pinned tree, README.md and the like, is refused).
+  const allowed = new Map(toolFiles(registry).map(u => [new URL(u.url).pathname, u]));
   const counts = { full: [], probes: [], ranged: [], refused: [] };
   const served = new Map(); // url → bytes actually written to the browser
   let blocked = false;

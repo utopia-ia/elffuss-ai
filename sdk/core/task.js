@@ -144,8 +144,9 @@ export class Task {
         try {
           return await this.#host.run(prepared.value, runOpts, { transfer: prepared.transfer, signal: sig, onProgress: this.#opts.onProgress });
         } catch (err) {
-          // The Worker is gone after any failure: the next run loads again (from the store).
-          this.#info = null;
+          // The Worker is gone after a failure of the runtime: the next run loads
+          // again (from the store). After an input refused, it is still there.
+          if (!this.#host?.alive) this.#info = null;
           throw toAiError(err);
         }
       }

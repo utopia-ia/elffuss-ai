@@ -157,7 +157,7 @@ export function moduleTable(root = ROOT) {
 /** docs/MODELS.md from the registry. */
 export function modelsDoc(root = ROOT) {
   const reg = JSON.parse(readFileSync(join(root, 'registry', 'tasks.json'), 'utf8'));
-  const out = [GEN, '# Models', '', 'Every model a site downloads, from its original Hugging Face repository, pinned to a commit. Nothing here is hosted or redistributed by Elffuss: the model store of the sites downloads each file once per browser and checks its hash. Generated from `registry/tasks.json`.', ''];
+  const out = [GEN, '# Models', '', 'Every model a site downloads, from its original Hugging Face repository, pinned to a commit. Nothing here is hosted or redistributed by Elffuss: the model store of the sites downloads each file the first time it is needed and keeps it in that browser, and the site checks its hash. Generated from `registry/tasks.json`.', ''];
   out.push('| Task | Model | Base model | Licence | Backend · variant · download |', '|---|---|---|---|---|');
   for (const [id, m] of Object.entries(reg.models)) {
     const variants = Object.entries(m.devices).flatMap(([dev, vs]) => vs.map(v => `${dev === 'webgpu' ? 'WebGPU' : 'WASM'} ${v.dtype}${v.when ? ' (with ' + v.when + ')' : ''} · ${formatMB(v.bytes, 'en')} MB`));
@@ -180,14 +180,14 @@ export function modelsDoc(root = ROOT) {
 export function llmsTxt(root = ROOT) {
   const reg = JSON.parse(readFileSync(join(root, 'registry', 'tasks.json'), 'utf8'));
   const sites = readSites(root);
-  const lines = ['# Elffuss tools', '', '> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, and make depth maps. Each runs its model in the browser with WebGPU or WebAssembly; the only download is the model, from its original Hugging Face repository at a pinned revision, and it is kept in the browser for the next visit. Files the user opens never leave the device.', ''];
+  const lines = ['# Elffuss tools', '', '> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, and make depth maps. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from its original Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool\'s own site. Files the user opens never leave the device.', ''];
   lines.push('## Tools', '');
   for (const s of sites.filter(x => !x.catalog)) {
     const t = mergeStrings(root, s.dir).en;
     const m = reg.models[s.models[0]];
     const sizes = Object.values(m.devices).flat().map(v => v.bytes);
     const size = Math.min(...sizes) === Math.max(...sizes) ? `${formatMB(sizes[0], 'en')} MB` : `${formatMB(Math.min(...sizes), 'en')} to ${formatMB(Math.max(...sizes), 'en')} MB`;
-    lines.push(`- [${t['catalog.name']}](${siteUrl(s, 'pro')}en/): ${t['catalog.line']} Model: ${m.base.name} by ${m.base.author} (${m.base.license}). Download: ${size}, once per browser.`);
+    lines.push(`- [${t['catalog.name']}](${siteUrl(s, 'pro')}en/): ${t['catalog.line']} Model: ${m.base.name} by ${m.base.author} (${m.base.license}). Model download: ${size}, the first time; it is then kept in that browser.`);
   }
   const cat = sites.find(x => x.catalog);
   lines.push(`- [Every tool](${siteUrl(cat, 'pro')}en/): the catalog.`, '');
