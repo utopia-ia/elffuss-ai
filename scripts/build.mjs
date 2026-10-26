@@ -101,6 +101,8 @@ export function buildSite({ root, site, sites, channel, buildId, outDir }) {
   w(`${v}config.js`, configSource({ site, registry, channel, buildId, storeUrl, sites }));
   w(`${v}LICENSES/Apache-2.0.txt`, { from: join(root, 'LICENSES', 'Apache-2.0.txt') });
   w(`${v}LICENSES/MIT-runonweb.txt`, { from: join(root, 'LICENSES', 'MIT-runonweb.txt') });
+  // The licences of code a site's own modules adapt (app.json `adapted`).
+  for (const a of site.adapted || []) w(`${v}${a.file}`, { from: join(root, ...a.file.split('/')) });
   w(`${v}NOTICE.txt`, { from: join(root, 'NOTICE') });
 
   // /vendor/: only what this site runs.
