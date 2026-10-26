@@ -76,12 +76,32 @@ test('one button.primary per app page, every other button .ghost, none in the ca
   }
 });
 
-test('stylesheets in order: tokens, layout, the site, the shared look', () => {
+test('stylesheets in order: tokens, layout, the site, the shared look, the Elffuss mark', () => {
   for (const f of htmlFiles(pro.out)) {
     const html = readFileSync(f, 'utf8');
     const hrefs = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map(m => m[1].replace(/^\/v\/[^/]+\//, ''));
     const site = relative(pro.out, f).split(sep)[0];
-    assert.deepEqual(hrefs, ['shared/tokens.css', 'shared/layout.css', site === 'tools' ? 'catalog.css' : 'app.css', 'shared/elffuss-look.css'], relative(pro.out, f));
+    assert.deepEqual(hrefs, ['shared/tokens.css', 'shared/layout.css', site === 'tools' ? 'catalog.css' : 'app.css', 'shared/elffuss-look.css', 'shared/elffuss-mark.css'], relative(pro.out, f));
+  }
+});
+
+// The mark as approved (f3d3d69): the sheet byte for byte, and on every page the markup of its header comment with the
+// label in the page's language, first in the header, followed by the site's name as its own link.
+const MARK_SHEET_SHA1 = '627569b7695e8a26bee673e2433adf6086b33413';
+test('every page opens its header with the Elffuss mark, then the site name; the mark sheet is the approved one', async () => {
+  const { createHash } = await import('node:crypto');
+  const sheet = readFileSync(join(ROOT, 'shared', 'elffuss-mark.css'));
+  assert.equal(createHash('sha1').update(sheet).digest('hex'), MARK_SHEET_SHA1, 'shared/elffuss-mark.css is not the approved sheet');
+  const doc = /(<a class="elffuss-mark"[\s\S]*?<\/a>)/.exec(sheet.toString('utf8'))[1];
+  const labels = { es: 'Elffuss: todas las apps', en: 'Elffuss: all apps' };
+  for (const f of htmlFiles(pro.out)) {
+    const html = readFileSync(f, 'utf8');
+    const rel = relative(pro.out, f);
+    const lang = /<html lang="(es|en)">/.exec(html)?.[1];
+    const m = /<header>\s*<div class="brand-row">\s*(<a class="elffuss-mark"[\s\S]*?<\/a>)\s*<span class="brand-sep" aria-hidden="true">·<\/span>\s*<a class="brand" href="[^"]+">([^<]+)<\/a>\s*<\/div>\s*<nav>/.exec(html);
+    assert.ok(m, `${rel}: header starts with the mark, the dot and the site name`);
+    assert.equal(m[1], doc.replace('aria-label="Elffuss: all apps"', `aria-label="${labels[lang]}"`), `${rel}: the mark's markup and its ${lang} label`);
+    assert.doesNotMatch(m[2], /Elffuss/, `${rel}: the name no longer repeats "Elffuss"`);
   }
 });
 

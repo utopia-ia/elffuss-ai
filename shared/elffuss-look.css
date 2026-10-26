@@ -51,6 +51,11 @@ header {
   box-shadow: 0 1px 0 rgba(217, 178, 122, .35), 0 12px 30px -20px rgba(0, 0, 0, .6);
 }
 .brand { font-size: 1.25rem; font-weight: 700; text-decoration: none; color: var(--fg); }
+/* The Elffuss mark (elffuss-mark.css) keeps the hub's brass leaf whatever --accent is here, and its word stays light on hover
+   (the line under it is the effect, not the teal of other links). */
+header .elffuss-mark { --accent: #c8a06a; }
+header a.elffuss-mark:hover { color: var(--fg); }
+.brand-sep { font-family: var(--serif); font-size: 1.25rem; }
 header nav a { padding: .35rem .75rem; border-radius: 10px; color: var(--fg); text-decoration: none; transition: background-color .15s, color .15s; }
 header nav a:hover { background: rgba(255, 255, 255, .08); color: var(--accent); }
 footer { color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); }
