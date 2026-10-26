@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "tests/fixtures/ocr/carpeta.expected.json",
-      "sha256": "44e48ff4570100da0b05e3414c2778a2748a4df5db3b60945cb4709c6f1e429a",
+      "sha256": "348b3523f27a92e035a8b5e34a455231e1ce8ba116867f412ce5f7d5c0d08b08",
       "license": "own-work",
       "source": {
         "script": "scripts/make-fixtures.mjs",

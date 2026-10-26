@@ -248,6 +248,16 @@ The OCR task where the model runs (a Worker): PP-OCR detection and recognition u
 
 Largest side, in pixels, the detector reads (its own limit).
 
+### `MAX_PIXELS`
+
+The most pixels an image may have to be read (12000 × 12000): more than the
+other tasks take, for large scans and posters (it is read at MAX_SIDE anyway),
+and still a refusal (too-large) for a picture that would only exhaust memory.
+
+### `LOW_CONFIDENCE`
+
+Below this mean score of a page's characters, its result says it was read with low confidence.
+
 ### `load(ctx)`
 
 | Parameter | Type | |
@@ -260,12 +270,12 @@ Largest side, in pixels, the detector reads (its own limit).
 |---|---|---|
 | `state` | `{ ort: any, det: any, rec: any, cfg: object, vocab: string[] }` |  |
 | `input` | `Blob\|ImageBitmap\|ImageData` |  |
-| `opts` | `{ maxSide?: number, minScore?: number, test?: { failRun?: boolean } \| null }` |  |
+| `opts` | `{ maxSide?: number, minScore?: number, orient?: boolean, test?: { failRun?: boolean } \| null }` |  |
 | `ctx` | `import('../core/task-runtime.js').TaskContext` |  |
 
 ## `sdk/ocr/index.js`
 
-@elffuss/ai/ocr: read the text of an image, in the browser. PP-OCR (PaddleOCR, Apache-2.0) detection and recognition with ONNX Runtime Web, on WebGPU or WebAssembly; the model comes from the Elffuss model store at a pinned revision. Spanish and English, and every other language of its Latin and Chinese character list.
+@elffuss/ai/ocr: read the text of an image, in the browser. PP-OCR (PaddleOCR, Apache-2.0) detection and recognition with ONNX Runtime Web, on WebGPU or WebAssembly; the model comes from the Elffuss model store at a pinned revision. Validated on Spanish text (its tests read Spanish pages exactly); its character list also covers English and the other languages written with those characters, which is not verified in this environment. It has no «¡». A page turned a quarter or upside down is read turned upright.
 
 ### Type `OcrBox`
 
@@ -286,18 +296,18 @@ One line of text: what it says, the recogniser's mean confidence (0-1), its box,
 ### Type `OcrResult`
 
 ```ts
-{ text: string, lines: OcrLine[], width: number, height: number, device: 'webgpu'|'wasm' }
+{ text: string, lines: OcrLine[], width: number, height: number, device: 'webgpu'|'wasm', orientation: 0|90|180|270, lowConfidence: boolean }
 ```
 
-The page text (rows top to bottom, a row's lines joined with a space), the lines in reading order, the input's size and the backend that read it.
+The page text (rows top to bottom, a row's lines joined with a space), the lines in reading order, the input's size and the backend that read it. `orientation`: how many degrees, clockwise, the page was turned to read it (a scan fed sideways or upside down; the boxes are still in the pixels of the input as given). `lowConfidence`: the recogniser's mean score over the page's characters is low, so the text may have mistakes.
 
 ### Type `OcrRunOptions`
 
 ```ts
-{ signal?: AbortSignal, maxSide?: number, minScore?: number }
+{ signal?: AbortSignal, maxSide?: number, minScore?: number, orient?: boolean }
 ```
 
-`maxSide` scales a larger input down before reading it (at most 4000, the detector's limit; boxes are still given in the input's pixels); `minScore` drops lines the recogniser is less sure of (0.5 by default).
+`maxSide` scales a larger input down before reading it (at most 4000, the detector's limit; boxes are still given in the input's pixels); `minScore` drops lines the recogniser is less sure of (0.5 by default); `orient: false` reads the page only as it is given.
 
 ### `ocr`
 
@@ -394,17 +404,75 @@ Text of each strip, in the order given.
 
 Returns `Promise<{ text: string, score: number }[]>`.
 
-### `ocrPage(models, img, { minScore = 0.5, scale = 1, maxBatch = 1 } = {})`
+### `readingStats(strips)`
 
-OCR of one page.
+How a reading of a page looks: how many characters it read, its mean score
+(weighted by characters), and the share of its boxes that stand upright
+(at least 1.5 times taller than wide: lines of a page turned a quarter).
+
+| Parameter | Type | |
+|---|---|---|
+| `strips` | `{ text: string, score: number, points: number[][] }[]` |  |
+
+### `LOW_SCORE`
+
+Below this mean score a page with lying boxes is tried upside down too.
+
+### `UPRIGHT_SHARE`
+
+Share of upright boxes above which a page is taken to be turned a quarter.
+
+### `BETTER_BY`
+
+How much better (mean score) another orientation must read to be kept.
+
+### `orientationsToTry(stats)`
+
+Which orientations to try after reading a page as it is: a quarter turn
+either way when most of its boxes stand upright, half a turn when its boxes
+lie but read badly. Angles are clockwise, in degrees.
+
+| Parameter | Type | |
+|---|---|---|
+| `stats` | `ReturnType<typeof readingStats>` |  |
+
+Returns `number[]`.
+
+### `rotateRgba({ width: W, height: H, data }, deg)`
+
+Turn RGBA pixels clockwise by 90, 180 or 270 degrees.
+
+| Parameter | Type | |
+|---|---|---|
+| `img` | `{ width: number, height: number, data: Uint8ClampedArray\|Uint8Array }` |  |
+| `deg` | `90\|180\|270` |  |
+
+### `unturn([x, y], deg, W, H)`
+
+A point of the turned image back in the pixels of the image as given
+(`W` × `H`, before turning it `deg` degrees clockwise).
+
+| Parameter | Type | |
+|---|---|---|
+| `p` | `number[]` |  |
+| `deg` | `number` |  |
+| `W` | `number` |  |
+| `H` | `number` |  |
+
+### `ocrPage(models, img, { minScore = 0.5, scale = 1, maxBatch = 1, orient = true } = {})`
+
+OCR of one page. A page that is turned (a scan fed sideways or upside down)
+is detected from its first reading and read again turned upright; the result
+says the angle (`orientation`, clockwise degrees it was turned to read it),
+and the boxes are always in the pixels of the page as given.
 
 | Parameter | Type | |
 |---|---|---|
 | `models` | `OcrModels` |  |
 | `img` | `{ width: number, height: number, data: Uint8ClampedArray\|Uint8Array }` | RGBA |
-| `[opts]` | `{ minScore?: number, scale?: number, maxBatch?: number }` | `scale` multiplies every coordinate (to report boxes in the pixels of a larger original); `maxBatch` strips per recogniser run: 1 by default, so a line reads the same whatever else is on the page (a batch pads each strip to its widest one) |
+| `[opts]` | `{ minScore?: number, scale?: number, maxBatch?: number, orient?: boolean }` | `scale` multiplies every coordinate (to report boxes in the pixels of a larger original); `maxBatch` strips per recogniser run: 1 by default, so a line reads the same whatever else is on the page (a batch pads each strip to its widest one); `orient` false reads the page only as it is |
 
-Returns `Promise<{ text: string, lines: OcrLine[] }>`.
+Returns `Promise<{ text: string, lines: OcrLine[], orientation: 0\|90\|180\|270, meanScore: number }>`.
 
 ## `sdk/ocr/rec.js`
 

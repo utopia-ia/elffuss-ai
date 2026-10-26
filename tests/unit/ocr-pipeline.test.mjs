@@ -108,7 +108,40 @@ test('lines below the minimum score are dropped; a blank page has no text', asyn
   assert.deepEqual([weak.text, weak.lines.length], ['', 0]);
   assert.equal((await ocrPage(models(fakeRec({ weak: true })), page(), { minScore: 0 })).lines.length, 2);
   const blank = { width: 300, height: 200, data: new Uint8ClampedArray(300 * 200 * 4).fill(255) };
-  assert.deepEqual(await ocrPage(models(fakeRec()), blank), { lines: [], text: '' });
+  assert.deepEqual(await ocrPage(models(fakeRec()), blank), { lines: [], text: '', orientation: 0, meanScore: 0 });
+});
+
+test('turning a page: pixels go where a clockwise turn puts them, and points come back', async () => {
+  const { rotateRgba, unturn } = await import('../../sdk/ocr/pipeline.js');
+  // A 3 × 2 image whose pixel (x, y) holds the value 10·y + x in its red channel.
+  const W = 3, H = 2;
+  const img = { width: W, height: H, data: new Uint8ClampedArray(W * H * 4) };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) img.data[(y * W + x) * 4] = 10 * y + x;
+  const at = (im, x, y) => im.data[(y * im.width + x) * 4];
+  const r90 = rotateRgba(img, 90), r180 = rotateRgba(img, 180), r270 = rotateRgba(img, 270);
+  assert.deepEqual([r90.width, r90.height, r180.width, r180.height, r270.width, r270.height], [2, 3, 3, 2, 2, 3]);
+  assert.equal(at(r90, H - 1, 0), at(img, 0, 0), '90: the top-left corner goes to the top right');
+  assert.equal(at(r180, W - 1, H - 1), at(img, 0, 0), '180: to the bottom right');
+  assert.equal(at(r270, 0, W - 1), at(img, 0, 0), '270: to the bottom left');
+  // Every pixel centre of a turned image maps back to the centre of the pixel it came from.
+  for (const [deg, r] of [[90, r90], [180, r180], [270, r270]]) {
+    for (let y = 0; y < r.height; y++) for (let x = 0; x < r.width; x++) {
+      const [ox, oy] = unturn([x + 0.5, y + 0.5], deg, W, H);
+      assert.equal(at(img, Math.floor(ox), Math.floor(oy)), at(r, x, y), `${deg}: (${x}, ${y})`);
+    }
+  }
+  assert.deepEqual(unturn([4, 5], 0, W, H), [4, 5]);
+});
+
+test('which orientations a first reading asks for', async () => {
+  const { readingStats, orientationsToTry, LOW_SCORE } = await import('../../sdk/ocr/pipeline.js');
+  const strip = (w, h, score, text = 'palabra') => ({ text, score, points: [[0, 0], [w, 0], [w, h], [0, h]] });
+  assert.deepEqual(orientationsToTry(readingStats([])), [], 'nothing found: nothing to turn');
+  assert.deepEqual(orientationsToTry(readingStats([strip(200, 30, 0.98), strip(150, 30, 0.95)])), [], 'lying boxes that read well');
+  assert.deepEqual(orientationsToTry(readingStats([strip(30, 200, 0.97), strip(30, 150, 0.96), strip(200, 30, 0.9)])), [90, 270], 'most boxes upright: a quarter turn either way');
+  assert.deepEqual(orientationsToTry(readingStats([strip(200, 30, LOW_SCORE - 0.2), strip(150, 30, 0.5)])), [180], 'lying boxes that read badly: upside down');
+  const st = readingStats([strip(10, 10, 1, 'ab'), strip(10, 10, 0.5, 'abcd')]);
+  assert.ok(Math.abs(st.meanScore - (2 * 1 + 4 * 0.5) / 6) < 1e-9, 'the mean score is weighted by characters');
 });
 
 test('a recogniser whose classes do not fit the dictionary is refused', async () => {

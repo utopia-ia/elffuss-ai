@@ -89,7 +89,8 @@ export function jsonDocument(items, meta) {
       f.device = it.device || null;
       f.pages = (it.pages || []).map(p => (p.error
         ? { page: p.page, error: p.error }
-        : { page: p.page, width: p.width, height: p.height, text: p.text, lines: p.lines.map(l => ({ text: l.text, score: l.score, box: l.box, polygon: l.polygon })) }));
+        : { page: p.page, width: p.width, height: p.height, ...(p.orientation ? { orientation: p.orientation } : {}), ...(p.lowConfidence ? { lowConfidence: true } : {}),
+          text: p.text, lines: p.lines.map(l => ({ text: l.text, score: l.score, box: l.box, polygon: l.polygon })) }));
     }
     return f;
   });

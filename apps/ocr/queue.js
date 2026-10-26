@@ -6,7 +6,10 @@
 // so at most two decoded pages are alive at once; only text and boxes are
 // kept. A file that cannot be opened or read is reported and the queue goes
 // on; a page that makes the reader fail is read once more scaled down to
-// 2560 pixels, and reported as too large if it fails again. A failure of the
+// 2560 pixels, and reported with the failure's own code (run-failed or
+// out-of-memory, never too-large: the file is not too large) if it fails
+// again. The site's runner has already tried WebAssembly by then when the
+// first attempt was on WebGPU. A failure of the
 // model store, of the model or of the runtimes stops the queue, keeping what
 // was read. Pausing waits between pages; cancelling stops at once.
 // No DOM here: documents and the reader are passed in.
@@ -139,15 +142,22 @@ async function readPage(item, n, input, { read, signal, maxSide, retrySide }) {
   } catch (err) {
     const code = codeOf(err);
     if (STOP_CODES.has(code)) throw err;
-    return { page: n, error: code === 'decode-failed' || code === 'unsupported-format' ? code : 'too-large' };
+    return { page: n, error: INPUT_CODES.has(code) || code === 'out-of-memory' ? code : 'run-failed' };
   }
 }
 
-/** One page's result (the reader gives boxes in the page's own pixels). */
+/**
+ * One page's result (the reader gives boxes in the page's own pixels). A page
+ * read turned (a scan fed sideways or upside down) says by how much, and one
+ * read with a low mean score says so; both only when it is the case.
+ */
 export function pageResult(n, item, r) {
   item.device = r.device;
   const lines = r.lines.map(l => ({ text: l.text, score: l.score, box: { ...l.box }, polygon: l.polygon.map(p => [p[0], p[1]]) }));
-  return { page: n, width: r.width, height: r.height, text: r.text, lines };
+  const out = { page: n, width: r.width, height: r.height, text: r.text, lines };
+  if (r.orientation) out.orientation = r.orientation;
+  if (r.lowConfidence) out.lowConfidence = true;
+  return out;
 }
 
 function failItem(item, error) {

@@ -182,8 +182,8 @@ test('the expected files of the test folder are what the export functions give f
   assert.ok(existsSync(join(FIX, 'carpeta.expected.md')));
 });
 
-test('PDF pages: 200 dpi, longest side at most 4000 pixels', () => {
-  assert.deepEqual(pdf.pageSize(595.28, 841.89), { scale: 200 / 72, width: 1653, height: 2338 });
+test('PDF pages: 300 dpi, longest side at most 4000 pixels', () => {
+  assert.deepEqual(pdf.pageSize(595.28, 841.89), { scale: 300 / 72, width: 2480, height: 3507 });
   const big = pdf.pageSize(2000, 1000);
   assert.deepEqual([big.width, big.height], [4000, 2000]);
 });

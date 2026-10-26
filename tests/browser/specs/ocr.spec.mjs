@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { readZip } from '../../../sdk/core/zip.js';
 import { normalizeText, characterErrorRate } from '../../../sdk/ocr/order.js';
 import { chooseVariant } from '../../../sdk/core/device.js';
+import { variantFiles } from '../../../sdk/core/registry.js';
 import { fill } from '../../../scripts/lib/template.mjs';
 import { formatMB } from '../../../scripts/lib/pages.mjs';
 import { projection } from '../../../scripts/make-fixtures.mjs';
@@ -59,6 +60,12 @@ function checkLines(t, lines, width, height, label) {
     if (!t.ok(ok, `${label}: line "${l.text}" has a sane box and score (${JSON.stringify(l.box)}, ${l.score})`)) return;
   }
 }
+
+/** The pinned URLs of the variant this browser uses. */
+const variantUrls = (t, site) => {
+  const m = t.registry.models[site.models[0]];
+  return variantFiles(m, chooseVariant(m, 'auto', t.probe).variant).map(f => f.url).sort();
+};
 
 function checkDevice(t, r, site) {
   t.equal(r.device, expectedDevice(site, t.registry, t.config), 'backend used');
@@ -103,6 +110,8 @@ export default [
       await t.noCsp(page);
       t.noPageErrors();
       t.networkClean(site);
+      t.equal(t.hubFull(), variantUrls(t, site), 'downloaded exactly the files of the variant, once each');
+      t.hubOnly(variantUrls(t, site));
       const side = await page.evaluate(() => globalThis.__elffuss.ocr.readSide);
       t.ok(side === 4000 || side === 2560, `pages are read up to ${side} pixels`);
       t.note(`${r.device}; ${f.pages[0].lines.length} lines; pages up to ${side} px`);
@@ -356,6 +365,53 @@ export default [
         t.equal(r.fallback, null, 'no change of backend with WASM');
       }
       t.noPageErrors();
+    },
+  },
+  {
+    // A scan fed sideways or upside down: the page reads it upright, says by
+    // how much it turned it, and gives the boxes on the page as it was given.
+    name: 'turned pages (a quarter either way, and upside down) read upright, exactly',
+    sites: ['ocr'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/');
+      const s = t.strings.ocr.es;
+      const turned = await page.evaluate(async b64 => {
+        const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: 'image/png' }));
+        const out = [];
+        for (const [name, deg] of [['girada-90.png', 90], ['girada-180.png', 180], ['girada-270.png', 270]]) {
+          const quarter = deg !== 180;
+          const c = new OffscreenCanvas(quarter ? bmp.height : bmp.width, quarter ? bmp.width : bmp.height);
+          const g = c.getContext('2d');
+          g.translate(c.width / 2, c.height / 2);
+          g.rotate(deg * Math.PI / 180);
+          g.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+          const bytes = new Uint8Array(await (await c.convertToBlob({ type: 'image/png' })).arrayBuffer());
+          let x = '';
+          for (let i = 0; i < bytes.length; i += 0x8000) x += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          out.push({ name, deg, b64: btoa(x) });
+        }
+        return out;
+      }, readFileSync(join(FIX, 'factura.png')).toString('base64'));
+      await choose(page, turned.map(f => ({ name: f.name, mimeType: 'image/png', buffer: Buffer.from(f.b64, 'base64') })));
+      const r = await readAll(page);
+      if (!t.ok(!r.errors.length, `no error: ${JSON.stringify(r.errors)} ${r.status}`)) return;
+      const doc = JSON.parse((await docs(page)).json);
+      const want = normalizeText(expected['factura.png'].text);
+      for (const f of turned) {
+        const got = doc.files.find(x => x.path === f.name);
+        const p = got?.pages?.[0];
+        if (!t.ok(p, `${f.name}: read`)) continue;
+        t.equal(normalizeText(p.text), want, `${f.name}: the text, exactly (CER ${characterErrorRate(p.text, want).toFixed(3)})`);
+        // It was turned ${deg} clockwise, so it reads upright turned the rest of the way.
+        t.equal(p.orientation, (360 - f.deg) % 360, `${f.name}: the page says it turned it`);
+        t.equal([p.width, p.height], f.deg === 180 ? [expected['factura.png'].width, expected['factura.png'].height] : [expected['factura.png'].height, expected['factura.png'].width], `${f.name}: the size of the page as given`);
+        checkLines(t, p.lines, p.width, p.height, f.name);
+      }
+      const notes = await page.evaluate(() => [...document.querySelectorAll('[data-role="turned"]')].map(n => n.textContent));
+      t.equal(notes.sort(), [90, 180, 270].map(d => fill(s['page.turned'], { deg: d })).sort(), 'each card says how much its page was turned');
+      t.noPageErrors();
+      await t.noCsp(page);
     },
   },
 ];

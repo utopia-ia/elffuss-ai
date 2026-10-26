@@ -4,8 +4,10 @@
 // @elffuss/ai/ocr: read the text of an image, in the browser. PP-OCR (PaddleOCR,
 // Apache-2.0) detection and recognition with ONNX Runtime Web, on WebGPU or
 // WebAssembly; the model comes from the Elffuss model store at a pinned
-// revision. Spanish and English, and every other language of its Latin and
-// Chinese character list.
+// revision. Validated on Spanish text (its tests read Spanish pages exactly);
+// its character list also covers English and the other languages written with
+// those characters, which is not verified in this environment. It has no «¡».
+// A page turned a quarter or upside down is read turned upright.
 //
 //   import { Ocr } from '@elffuss/ai/ocr';
 //   const reader = new Ocr({ device: 'auto' });
@@ -20,13 +22,19 @@ import { Task, oneShot } from '../core/task.js';
  * @typedef {{ text: string, score: number, box: OcrBox, polygon: number[][] }} OcrLine
  *   One line of text: what it says, the recogniser's mean confidence (0-1), its
  *   box, and its four corners (top-left, top-right, bottom-right, bottom-left).
- * @typedef {{ text: string, lines: OcrLine[], width: number, height: number, device: 'webgpu'|'wasm' }} OcrResult
+ * @typedef {{ text: string, lines: OcrLine[], width: number, height: number, device: 'webgpu'|'wasm',
+ *   orientation: 0|90|180|270, lowConfidence: boolean }} OcrResult
  *   The page text (rows top to bottom, a row's lines joined with a space), the
  *   lines in reading order, the input's size and the backend that read it.
- * @typedef {{ signal?: AbortSignal, maxSide?: number, minScore?: number }} OcrRunOptions
+ *   `orientation`: how many degrees, clockwise, the page was turned to read it
+ *   (a scan fed sideways or upside down; the boxes are still in the pixels of
+ *   the input as given). `lowConfidence`: the recogniser's mean score over the
+ *   page's characters is low, so the text may have mistakes.
+ * @typedef {{ signal?: AbortSignal, maxSide?: number, minScore?: number, orient?: boolean }} OcrRunOptions
  *   `maxSide` scales a larger input down before reading it (at most 4000, the
  *   detector's limit; boxes are still given in the input's pixels); `minScore`
- *   drops lines the recogniser is less sure of (0.5 by default).
+ *   drops lines the recogniser is less sure of (0.5 by default); `orient: false`
+ *   reads the page only as it is given.
  */
 
 /**

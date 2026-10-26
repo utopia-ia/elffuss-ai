@@ -7,7 +7,8 @@
 // this browser; each card fills in when its file is done, with its text, its
 // lines and their boxes. The results are kept per file and page and leave as
 // one .txt per file, a Markdown and a JSON document, or all of them in a ZIP
-// made here. Nothing is sent anywhere: the only download is the model.
+// made here. Nothing is sent anywhere: what is downloaded is the model (through
+// the Elffuss model store) and the software that runs it, from this site.
 
 import { createShell } from './shared/shell.js';
 import { Ocr } from './sdk/ocr/index.js';
@@ -118,6 +119,7 @@ function summaryText() {
 }
 
 async function add(entries, how) {
+  shell.retryStorage(); // a store that was down when the page loaded may be back
   if (!entries.length) { shell.setStatus(t('list.empty')); return; }
   const root = commonRoot(entries.map(e => e.path));
   if (root && how !== 'files') {
@@ -194,6 +196,8 @@ function fillCard(it) {
       const section = el('section', { data: { page: String(p.page) } });
       if (multi) section.append(el('h4', { textContent: t('page.title', { n: p.page }) }));
       if (p.error) { section.append(el('p', { className: 'muted', textContent: t('reason.' + p.error) })); children.push(section); continue; }
+      if (p.orientation) section.append(el('p', { className: 'muted', textContent: t('page.turned', { deg: p.orientation }), data: { role: 'turned' } }));
+      if (p.lowConfidence) section.append(el('p', { textContent: t('page.lowConfidence'), data: { role: 'low-confidence' } }));
       const details = el('details', { open: state.items.filter(x => x.reason !== 'hidden').length === 1 },
         el('summary', { textContent: p.text ? t('text.title') : t('reason.no-text') }),
         el('pre', { textContent: p.text, data: { role: 'text' } }));
@@ -314,7 +318,7 @@ const exportTexts = () => ({
   header: t('export.header', { tool: TOOL, model: model.name[lang], author: model.base.author, license: model.license }),
   page: t('page.title', { n: '{n}' }),
   noText: t('export.noText'),
-  reasons: Object.fromEntries(['hidden', 'unsupported-format', 'pdf-password', 'decode-failed', 'too-large', 'run-failed', 'no-text', 'not-processed'].map(k => [k, t('reason.' + k)])),
+  reasons: Object.fromEntries(['hidden', 'unsupported-format', 'pdf-password', 'decode-failed', 'too-large', 'out-of-memory', 'run-failed', 'no-text', 'not-processed'].map(k => [k, t('reason.' + k)])),
 });
 
 function documents() {
@@ -384,7 +388,7 @@ if (config.testHooks) {
     get reading() { return state.reading; },
     get waiting() { return Boolean(state.waiting); },
     get done() { return state.done; },
-    items: () => state.items.map(i => ({ path: i.path, status: finalStatus(i), reason: i.reason ?? null, error: i.error ?? null, kind: i.kind, type: i.type, pages: (i.pages || []).map(p => ({ page: p.page, text: p.text ?? null, error: p.error ?? null, lines: p.lines?.length ?? 0 })) })),
+    items: () => state.items.map(i => ({ path: i.path, status: finalStatus(i), reason: i.reason ?? null, error: i.error ?? null, kind: i.kind, type: i.type, pages: (i.pages || []).map(p => ({ page: p.page, text: p.text ?? null, error: p.error ?? null, lines: p.lines?.length ?? 0, orientation: p.orientation ?? 0, lowConfidence: Boolean(p.lowConfidence) })) })),
     documents,
     pause, resume,
     readSide: READ_SIDE,

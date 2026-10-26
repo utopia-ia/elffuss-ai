@@ -5,15 +5,18 @@
 // its library on the page, its Worker created through the Trusted Types
 // policy, and its decoders, character maps, standard fonts and colour profile
 // fetched from /vendor/. One document open at a time; each page is drawn at
-// 200 dpi (less when its longest side would pass 4000 pixels), handed over as
+// 300 dpi (less when its longest side would pass 4000 pixels), handed over as
 // ImageData and its canvas released at once. The text a digital PDF
 // already carries is not used: every page is read like a scan.
 
 import { scriptUrl } from './sdk/core/tt.js';
 import { assertPdfjsRuntime } from './sdk/core/runtimes.js';
 
-/** Resolution of the rendered pages. */
-export const PDF_DPI = 200;
+/**
+ * Resolution of the rendered pages. At 200 dpi small type lost detail: «ü» in a
+ * 16 pt serif read as «iü»; at 300 it reads as in an image of the same text.
+ */
+export const PDF_DPI = 300;
 
 const coded = (code, message, cause) => Object.assign(new Error(message), { code, cause });
 

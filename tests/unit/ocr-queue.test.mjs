@@ -74,12 +74,12 @@ test('a file that cannot be opened or decoded is reported and the queue goes on'
   assert.deepEqual(items[4].pages.map(p => p.error ?? 'ok'), ['ok', 'decode-failed'], 'a page that fails keeps the others');
 });
 
-test('a reader failure is tried once more at 2560 pixels; twice is too large', async () => {
-  const items = [item('a.png'), item('b.png'), item('c.png')];
-  const w = world({ readErrorOnce: { 'a.png#1': { error: coded('run-failed') } }, readError: { 'b.png#1': coded('run-failed') } });
+test('a reader failure is tried once more at 2560 pixels; twice keeps the failure\'s own code, never too-large', async () => {
+  const items = [item('a.png'), item('b.png'), item('c.png'), item('d.png')];
+  const w = world({ readErrorOnce: { 'a.png#1': { error: coded('run-failed') } }, readError: { 'b.png#1': coded('run-failed'), 'd.png#1': coded('out-of-memory') } });
   const r = await readQueue(items, w, { signal: new AbortController().signal });
   assert.equal(r.stopped, null);
-  assert.deepEqual(items.map(i => [i.status, i.error ?? null]), [['ok', null], ['error', 'too-large'], ['ok', null]]);
+  assert.deepEqual(items.map(i => [i.status, i.error ?? null]), [['ok', null], ['error', 'run-failed'], ['ok', null], ['error', 'out-of-memory']]);
   assert.deepEqual(w.log.filter(l => l.startsWith('read a.png') || l.startsWith('read b.png')), [`read a.png#1 ${MAX_SIDE}`, `read a.png#1 ${RETRY_SIDE}`, `read b.png#1 ${MAX_SIDE}`, `read b.png#1 ${RETRY_SIDE}`]);
 });
 
