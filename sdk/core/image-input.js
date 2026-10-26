@@ -62,7 +62,14 @@ export function imageSize(head) {
   const i32le = i => b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24);
   const ok = (width, height) => (width > 0 && height > 0 ? { width, height } : null);
   const has = n => b.length >= n;
-  if (type === 'image/png') return has(24) && b[12] === 0x49 && b[13] === 0x48 && b[14] === 0x44 && b[15] === 0x52 ? ok(u32be(16), u32be(20)) : null;
+  if (type === 'image/png') {
+    // Only a header that PNG allows: a 13-byte IHDR, sides up to 2^31 − 1, a known
+    // bit depth and colour type. Anything else is left to the decoder, which fails.
+    if (!has(26) || u32be(8) !== 13 || !(b[12] === 0x49 && b[13] === 0x48 && b[14] === 0x44 && b[15] === 0x52)) return null;
+    const w = u32be(16), h = u32be(20);
+    if (w > 0x7fffffff || h > 0x7fffffff || ![1, 2, 4, 8, 16].includes(b[24]) || ![0, 2, 3, 4, 6].includes(b[25])) return null;
+    return ok(w, h);
+  }
   if (type === 'image/gif') return has(10) ? ok(u16le(6), u16le(8)) : null;
   if (type === 'image/bmp') {
     if (!has(26)) return null;
