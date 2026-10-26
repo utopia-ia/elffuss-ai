@@ -107,6 +107,32 @@ export function isShaderError(err) {
 }
 
 /**
+ * True when this realm can grow a WebAssembly memory to `bytes`, as the
+ * WebAssembly runtime will have to for a large model. It asks for the pages
+ * the way that runtime does, before anything is downloaded; a browser that
+ * caps WebAssembly lower (or cannot reserve that much) answers false. The probe
+ * is dropped at once, and V8 collects it before failing a later allocation.
+ * @param {number} bytes
+ * @param {{ WebAssembly?: any }} [scope] replaces the global WebAssembly (tests)
+ */
+export function canGrowWasmMemory(bytes, scope = globalThis) {
+  const W = scope.WebAssembly;
+  if (typeof W?.Memory !== 'function') return false;
+  const pages = Math.ceil(bytes / 65536);
+  if (!(pages >= 1 && pages <= 65536)) return false;
+  let mem = null;
+  try {
+    mem = new W.Memory({ initial: 1, maximum: pages });
+    if (pages > 1) mem.grow(pages - 1);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    mem = null;
+  }
+}
+
+/**
  * Threads for ONNX Runtime's WebAssembly backend: one unless the page is
  * cross-origin isolated (the threaded build needs SharedArrayBuffer).
  * @param {{ isolated?: boolean, cores?: number }} [env]
