@@ -118,12 +118,14 @@ test('layout sheets only lay out; their only colours are the eight variables', (
   }
 });
 
-test('tokens.css defines the eight variables and nothing else; elffuss-look.css is empty', () => {
+test('tokens.css defines the eight variables and nothing else; elffuss-look.css loads nothing', () => {
   const decl = declarations(readFileSync(join(ROOT, 'shared', 'tokens.css'), 'utf8'));
   assert.deepEqual(decl.map(d => d.prop).sort(), [...TOKENS].sort());
   for (const d of decl) assert.match(d.value, /^#[0-9a-f]{6}$/);
-  const look = readFileSync(join(ROOT, 'shared', 'elffuss-look.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').trim();
-  assert.equal(look, '');
+  // The look sheet is the UI session's: it may set colours and type, but it cannot
+  // load fonts, images or other sheets (the CSP would refuse them: font-src 'none').
+  const look = readFileSync(join(ROOT, 'shared', 'elffuss-look.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.doesNotMatch(look, /@import|@font-face|url\s*\(/i);
 });
 
 test('scripts write no colours, no inline styles and no HTML', () => {
