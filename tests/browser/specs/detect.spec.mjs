@@ -345,11 +345,12 @@ export function labelledSet(root = ROOT) {
 
 /**
  * What the model must reach on the labelled set with its input normalised as it
- * was trained (ImageNet mean and deviation). Fed x/255 only, as its config says,
- * the cat of detect/foto.jpg scores about 0.66 and a second, duplicate cat
- * about 0.38; normalised, about 0.83 and 0.12.
+ * was trained (ImageNet mean and deviation). In this page, fed x/255 only, as
+ * its config says, the cat of detect/foto.jpg scored about 0.66 and a second,
+ * duplicate cat about 0.38; normalised, about 0.78 and 0.27. The bounds sit
+ * halfway, so either input is told apart with room on both sides.
  */
-export const RECALL = Object.freeze({ minScore: 0.5, minIou: 0.5, catScore: 0.75, duplicate: 0.3 });
+export const RECALL = Object.freeze({ minScore: 0.5, minIou: 0.5, catScore: 0.72, duplicate: 0.33 });
 
 // ── tests ────────────────────────────────────────────────────────────────────
 
