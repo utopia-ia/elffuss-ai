@@ -1,0 +1,172 @@
+{
+  "schema": "elffuss-ocr/1",
+  "tool": "ocr.elffuss.com",
+  "model": {
+    "id": "ocr/pp-ocrv6-small",
+    "det": {
+      "repo": "PaddlePaddle/PP-OCRv6_small_det_onnx",
+      "revision": "28fe5895c24fd108c19eb3e8479f4ab385fbfc62"
+    },
+    "rec": {
+      "repo": "PaddlePaddle/PP-OCRv6_small_rec_onnx",
+      "revision": "b8f84f0b80c529de40b4fbb3544b84fa7233a513"
+    },
+    "license": "Apache-2.0"
+  },
+  "files": [
+    {
+      "path": ".DS_Store",
+      "status": "skipped",
+      "reason": "hidden"
+    },
+    {
+      "path": "escaneos/carta.tif",
+      "type": "image/tiff",
+      "size": 20376,
+      "status": "ok",
+      "pages": [
+        {
+          "page": 1,
+          "width": 1700,
+          "height": 520,
+          "text": "CARTA DE PRUEBA\nEsta página es una imagen en blanco y negro.\nSe lee igual que una imagen normal.",
+          "lines": [
+            "CARTA DE PRUEBA",
+            "Esta página es una imagen en blanco y negro.",
+            "Se lee igual que una imagen normal."
+          ]
+        },
+        {
+          "page": 2,
+          "width": 1700,
+          "height": 420,
+          "text": "Segunda página del mismo archivo.\nGracias por leer hasta aquí.",
+          "lines": [
+            "Segunda página del mismo archivo.",
+            "Gracias por leer hasta aquí."
+          ]
+        }
+      ]
+    },
+    {
+      "path": "facturas/2026/enero.png",
+      "type": "image/png",
+      "size": 103579,
+      "status": "ok",
+      "pages": [
+        {
+          "page": 1,
+          "width": 1600,
+          "height": 1000,
+          "text": "FACTURA Nº 2026/0147\nPanadería La Espiga, S. L.\nCalle del Olmo 12, 3º A, 28801 Alcalá de Henares\nConcepto: revisión anual del horno de leña\n¿Incluye desplazamiento? Sí, dentro de la zona.\nImporte: 1.234,56 € (IVA incluido)\n«Gracias por su confianza»\nÑandú, pingüino y cigüeña · ÁÉÍÓÚÜ",
+          "lines": [
+            "FACTURA Nº 2026/0147",
+            "Panadería La Espiga, S. L.",
+            "Calle del Olmo 12, 3º A, 28801 Alcalá de Henares",
+            "Concepto: revisión anual del horno de leña",
+            "¿Incluye desplazamiento? Sí, dentro de la zona.",
+            "Importe: 1.234,56 € (IVA incluido)",
+            "«Gracias por su confianza»",
+            "Ñandú, pingüino y cigüeña",
+            "· ÁÉÍÓÚÜ"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "facturas/2026/FEBRERO.JPG",
+      "type": "image/jpeg",
+      "size": 62971,
+      "status": "ok",
+      "pages": [
+        {
+          "page": 1,
+          "width": 1400,
+          "height": 700,
+          "text": "FACTURA Nº 2026/0212\nFerretería El Clavo, S. A.\nAvenida de la Paz 7, 41001 Sevilla\nConcepto: tornillos, tuercas y arandelas\nImporte: 86,40 € (IVA incluido)",
+          "lines": [
+            "FACTURA Nº 2026/0212",
+            "Ferretería El Clavo, S. A.",
+            "Avenida de la Paz 7, 41001 Sevilla",
+            "Concepto: tornillos, tuercas y arandelas",
+            "Importe: 86,40 € (IVA incluido)"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "fotos/escaneo.heic",
+      "type": "image/heic",
+      "size": 64,
+      "status": "skipped",
+      "reason": "unsupported-format"
+    },
+    {
+      "path": "fotos/rota.png",
+      "type": "image/png",
+      "size": 61,
+      "status": "error",
+      "error": "decode-failed"
+    },
+    {
+      "path": "fotos/Thumbs.db",
+      "status": "skipped",
+      "reason": "hidden"
+    },
+    {
+      "path": "leeme.txt",
+      "type": null,
+      "size": 67,
+      "status": "skipped",
+      "reason": "unsupported-format"
+    },
+    {
+      "path": "notas/acta.pdf",
+      "type": "application/pdf",
+      "size": 30137,
+      "status": "ok",
+      "pages": [
+        {
+          "page": 1,
+          "width": 2478,
+          "height": 3507,
+          "text": "ACTA DE LA REUNIÓN DE VECINOS\nComunidad de la calle Mayor 5, Toledo\nAsistentes: once propietarios de doce.\nPrimer punto: arreglo del ascensor.\nSe aprueba pedir tres presupuestos.",
+          "lines": [
+            "ACTA DE LA REUNIÓN DE VECINOS",
+            "Comunidad de la calle Mayor 5, Toledo",
+            "Asistentes: once propietarios de doce.",
+            "Primer punto: arreglo del ascensor.",
+            "Se aprueba pedir tres presupuestos."
+          ]
+        },
+        {
+          "page": 2,
+          "width": 2478,
+          "height": 3507,
+          "text": "Segundo punto: limpieza del portal.\nSe cambia de empresa el próximo mes.\nRuegos y preguntas: ninguno.\nFirma la presidenta de la comunidad.",
+          "lines": [
+            "Segundo punto: limpieza del portal.",
+            "Se cambia de empresa el próximo mes.",
+            "Ruegos y preguntas: ninguno.",
+            "Firma la presidenta de la comunidad."
+          ]
+        }
+      ]
+    },
+    {
+      "path": "notas/vacio.png",
+      "type": null,
+      "size": 0,
+      "status": "error",
+      "error": "decode-failed"
+    }
+  ],
+  "summary": {
+    "files": 10,
+    "ok": 4,
+    "skipped": 4,
+    "errors": 2,
+    "notProcessed": 0,
+    "pages": 6
+  }
+}

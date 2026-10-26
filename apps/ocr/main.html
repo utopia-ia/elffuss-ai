@@ -1,0 +1,40 @@
+  <h1>{{t:title}}</h1>
+  <p>{{t:intro}}</p>
+  <label class="drop">
+    <span>{{t:drop}}</span>
+    <input class="visually-hidden" type="file" multiple accept="{{v:accept}}" data-input="files">
+  </label>
+  <p class="actions">
+    <button class="ghost" type="button" data-action="pick-folder">{{t:action.pickFolder}}</button>
+    <button class="ghost" type="button" data-action="take-photo">{{t:action.takePhoto}}</button>
+  </p>
+  <input class="visually-hidden" type="file" webkitdirectory multiple tabindex="-1" aria-hidden="true" data-input="folder">
+  <input class="visually-hidden" type="file" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true" data-input="camera">
+  <p class="muted" data-role="folder-note">{{t:folder.note}}</p>
+  <p data-role="model">{{html:modelLine}}</p>
+  <p class="muted" data-role="model-note" hidden></p>
+  <section data-role="queue" hidden>
+    <h2>{{t:queue.title}}</h2>
+    <p data-role="queue-summary"></p>
+    <p class="actions">
+      <button class="ghost" type="button" data-action="pause" hidden>{{t:action.pause}}</button>
+      <button class="ghost" type="button" data-action="resume" hidden>{{t:action.resume}}</button>
+      <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>
+      <button class="ghost" type="button" data-action="clear" hidden>{{t:action.clear}}</button>
+    </p>
+  </section>
+  <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
+  <progress hidden></progress>
+  <p class="status" role="status" aria-live="polite"></p>
+  <section class="result" hidden>
+    <h2>{{t:result.title}}</h2>
+    <p class="muted" data-role="result-summary"></p>
+    <p class="actions" data-role="exports" hidden>
+      <button class="ghost" type="button" data-action="download-zip">{{t:action.downloadZip}}</button>
+      <button class="ghost" type="button" data-action="download-md">{{t:action.downloadMd}}</button>
+      <button class="ghost" type="button" data-action="download-json">{{t:action.downloadJson}}</button>
+      <button class="ghost" type="button" data-action="copy-all">{{t:action.copyAll}}</button>
+    </p>
+    <ol class="files" data-role="files"></ol>
+  </section>
+{{html:storage}}

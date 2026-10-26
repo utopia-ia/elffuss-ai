@@ -13,6 +13,7 @@
     "./depth/sizes": "./sdk/depth/sizes.js",
     "./detect": "./sdk/detect/index.js",
     "./detect/sizes": "./sdk/detect/sizes.js",
+    "./ocr": "./sdk/ocr/index.js",
     "./ocr/sizes": "./sdk/ocr/sizes.js",
     "./package.json": "./package.json"
   },

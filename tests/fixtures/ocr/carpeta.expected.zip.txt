@@ -1,0 +1,6 @@
+texto/escaneos/carta.tif.txt
+texto/facturas/2026/enero.png.txt
+texto/facturas/2026/FEBRERO.JPG.txt
+texto/notas/acta.pdf.txt
+texto.md
+texto.json
