@@ -11,19 +11,23 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-Apache--2.0-c8a06a" alt="Licence: Apache-2.0"></a>
-  <a href="https://tools.elffuss.com/"><img src="https://img.shields.io/badge/live-tools.elffuss.com-54dcc6" alt="Live: tools.elffuss.com"></a>
+  <a href="https://tools.elffuss.com/en/"><img src="https://img.shields.io/badge/live-tools.elffuss.com-54dcc6" alt="Live: tools.elffuss.com"></a>
 </p>
 
 <table>
   <tr>
-    <td width="25%"><a href="https://cutout.elffuss.com/"><img src="docs/img/cutout.webp" alt="cutout.elffuss.com: a dog on grass, half with its background removed"></a></td>
-    <td width="25%"><a href="https://ocr.elffuss.com/"><img src="docs/img/ocr.webp" alt="ocr.elffuss.com: the text of a photographed invoice, with a box around each line"></a></td>
-    <td width="25%"><a href="https://detect.elffuss.com/"><img src="docs/img/detect.webp" alt="detect.elffuss.com: a dog and a cat, each in a labelled box"></a></td>
-    <td width="25%"><a href="https://depth.elffuss.com/"><img src="docs/img/depth.webp" alt="depth.elffuss.com: the colour depth map of a trail sign in a field"></a></td>
+    <td width="50%"><a href="https://cutout.elffuss.com/en/"><img src="docs/img/cutout.webp" alt="cutout.elffuss.com: a dog on grass, half with its background removed"></a></td>
+    <td width="50%"><a href="https://ocr.elffuss.com/en/"><img src="docs/img/ocr.webp" alt="ocr.elffuss.com: the text read from an invoice, with a box around each line"></a></td>
   </tr>
   <tr>
     <td align="center"><b>Remove background</b></td>
     <td align="center"><b>Read text</b></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="https://detect.elffuss.com/en/"><img src="docs/img/detect.webp" alt="detect.elffuss.com: a dog and a cat, each in a labelled box"></a></td>
+    <td width="50%"><a href="https://depth.elffuss.com/en/"><img src="docs/img/depth.webp" alt="depth.elffuss.com: the colour depth map of a trail sign in a field"></a></td>
+  </tr>
+  <tr>
     <td align="center"><b>Detect objects</b></td>
     <td align="center"><b>Depth map</b></td>
   </tr>
@@ -45,19 +49,20 @@ from Wikimedia Commons and on an invoice drawn by `scripts/make-fixtures.mjs`
 
 | Site | What it does | Model (licence) | Backends |
 |---|---|---|---|
-| [cutout.elffuss.com](https://cutout.elffuss.com/) | Remove the background, as a transparent PNG, with a before and after view | BEN2 by PramaLLC (MIT) | WebAssembly |
-| [ocr.elffuss.com](https://ocr.elffuss.com/) | Read the text of photos, scans and PDFs, even whole folders; export as Markdown, JSON or ZIP | PP-OCRv6 small by PaddlePaddle (Apache-2.0) | WebGPU or WebAssembly |
-| [detect.elffuss.com](https://detect.elffuss.com/) | Find up to 80 kinds of objects, in a photo or with the camera | RF-DETR Nano by Roboflow (Apache-2.0) | WebAssembly |
-| [depth.elffuss.com](https://depth.elffuss.com/) | Work out what is near and what is far, with a colour map, a 3D view and 16-bit PNG | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
-| [tools.elffuss.com](https://tools.elffuss.com/) | The catalog of every Elffuss tool | none | |
+| [cutout.elffuss.com](https://cutout.elffuss.com/en/) | Remove the background, as a transparent PNG, with a before and after view | BEN2 by PramaLLC (MIT) | WebAssembly |
+| [ocr.elffuss.com](https://ocr.elffuss.com/en/) | Read the text of photos, scans and PDFs, even whole folders; export as Markdown, JSON or ZIP | PP-OCRv6 small by PaddlePaddle (Apache-2.0) | WebGPU or WebAssembly |
+| [detect.elffuss.com](https://detect.elffuss.com/en/) | Find up to 80 kinds of objects, in a photo or with the camera | RF-DETR Nano by Roboflow (Apache-2.0) | WebAssembly |
+| [depth.elffuss.com](https://depth.elffuss.com/en/) | Work out what is near and what is far, with a colour map, a 3D view and 16-bit PNG | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
+| [tools.elffuss.com](https://tools.elffuss.com/en/) | The catalog of every Elffuss tool | none | none |
 
-Every site is in English (`/en/`) and Spanish.
+Every site is in Spanish at its root and in English under `/en/`.
 
 ## What stays on your device
 
 - **Your files.** Images, PDFs and camera frames are read and processed in the
   page and its Worker. The page's Content Security Policy only lets it connect
-  to its own origin (`connect-src 'self'`), so it cannot send them anywhere.
+  to its own origin (`connect-src 'self'`) and only lets it embed the model
+  store, which accepts nothing from the sites but requests for model files.
   There is no analytics script.
 - **What is downloaded.** The model, from its Hugging Face repository at a
   pinned commit, through the Elffuss model store; and the code and runtimes,
@@ -78,7 +83,8 @@ way is to let the build lay out one tool's files and put your page next to them.
 ```bash
 git clone https://github.com/utopia-ia/elffuss-ai.git
 cd elffuss-ai
-node scripts/build.mjs detect --dev --out dist   # writes dist/detect/v/dev/ (SDK, registry) and dist/detect/vendor/ (runtimes)
+# writes dist/detect/v/dev/ (SDK, registry) and dist/detect/vendor/ (runtimes)
+node scripts/build.mjs detect --dev --out dist
 ```
 
 Save this as `dist/detect/my-page.html`:
@@ -97,8 +103,10 @@ Save this as `dist/detect/my-page.html`:
   });
 
   document.getElementById('file').addEventListener('change', async e => {
-    const { objects, device } = await detector.run(e.target.files[0], { threshold: 0.5 });
-    out.textContent = `${device}\n` + objects.map(o => `${o.label} ${o.score.toFixed(2)}`).join('\n');
+    const file = e.target.files[0];
+    const { objects, device } = await detector.run(file, { threshold: 0.5 });
+    const lines = objects.map(o => `${o.label} ${o.score.toFixed(2)}`);
+    out.textContent = [device, ...lines].join('\n');
   });
 </script>
 ```
@@ -116,7 +124,8 @@ later runs take it from the browser.
 The other tasks work the same way (`node scripts/build.mjs <cutout|ocr|depth> --dev --out dist`):
 
 ```js
-import { RemoveBg } from '/v/dev/sdk/remove-bg/index.js';  // → { png, alpha, width, height, device, … }
+// run() gives { png, alpha, width, height, device, … }
+import { RemoveBg } from '/v/dev/sdk/remove-bg/index.js';
 import { Depth } from '/v/dev/sdk/depth/index.js';
 import { Ocr } from '/v/dev/sdk/ocr/index.js';
 ```
@@ -233,15 +242,24 @@ cache, and run in Chrome twice: with WebGPU (after checking for a real adapter)
 and with WebGPU removed. They need Playwright from any `node_modules`.
 
 ```bash
-export ELFFUSS_AI_CACHE=<a directory outside the repo>          # weights, profiles, logs, test builds
+# weights, profiles, logs and test builds go here, outside the repo
+export ELFFUSS_AI_CACHE=<directory>
 export ELFFUSS_PLAYWRIGHT_DIR=<a node_modules that has playwright>
-node scripts/fetch-weights.mjs                                   # once: every pinned file, checked
-node scripts/make-broker-fixture.mjs --base <store page> --patch <tools patch>   # once: the store page
+export ELFFUSS_AI_LOCK=none
+
+# once: every pinned model file, checked
+node scripts/fetch-weights.mjs
+# once: the model store page, checked against tests/fixtures/broker/SOURCE.json
+mkdir -p "$ELFFUSS_AI_CACHE/broker"
+curl -o "$ELFFUSS_AI_CACHE/broker/index.html" https://models.elffuss.com/
+
 node tests/browser/run.mjs [--configs A,B] [--sites depth] [--only <text>]
 ```
 
-WebGPU runs take a coordination lock (`ELFFUSS_AI_LOCK`, or
-`ELFFUSS_AI_LOCK=none`).
+The store page is not in this repository; the harness refuses a copy whose
+SHA-256 differs from the pinned one. The WebGPU runs can take a lock shared
+with other work on the machine: point `ELFFUSS_AI_LOCK` at a lock script, or
+leave it at `none`.
 
 Maintenance, with the network:
 

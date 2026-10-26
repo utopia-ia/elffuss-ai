@@ -13,8 +13,10 @@ Background removal, OCR, object detection and depth maps that run in your browse
 ## Website
 
 ```
-https://tools.elffuss.com/
+https://tools.elffuss.com/en/
 ```
+
+(The root of every site is in Spanish; `/en/` is the English page.)
 
 ## Topics
 
