@@ -171,3 +171,30 @@ test('each site ships only its runtimes', () => {
   for (const s of ['depth', 'ocr']) assert.ok(has(s, 'vendor/onnxruntime-web@1.30.0/dist/ort-wasm-simd-threaded.asyncify.wasm'), `${s}: the WebGPU variant`);
   assert.equal(has('ocr', 'vendor/@huggingface'), false, 'the OCR uses ONNX Runtime directly');
 });
+
+test('licences: what Transformers.js bundles, the modified-file line, and the source of the MPL parts', () => {
+  const read = (s, p) => readFileSync(join(pro.out, s, ...p.split('/')), 'utf8');
+  for (const s of ['cutout', 'depth', 'detect']) {
+    const dir = readdirSync(join(pro.out, s, 'vendor', '@huggingface'))[0];
+    const tf = read(s, `vendor/@huggingface/${dir}/transformers.web.min.js`);
+    assert.match(tf.split('\n')[0], /^\/\*! Modified by UtopiaIA/, `${s}: the served Transformers.js says it was modified`);
+    for (const lib of ['jinja@0.5.10', 'tokenizers@0.2.0']) {
+      assert.ok(existsSync(join(pro.out, s, 'vendor', '@huggingface', dir, 'bundled', '@huggingface', lib, 'LICENSE')), `${s}: ${lib} licence served`);
+    }
+    for (const [page, lang] of [['licencias/index.html', 'es'], ['en/licenses/index.html', 'en']]) {
+      const html = read(s, page);
+      assert.match(html, /bundled\/@huggingface\/jinja@0\.5\.10\/LICENSE/, `${s} ${lang}: links the jinja licence`);
+      assert.match(html, /bundled\/@huggingface\/tokenizers@0\.2\.0\/LICENSE/, `${s} ${lang}: links the tokenizers licence`);
+    }
+  }
+  for (const s of ['cutout', 'depth', 'detect', 'ocr']) {
+    for (const page of ['licencias/index.html', 'en/licenses/index.html']) {
+      const html = read(s, page);
+      assert.ok(html.includes('https://github.com/microsoft/onnxruntime/tree/v1.30.0'), `${s} ${page}: ONNX Runtime source`);
+      assert.ok(html.includes('https://github.com/eigen-mirror/eigen/archive/1d8b82b0740839c0de7f1242a3585e3390ff5f33.zip'), `${s} ${page}: Eigen source (MPL-2.0)`);
+      assert.match(html, /MPL-2\.0/, `${s} ${page}: names the MPL`);
+    }
+  }
+  const notice = readFileSync(join(ROOT, 'NOTICE'), 'utf8');
+  for (const piece of ['@huggingface/jinja 0.5.10', 'MIT License', '@huggingface/tokenizers 0.2.0', 'Mozilla Public License 2.0', 'modified']) assert.ok(notice.includes(piece), `NOTICE: ${piece}`);
+});

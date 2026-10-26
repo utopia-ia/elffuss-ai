@@ -2,7 +2,7 @@
 
 # Models
 
-Every model a site downloads, from its original Hugging Face repository, pinned to a commit. Nothing here is hosted or redistributed by Elffuss: the model store of the sites downloads each file once per browser and checks its hash. Generated from `registry/tasks.json`.
+Every model a site downloads, from its original Hugging Face repository, pinned to a commit. Nothing here is hosted or redistributed by Elffuss: the model store of the sites downloads each file the first time it is needed and keeps it in that browser, and the site checks its hash. Generated from `registry/tasks.json`.
 
 | Task | Model | Base model | Licence | Backend · variant · download |
 |---|---|---|---|---|

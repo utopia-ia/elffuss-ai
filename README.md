@@ -3,8 +3,9 @@
 Task modules for the browser, and the small sites built on them: remove the
 background of a photo, read the text of images and PDFs, detect objects, and make
 depth maps, with WebGPU or WebAssembly. Each site runs its model in your browser.
-The only download is the model, from its original Hugging Face repository at a
-pinned revision; it is downloaded the first time and kept in this browser.
+A site downloads its model, from its original Hugging Face repository at a pinned
+revision (the first time; then it is kept in this browser), and the software that
+runs it, from the site itself. The files you open never leave your device.
 
 | Site | What it does | Model (licence) | Backends |
 |---|---|---|---|
@@ -42,7 +43,7 @@ reference (generated from the JSDoc) and `docs/MODELS.md` for every model.
 2. On the click, the task's Worker asks the store for each file at its pinned
    URL and exact size (`get`). The store keeps it in its own storage, shared by
    the Elffuss sites, and downloads only what it lacks.
-3. The SDK checks every file's hash against the registry (once per browser),
+3. The SDK checks every file's hash against the registry (the first time in each browser),
    checks the runtime versions against the pins, and creates the session on
    the backend the registry allows for this browser. It never switches backend
    on its own; a site may retry once on WebAssembly and says so.
@@ -51,8 +52,10 @@ reference (generated from the JSDoc) and `docs/MODELS.md` for every model.
    never talks to the Hub: its Content Security Policy only allows its own
    origin, the store's frame, and WebAssembly. Trusted Types are required.
 
-The sites cannot empty the store, save copies into it or list it; the store only
-accepts from them pinned files of the repositories in `registry/tasks.json`.
+The sites cannot empty the store, save copies into it or list it, and nothing they
+ask deletes a stored copy: the store only accepts from them the files of
+`registry/tasks.json`, each at its pinned URL and with its exact size
+(`node scripts/broker-repos.mjs` prints that list for the store).
 
 ## Repository
 
@@ -117,9 +120,10 @@ not part of this repository and are not redistributed.
 Módulos por tarea para el navegador y las webs pequeñas que los usan: quitar el
 fondo de una foto, leer el texto de imágenes y PDF, detectar objetos y sacar
 mapas de profundidad, con WebGPU o WebAssembly. Cada web ejecuta su modelo en tu
-navegador. Lo único que se descarga es el modelo, desde su repositorio original
-de Hugging Face y fijado a una revisión: se descarga la primera vez y se guarda
-en este navegador. Los archivos que abres no salen de tu equipo.
+navegador. Cada web descarga su modelo, desde su repositorio original de Hugging
+Face y fijado a una revisión (la primera vez; después se guarda en este
+navegador), y el programa que lo ejecuta, desde la propia web. Los archivos que
+abres no salen de tu equipo.
 
 Cada web es un sitio estático con su propio dominio, su CSP y su certificado; el
 catálogo de todas está en `tools.elffuss.com`. Los pesos pasan por el almacén de

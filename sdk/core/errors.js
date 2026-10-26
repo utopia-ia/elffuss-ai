@@ -21,17 +21,31 @@
  * - decode-failed: an input could not be decoded
  * - unsupported-format: an input of a type the task does not take
  * - too-large: an input too large even after scaling it down
+ * - out-of-memory: the runtime could not get the memory the model needs in this browser
  * - run-failed: anything else while running, with the original error as `cause`
  * - disposed: the task instance was disposed
  * @typedef {'store-unavailable'|'store-permission'|'store-quota'|'store-network'|'integrity'|'not-in-registry'|
  *   'device-unsupported'|'webgpu-unavailable'|'runtime-mismatch'|'model-mismatch'|'aborted'|'decode-failed'|
- *   'unsupported-format'|'too-large'|'run-failed'|'disposed'} AiErrorCode
+ *   'unsupported-format'|'too-large'|'out-of-memory'|'run-failed'|'disposed'} AiErrorCode
  */
 export const ERROR_CODES = Object.freeze([
   'store-unavailable', 'store-permission', 'store-quota', 'store-network', 'integrity', 'not-in-registry',
   'device-unsupported', 'webgpu-unavailable', 'runtime-mismatch', 'model-mismatch', 'aborted',
-  'decode-failed', 'unsupported-format', 'too-large', 'run-failed', 'disposed',
+  'decode-failed', 'unsupported-format', 'too-large', 'out-of-memory', 'run-failed', 'disposed',
 ]);
+
+/** Codes of errors about the input itself, raised before the model runs: the runtime is intact. */
+export const INPUT_ERROR_CODES = Object.freeze(['decode-failed', 'unsupported-format', 'too-large']);
+
+/**
+ * True when an error says that memory could not be had: a C++ allocation that
+ * failed inside the WebAssembly runtime (std::bad_alloc), a WebAssembly memory
+ * that could not grow, or a buffer the browser would not allocate.
+ */
+export function isOutOfMemory(err) {
+  const text = `${err?.name || ''} ${err instanceof Error ? err.message : String(err?.message ?? err)}`;
+  return /bad_alloc|out of memory|Array buffer allocation failed|could not allocate memory|Cannot enlarge memory|failed to grow memory/i.test(text);
+}
 
 /** Error of the SDK. `code` is one of ERROR_CODES. */
 export class AiError extends Error {
@@ -81,7 +95,8 @@ export function toAiError(err, fallback = 'run-failed') {
   if (isAiError(err)) return err;
   if (err && typeof err === 'object' && err.name === 'AbortError') return new AiError('aborted', 'cancelled', { cause: err });
   const message = err instanceof Error ? err.message : String(err);
-  return new AiError(fallback, message || fallback, { cause: err });
+  const code = fallback === 'run-failed' && isOutOfMemory(err) ? 'out-of-memory' : fallback;
+  return new AiError(code, message || code, { cause: err });
 }
 
 /** A plain object that survives postMessage. */

@@ -3,15 +3,17 @@
 //
 // The page side of a task Worker. It creates the Worker through the Trusted
 // Types policy, answers its store requests with the page's store client, and
-// replaces it after any failure: Transformers.js 4.3.1 keeps session creation
-// and runs on global promise chains that stay broken after one rejection, so a
-// failed Worker is never reused. The files come back from the store, so a new
-// Worker does not download anything again.
+// replaces it after any failure of the runtime: Transformers.js 4.3.1 keeps
+// session creation and runs on global promise chains that stay broken after one
+// rejection, so a Worker whose runtime failed is never reused. The files come
+// back from the store, so a new Worker does not download anything again. A run
+// refused for its input (a file that is not an image, or that cannot be decoded)
+// never reached the runtime, so that Worker and its model are kept.
 //
 // Cancelling a call cancels the downloads it started (elffuss-model-cancel) and
 // terminates the Worker, because ONNX Runtime cannot stop a run halfway.
 
-import { AiError, deserializeError, toAiError } from './errors.js';
+import { AiError, INPUT_ERROR_CODES, deserializeError, toAiError } from './errors.js';
 import { serveStore } from './store-bridge.js';
 import { scriptUrl } from './tt.js';
 
@@ -68,7 +70,8 @@ export function createWorkerHost({ workerUrl, store, onCspViolation, readyTimeou
   }
 
   /**
-   * One call to the Worker. Any failure replaces the Worker.
+   * One call to the Worker. Any failure replaces the Worker, except a run refused
+   * for its input.
    * @param {'load'|'run'|'dispose'} type
    * @param {object} payload
    * @param {{ transfer?: Transferable[], signal?: AbortSignal, onProgress?: Function }} [opts]
@@ -89,7 +92,8 @@ export function createWorkerHost({ workerUrl, store, onCspViolation, readyTimeou
         catch (err) { calls.delete(id); reject(toAiError(err)); }
       });
     } catch (err) {
-      if (type !== 'dispose' && worker === w) kill('replaced');
+      const inputOnly = type === 'run' && INPUT_ERROR_CODES.includes(err?.code) && !err?.details?.runtime;
+      if (type !== 'dispose' && worker === w && !inputOnly) kill('replaced');
       throw err;
     } finally {
       signal?.removeEventListener('abort', onAbort);

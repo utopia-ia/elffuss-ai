@@ -156,3 +156,22 @@ test('the Worker loop answers load, run and dispose, and reports errors as AiErr
   assert.equal(impl.log.dispose, 1);
   assert.throws(() => runResult({ echo: 1 }), { code: 'run-failed' });
 });
+
+test('the Worker loop reports what ctx.report() says during a run under that run, not the finished load', async () => {
+  const port = new EventTarget();
+  const out = [];
+  port.postMessage = m => out.push(m);
+  const send = data => port.dispatchEvent(Object.assign(new Event('message'), { data }));
+  const impl = { ...makeImpl(), async run(state, input, o, ctx) { ctx.report('running'); await new Promise(r => setTimeout(r, 5)); ctx.report('done'); return { value: input }; } };
+  serveTask(impl, { port });
+  const answerStore = () => { for (const m of out.splice(0)) if (m.type === 'store-has') send({ type: 'store-reply', id: m.id, ok: true, value: true }); else if (m.type) out.push(m); };
+  send({ type: 'load', id: 1, opts: { registry: reg, runtime, model: 'depth/depth-anything-v2-small', device: 'wasm' } });
+  for (let i = 0; i < 20 && !out.some(m => m.type === 'result' && m.id === 1); i++) { await new Promise(r => setTimeout(r, 5)); answerStore(); }
+  const loadStatuses = out.filter(m => m.type === 'progress' && m.id === 1).map(m => m.progress.status);
+  assert.ok(loadStatuses.includes('checking') && loadStatuses.includes('ready'), `the load's statuses go to the load (${loadStatuses})`);
+  send({ type: 'run', id: 2, input: 'img', opts: {} });
+  for (let i = 0; i < 20 && !out.some(m => m.type === 'result' && m.id === 2); i++) await new Promise(r => setTimeout(r, 5));
+  assert.deepEqual(out.filter(m => m.type === 'progress' && m.id === 2).map(m => m.progress.status), ['running', 'done']);
+  assert.equal(out.filter(m => m.type === 'progress' && m.id === 1).length, loadStatuses.length, 'nothing more under the load');
+  assert.equal(out.find(m => m.type === 'result' && m.id === 2).value, 'img');
+});
