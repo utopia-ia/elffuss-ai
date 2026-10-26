@@ -64,3 +64,14 @@ test('ONNX Runtime variant per site, threads and shader errors', () => {
   assert.equal(isShaderError(new Error('Invalid ShaderModule "LayerNorm"')), true);
   assert.equal(isShaderError(new Error('out of memory')), false);
 });
+
+test('the WebAssembly heap probe: grows when it can, says no when the browser caps it', async () => {
+  const { canGrowWasmMemory } = await import('../../sdk/core/device.js');
+  assert.equal(canGrowWasmMemory(64 * 65536), true, 'a small heap grows here');
+  const capped = { WebAssembly: { Memory: class { constructor({ maximum }) { if (maximum > 16384) throw new RangeError('could not allocate memory'); } grow() {} } } };
+  assert.equal(canGrowWasmMemory(3.5 * 2 ** 30, capped), false, 'a browser that caps WebAssembly lower');
+  const failsToGrow = { WebAssembly: { Memory: class { grow() { throw new RangeError('WebAssembly.Memory.grow(): Maximum memory size exceeded'); } } } };
+  assert.equal(canGrowWasmMemory(2 ** 30, failsToGrow), false, 'one that cannot grow that far');
+  assert.equal(canGrowWasmMemory(5 * 2 ** 30), false, 'more than WebAssembly can address');
+  assert.equal(canGrowWasmMemory(2 ** 30, {}), false, 'no WebAssembly at all');
+});

@@ -64,6 +64,19 @@ True when an error looks like a WebGPU shader or kernel failure. A site that
 ran with device 'auto' on WebGPU retries once on WebAssembly after any failure;
 this only labels the reason it reports.
 
+### `canGrowWasmMemory(bytes, scope = globalThis)`
+
+True when this realm can grow a WebAssembly memory to `bytes`, as the
+WebAssembly runtime will have to for a large model. It asks for the pages
+the way that runtime does, before anything is downloaded; a browser that
+caps WebAssembly lower (or cannot reserve that much) answers false. The probe
+is dropped at once, and V8 collects it before failing a later allocation.
+
+| Parameter | Type | |
+|---|---|---|
+| `bytes` | `number` |  |
+| `[scope]` | `{ WebAssembly?: any }` | replaces the global WebAssembly (tests) |
+
 ### `threadCount({ isolated = Boolean(globalThis.crossOriginIsolated), cores = globalThis.navigator?.hardwareConcurrency || 1 } = {})`
 
 Threads for ONNX Runtime's WebAssembly backend: one unless the page is
@@ -94,14 +107,25 @@ Every code an AiError can carry.
 - decode-failed: an input could not be decoded
 - unsupported-format: an input of a type the task does not take
 - too-large: an input too large even after scaling it down
+- out-of-memory: the runtime could not get the memory the model needs in this browser
 - run-failed: anything else while running, with the original error as `cause`
 - disposed: the task instance was disposed
 
 ### Type `AiErrorCode`
 
 ```ts
-'store-unavailable'|'store-permission'|'store-quota'|'store-network'|'integrity'|'not-in-registry'| 'device-unsupported'|'webgpu-unavailable'|'runtime-mismatch'|'model-mismatch'|'aborted'|'decode-failed'| 'unsupported-format'|'too-large'|'run-failed'|'disposed'
+'store-unavailable'|'store-permission'|'store-quota'|'store-network'|'integrity'|'not-in-registry'| 'device-unsupported'|'webgpu-unavailable'|'runtime-mismatch'|'model-mismatch'|'aborted'|'decode-failed'| 'unsupported-format'|'too-large'|'out-of-memory'|'run-failed'|'disposed'
 ```
+
+### `INPUT_ERROR_CODES`
+
+Codes of errors about the input itself, raised before the model runs: the runtime is intact.
+
+### `isOutOfMemory(err)`
+
+True when an error says that memory could not be had: a C++ allocation that
+failed inside the WebAssembly runtime (std::bad_alloc), a WebAssembly memory
+that could not grow, or a buffer the browser would not allocate.
 
 ### `class AiError`
 
@@ -206,6 +230,13 @@ Link to the page of a repository on the Hub, at a revision.
 ## `sdk/core/image-input.js`
 
 Images in and out of a task. On the page, anything image-like becomes what a Worker can receive without copying (Blob, ImageBitmap, ImageData). In the Worker, a Blob is sniffed by its first bytes (never by its name), decoded with its EXIF orientation applied, and scaled down when it is too large.
+ Browsers decode a file at its full size even when asked for a smaller bitmap (createImageBitmap's resize options scale after decoding), so the size is read from the file's header first and a file of more than MAX_INPUT_PIXELS is refused with too-large before anything is decoded. A small file can declare a huge picture (a PNG of one colour compresses to almost nothing).
+
+### `MAX_INPUT_PIXELS`
+
+The most pixels an input may have (8192 × 8192). It covers the photos of
+today's cameras; above it, a single decode would take more memory than a page
+should, so the file is refused (too-large) before it is decoded.
 
 ### `sniffImageType(head)`
 
@@ -214,6 +245,56 @@ Image types the tasks decode, by their first bytes.
 ### `DECODABLE`
 
 Types the browser decodes for the tasks. HEIC and TIFF are refused on purpose.
+
+### `imageSize(head)`
+
+Width and height of an image from the first bytes of its file, without
+decoding it (the size as stored: an EXIF rotation swaps them but does not
+change the number of pixels). Null when the header does not say, or is cut.
+
+| Parameter | Type | |
+|---|---|---|
+| `head` | `Uint8Array\|ArrayBuffer` | the start of the file (the first megabyte is plenty) |
+
+Returns `{ width: number, height: number } \| null`.
+
+### `checkPixelBudget(blob, maxPixels = MAX_INPUT_PIXELS)`
+
+Refuse an image file whose picture has more than `maxPixels` pixels, from its
+header, before anything decodes it. Files whose header does not say are left
+to the decoder (and checked again after it).
+
+| Parameter | Type | |
+|---|---|---|
+| `blob` | `Blob` |  |
+| `[maxPixels]` | `number` |  |
+
+Returns `Promise<{ width: number, height: number } \| null>`: the size the header gives
+
+### `previewBitmap(blob, { maxSide = 2048, maxPixels = MAX_INPUT_PIXELS } = {})`
+
+On the page: a small copy of an image file to show, at most `maxSide` on its
+longest side, with its EXIF orientation applied. The full-size decode it needs
+is released at once, and a file over the pixel budget is refused first
+(too-large), so showing a photo never keeps a full-size copy alive.
+
+| Parameter | Type | |
+|---|---|---|
+| `blob` | `Blob` |  |
+| `[opts]` | `{ maxSide?: number, maxPixels?: number }` |  |
+
+Returns `Promise<{ bitmap: ImageBitmap, sourceWidth: number, sourceHeight: number }>`: the small copy, and the size of the picture (as shown, after its EXIF orientation)
+
+### `previewImage(blob, opts)`
+
+On the page: a small PNG of an image file, for an <img> (see previewBitmap).
+
+| Parameter | Type | |
+|---|---|---|
+| `blob` | `Blob` |  |
+| `[opts]` | `{ maxSide?: number, maxPixels?: number }` |  |
+
+Returns `Promise<{ blob: Blob, width: number, height: number, sourceWidth: number, sourceHeight: number }>`.
 
 ### `toTransferable(input)`
 
@@ -226,24 +307,28 @@ copying. Returns the value and the list of objects to transfer.
 
 Returns `Promise<{ value: Blob\|ImageBitmap\|ImageData, transfer: Transferable[] }>`.
 
-### `decodeImage(input, { maxSide = 0, close = true } = {})`
+### `decodeImage(input, { maxSide = 0, close = true, maxPixels = MAX_INPUT_PIXELS } = {})`
 
 In the Worker (or the page): decode an input to RGBA pixels.
 
 | Parameter | Type | |
 |---|---|---|
 | `input` | `Blob\|ImageBitmap\|ImageData` |  |
-| `[opts]` | `{ maxSide?: number, close?: boolean }` | `maxSide` scales the longest side down to it |
+| `[opts]` | `{ maxSide?: number, close?: boolean, maxPixels?: number }` | `maxSide` scales the longest side down to it; a file whose picture has more than `maxPixels` pixels is refused (too-large) before decoding |
 
 Returns `Promise<{ width: number, height: number, data: Uint8ClampedArray, scaled: boolean, sourceWidth: number, sourceHeight: number }>`.
 
 ### `encodePng({ width, height, data })`
 
-Encode RGBA pixels as PNG (needs OffscreenCanvas, so a browser realm).
+Encode RGBA pixels as PNG, exactly as given. An image with any pixel that is
+not fully opaque is written without a canvas, so those pixels keep their
+colour (a canvas stores premultiplied alpha and would change it); a fully
+opaque one goes through the browser's own encoder, which is faster and loses
+nothing there. The colours are those the browser decoded the input to, sRGB.
 
 | Parameter | Type | |
 |---|---|---|
-| `img` | `{ width: number, height: number, data: Uint8ClampedArray }` |  |
+| `img` | `{ width: number, height: number, data: Uint8ClampedArray\|Uint8Array }` |  |
 
 Returns `Promise<Blob>`.
 
@@ -312,6 +397,37 @@ Release a session; never throws.
 ### `tensor(ort, data, dims)`
 
 A Float32 tensor of a shape, checking the data length.
+
+## `sdk/core/png.js`
+
+PNG files written and read without a canvas. A canvas stores premultiplied alpha, so a pixel that is not fully opaque comes back with other colours (the edge of a cut-out changed by up to half the range); and it only writes 8 bits per channel. This writer puts the given samples in the file as they are: grey or RGB, with or without alpha, at 8 or 16 bits. Compression uses the browser's CompressionStream (also in Node), so nothing else is needed.
+
+### `filterRow(row, prev, bpp)`
+
+Filter one scanline (`prev` is the raw row above, or null) with each of the
+five PNG filters and keep the one whose bytes, read as signed, add up to the
+least (the usual heuristic). Returns the filter type byte and the row.
+
+### `encodePngSamples({ width, height, channels, bitDepth = 8, data, srgb = false })`
+
+A PNG of raw samples, row by row, with no change to them.
+
+| Parameter | Type | |
+|---|---|---|
+| `img` | `{ width: number, height: number, channels: 1\|2\|3\|4, bitDepth?: 8\|16, data: Uint8Array\|Uint8ClampedArray\|Uint16Array, srgb?: boolean }` | `data` holds `channels` samples per pixel (16-bit samples in a Uint16Array); `srgb` marks the colours as sRGB (an sRGB chunk), as a browser decodes them. |
+
+Returns `Promise<Blob>`: an `image/png` Blob
+
+### `decodePng(input)`
+
+Read a PNG: greyscale, grey with alpha, RGB or RGBA, at 8 or 16 bits, not
+interlaced. Checks the signature and every chunk's CRC.
+
+| Parameter | Type | |
+|---|---|---|
+| `input` | `ArrayBuffer\|Uint8Array\|Blob` |  |
+
+Returns `Promise<{ width: number, height: number, bitDepth: 8\|16, channels: number, data: Uint8Array\|Uint16Array, srgb: boolean }>`: `data` holds `channels` samples per pixel, row by row
 
 ## `sdk/core/progress.js`
 
@@ -449,6 +565,18 @@ The part of a model that lives in this repo, or null.
 ### `registryRepos(registry)`
 
 Every Hugging Face repo the registry pins, sorted.
+
+### `toolFiles(registry)`
+
+The files the tool sites may ask the store for: those of every variant of every
+model, each pinned URL once, with its size, sorted by URL. The model store's
+rule for the tools lists exactly these (scripts/broker-repos.mjs prints it).
+
+| Parameter | Type | |
+|---|---|---|
+| `registry` | `Registry` |  |
+
+Returns `{ url: string, size: number }[]`.
 
 ### `registryUrls(registry)`
 
@@ -725,7 +853,7 @@ Returns `TrustedScriptURL\|string`.
 
 ## `sdk/core/worker-host.js`
 
-The page side of a task Worker. It creates the Worker through the Trusted Types policy, answers its store requests with the page's store client, and replaces it after any failure: Transformers.js 4.3.1 keeps session creation and runs on global promise chains that stay broken after one rejection, so a failed Worker is never reused. The files come back from the store, so a new Worker does not download anything again.
+The page side of a task Worker. It creates the Worker through the Trusted Types policy, answers its store requests with the page's store client, and replaces it after any failure of the runtime: Transformers.js 4.3.1 keeps session creation and runs on global promise chains that stay broken after one rejection, so a Worker whose runtime failed is never reused. The files come back from the store, so a new Worker does not download anything again. A run refused for its input (a file that is not an image, or that cannot be decoded) never reached the runtime, so that Worker and its model are kept.
  Cancelling a call cancels the downloads it started (elffuss-model-cancel) and terminates the Worker, because ONNX Runtime cannot stop a run halfway.
 
 ### `createWorkerHost({ workerUrl, store, onCspViolation, readyTimeout = 30000, name = 'elffuss-ai-task' })`

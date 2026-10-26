@@ -63,15 +63,15 @@ export class TestRun {
     this.requests = [];
   }
 
-  /** A fresh browser profile. */
-  async newContext({ javaScriptEnabled = true } = {}) {
+  /** A fresh browser profile; `args` adds Chrome flags to the configuration's. */
+  async newContext({ javaScriptEnabled = true, args = [] } = {}) {
     const tmp = join(this.cache, 'tmp');
     mkdirSync(tmp, { recursive: true });
     const dir = mkdtempSync(join(tmp, 'profile-'));
     const ctx = await this.playwright.chromium.launchPersistentContext(dir, {
       ...(this.browser === 'chrome' ? { channel: 'chrome' } : {}),
       headless: this.headless,
-      args: CONFIGS[this.config].args,
+      args: [...CONFIGS[this.config].args, ...args],
       serviceWorkers: 'block',
       ignoreHTTPSErrors: true,
       javaScriptEnabled,
@@ -103,11 +103,16 @@ export class TestRun {
     return siteUrl(site, 'test').replace(/\/$/, '') + path;
   }
 
-  /** Open a path of a site and wait for its shell (or the smoke page) to be ready. */
+  /**
+   * Open a path of a site and wait for its shell (or the smoke page) to be ready.
+   * `shell` also waits for the store's first answer on an app page (the page is
+   * usable before it: `shell-only` waits for the shell alone).
+   */
   async open(ctx, site, path = '/', { wait = 'shell', timeout = 60000 } = {}) {
     const page = await this.page(ctx);
     await page.goto(this.url(site, path), { waitUntil: 'domcontentloaded' });
-    if (wait === 'shell') await page.waitForFunction(() => document.documentElement.dataset.shell === 'ready', null, { timeout });
+    if (wait === 'shell') await page.waitForFunction(() => document.documentElement.dataset.shell === 'ready' && (document.documentElement.dataset.storage || !document.querySelector('main button.primary')), null, { timeout });
+    if (wait === 'shell-only') await page.waitForFunction(() => document.documentElement.dataset.shell === 'ready', null, { timeout });
     if (wait === 'smoke') await page.waitForFunction(() => globalThis.__smoke?.done === true, null, { timeout: 10 * timeout });
     return page;
   }
@@ -159,6 +164,23 @@ export class TestRun {
   /** Make the model store unreachable for a context. */
   async blockStore(ctx) {
     await ctx.route(`${STORE_ORIGIN}/**`, route => route.abort('connectionrefused'));
+  }
+
+  /** Make the model store reachable again. */
+  async unblockStore(ctx) {
+    await ctx.unroute(`${STORE_ORIGIN}/**`);
+  }
+
+  /**
+   * Every request that reached the Hub mock (whole files, probes and ranges) is
+   * one of `urls`: the files of the variants the test expects, and nothing else
+   * of the registry.
+   */
+  hubOnly(urls, what = 'the expected variant') {
+    const allowed = new Set(urls);
+    const seen = [...this.hub.counts.full, ...this.hub.counts.probes, ...this.hub.counts.ranged];
+    const extra = [...new Set(seen.filter(u => !allowed.has(u)))];
+    this.ok(extra.length === 0, `Hub files outside ${what}: ${extra.slice(0, 3).join(', ')}`);
   }
 
   /** Empty the store's storage of a context, as a user would from Claw (the tools cannot). */

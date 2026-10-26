@@ -101,6 +101,8 @@ export function buildSite({ root, site, sites, channel, buildId, outDir }) {
   w(`${v}config.js`, configSource({ site, registry, channel, buildId, storeUrl, sites }));
   w(`${v}LICENSES/Apache-2.0.txt`, { from: join(root, 'LICENSES', 'Apache-2.0.txt') });
   w(`${v}LICENSES/MIT-runonweb.txt`, { from: join(root, 'LICENSES', 'MIT-runonweb.txt') });
+  // The licences of code a site's own modules adapt (app.json `adapted`).
+  for (const a of site.adapted || []) w(`${v}${a.file}`, { from: join(root, ...a.file.split('/')) });
   w(`${v}NOTICE.txt`, { from: join(root, 'NOTICE') });
 
   // /vendor/: only what this site runs.
@@ -114,7 +116,8 @@ export function buildSite({ root, site, sites, channel, buildId, outDir }) {
       const tfId = VENDOR_DIRS.transformers;
       const src = readFileSync(join(root, 'vendor', tfId, 'dist', 'transformers.web.min.js'), 'utf8');
       w(`vendor/${transformersDir(variant)}/transformers.web.min.js`, rewriteTransformers(src, ortSpecifierFromTransformers(variant)));
-      w(`vendor/${transformersDir(variant)}/LICENSE`, { from: join(root, 'vendor', tfId, 'LICENSE') });
+      // Its licence and those of the libraries its file bundles.
+      for (const f of Object.keys(manifest.packages[tfId].licenses)) w(`vendor/${transformersDir(variant)}/${f}`, { from: join(root, 'vendor', tfId, f) });
     }
     if (site.pdfjs) {
       const pdfId = VENDOR_DIRS.pdfjs;

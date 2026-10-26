@@ -12,7 +12,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * @typedef {{ site: string, host: string, testPort: number, dir: string, catalog?: boolean, task?: string,
- *   models?: string[], camera?: boolean, pdfjs?: boolean, accept?: string, status?: 'scaffold'|'ready' }} Site
+ *   models?: string[], camera?: boolean, pdfjs?: boolean, accept?: string, status?: 'scaffold'|'ready',
+ *   adapted?: { key: string, file: string, license: string }[] }} Site
+ *   `adapted`: code of other projects the site's modules adapt: the strings key that says what, the
+ *   licence file under LICENSES/ and its name, shown on the licence pages and served with the site.
  */
 
 /** Every site: the catalog first, then the apps in alphabetical order. @returns {Site[]} */
@@ -30,6 +33,9 @@ export function sites(root = ROOT) {
   }
   for (const s of out) {
     if (!/^[a-z][a-z0-9-]*$/.test(s.site)) throw new Error('bad site name ' + s.site);
+    for (const a of s.adapted || []) {
+      if (!/^LICENSES\/[\w.+-]+\.txt$/.test(a.file || '') || !existsSync(join(root, a.file)) || !a.key || !a.license) throw new Error(`${s.site}: bad adapted entry ${JSON.stringify(a)}`);
+    }
     if (s.host !== `${s.site}.elffuss.com`) throw new Error(`${s.site}: host must be ${s.site}.elffuss.com`);
     if (!(s.testPort >= 1024 && s.testPort < 65536)) throw new Error(`${s.site}: bad testPort`);
   }

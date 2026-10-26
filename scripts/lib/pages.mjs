@@ -28,6 +28,11 @@ export function pagePaths(channel) {
   };
 }
 
+/** Source of the ONNX Runtime release the sites serve (its WebAssembly includes MPL-2.0 code). */
+export const ORT_SOURCE = 'https://github.com/microsoft/onnxruntime/tree/v1.30.0';
+/** The Eigen source that release builds with (cmake/deps.txt at v1.30.0): the MPL-2.0 part. */
+export const EIGEN_SOURCE = 'https://github.com/eigen-mirror/eigen/archive/1d8b82b0740839c0de7f1242a3585e3390ff5f33.zip';
+
 /** Models of a site, from the registry. */
 export function siteModels(site, registry) {
   return (site.models || []).map(id => ({ id, ...registry.models[id] }));
@@ -46,11 +51,16 @@ export function siteRuntimes(site, registry, manifest) {
   const ortId = VENDOR_DIRS.onnxruntimeWeb, tfId = VENDOR_DIRS.transformers, pdfId = VENDOR_DIRS.pdfjs;
   const out = [];
   if (models.some(m => m.runtime === 'transformers.js')) {
+    // Its file bundles two libraries of its own authors, each with its licence.
+    const bundled = Object.entries(manifest.packages[tfId].licenses).filter(([, l]) => l.bundled)
+      .map(([p, l]) => ({ label: `${l.bundled.replace(/@(?=[^@]*$)/, ' ')} (${l.license})`, href: `/vendor/${transformersDir(variant)}/${p}` }));
     out.push({ key: 'transformers', name: 'Transformers.js', version: PINS.transformers, author: 'Hugging Face', license: manifest.packages[tfId].license,
-      files: [{ label: 'licence', href: `/vendor/${transformersDir(variant)}/LICENSE` }] });
+      files: [{ label: 'licence', href: `/vendor/${transformersDir(variant)}/LICENSE` }, ...bundled], note: 'licenses.transformersNote' });
   }
+  // The MPL-2.0 parts of ONNX Runtime's WebAssembly (Eigen): where their source is.
   out.push({ key: 'onnxruntimeWeb', name: 'ONNX Runtime Web', version: PINS.onnxruntimeWeb, author: 'Microsoft', license: manifest.packages[ortId].license,
-    files: [{ label: 'licence', href: `/vendor/${ortId}/LICENSE.txt` }, { label: 'notices', href: `/vendor/${ortId}/ThirdPartyNotices.txt` }] });
+    files: [{ label: 'licence', href: `/vendor/${ortId}/LICENSE.txt` }, { label: 'notices', href: `/vendor/${ortId}/ThirdPartyNotices.txt` },
+      { label: 'source', href: ORT_SOURCE }, { label: 'eigen', href: EIGEN_SOURCE }], note: 'licenses.ortNote' });
   if (site.pdfjs) {
     out.push({ key: 'pdfjs', name: 'PDF.js', version: PINS.pdfjs, author: 'Mozilla', license: manifest.packages[pdfId].license,
       files: Object.keys(manifest.packages[pdfId].licenses).map(p => ({ label: p, href: `/vendor/${pdfId}/${p}` })) });
@@ -162,14 +172,17 @@ export function licensesMain({ site, models, runtimes, t, base }) {
   if (runtimes.length) {
     out.push(`  <h2>${esc(t['licenses.runtimes'])}</h2>`, '  <ul>');
     for (const r of runtimes) {
-      const links = r.files.map(f => `<a href="${esc(f.href)}">${esc(f.label === 'licence' ? t['licenses.licence'] : f.label === 'notices' ? t['licenses.notices'] : f.label)}</a>`).join(', ');
-      out.push(`    <li>${esc(`${r.name} ${r.version} (${r.author}), ${r.license}`)}: ${links}</li>`);
+      const label = f => ({ licence: t['licenses.licence'], notices: t['licenses.notices'], source: t['licenses.source'], eigen: t['licenses.eigen'] })[f.label] || f.label;
+      const links = r.files.map(f => `<a href="${esc(f.href)}">${esc(label(f))}</a>`).join(', ');
+      out.push(`    <li>${esc(`${r.name} ${r.version} (${r.author}), ${r.license}`)}: ${links}.${r.note ? ' ' + esc(t[r.note]) : ''}</li>`);
     }
     out.push('  </ul>');
   }
   out.push(`  <h2>${esc(t['licenses.code'])}</h2>`);
   out.push(`  <p>${esc(t['licenses.siteCode'])} <a href="${esc(base)}LICENSES/Apache-2.0.txt">Apache-2.0</a> · <a href="${esc(base)}NOTICE.txt">NOTICE</a></p>`);
   out.push(`  <p>${esc(t['licenses.runonweb'])} <a href="${esc(base)}LICENSES/MIT-runonweb.txt">MIT</a></p>`);
+  // Code of other projects that this site's own modules adapt (app.json `adapted`).
+  for (const a of site.adapted || []) out.push(`  <p>${esc(t[a.key])} <a href="${esc(base)}${esc(a.file)}">${esc(a.license)}</a></p>`);
   return out.join('\n');
 }
 

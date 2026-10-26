@@ -99,6 +99,42 @@ test('no ready answer or no reply means store-unavailable', async () => {
   c.dispose();
 });
 
+test('a store that did not open is asked again on the next call, in a new frame', async () => {
+  // First frame: no ready answer. Second frame: ready, and it answers has.
+  const win = new EventTarget();
+  globalThis.addEventListener = win.addEventListener.bind(win);
+  globalThis.removeEventListener = win.removeEventListener.bind(win);
+  const frames = [];
+  const document = {
+    createElement() {
+      const n = frames.length;
+      const contentWindow = {
+        postMessage(msg) {
+          if (msg.type === 'elffuss-model-has') setTimeout(() => win.dispatchEvent(Object.assign(new Event('message'), { data: { id: msg.id, kind: 'has', cached: true, size: 7 }, origin: ORIGIN, source: contentWindow })), 1);
+        },
+      };
+      const f = {
+        n, removed: false, contentWindow, setAttribute() {}, remove() { this.removed = true; },
+        set src(v) {
+          if (n >= 1) setTimeout(() => win.dispatchEvent(Object.assign(new Event('message'), { data: { kind: 'elffuss-broker-ready', v: 2, puede: ['get', 'has', 'cancel'] }, origin: ORIGIN, source: contentWindow })), 1);
+        },
+      };
+      frames.push(f);
+      return f;
+    },
+    body: { appendChild() {} },
+  };
+  const c = createStoreClient({ document, readyTimeout: 20 });
+  await assert.rejects(c.has('https://x/y', 7), { code: 'store-unavailable' });
+  assert.equal(frames.length, 1);
+  assert.equal(frames[0].removed, true, 'the frame that never opened is removed');
+  assert.equal(await c.has('https://x/y', 7), true, 'the next question opens a new frame and gets its answer');
+  assert.equal(frames.length, 2);
+  assert.equal(await c.has('https://x/y', 7), true);
+  assert.equal(frames.length, 2, 'a store that opened is kept');
+  c.dispose();
+});
+
 test('cancelling a get sends elffuss-model-cancel and rejects with aborted', async () => {
   const w = world({ handler(msg, reply) { if (msg.type === 'elffuss-model-get') reply({ kind: 'progress', loaded: 1, total: 10 }); } });
   const c = createStoreClient({ document: w.document });

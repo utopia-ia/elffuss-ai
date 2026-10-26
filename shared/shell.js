@@ -89,6 +89,7 @@ export async function createShell({ config: cfg = config } = {}) {
   const files = choice ? variantFiles(model, choice.variant) : [];
   let primaryLabels = null; // { run, download }
   let busy = null;
+  let storageKnown = false; // the store answered the last time it was asked
 
   const setStatus = text => { if (els.status) els.status.textContent = text || ''; };
   const showProgress = (loaded, total) => {
@@ -153,6 +154,7 @@ export async function createShell({ config: cfg = config } = {}) {
         requested,
         factory,
         options: device => shell.taskOptions({ device }),
+        attempted: () => choice?.device ?? null,
         onDevice: (device, fallback) => { diagnostics.device = device; diagnostics.fallback = fallback; },
       });
     },
@@ -172,12 +174,16 @@ export async function createShell({ config: cfg = config } = {}) {
       try {
         has = new Map(await Promise.all([...urls].map(async ([u, size]) => [u, await store.has(u, size)])));
       } catch (err) {
+        storageKnown = false;
+        document.documentElement.dataset.storage = 'unknown';
         const s = $('[data-role="storage-summary"]', els.storage || document);
         if (s) s.textContent = t('storage.unknown');
         if (!busy) shell.showError(err);
         if (primaryLabels && els.primary) els.primary.textContent = fill(primaryLabels.download, { size: `${formatMB(files.reduce((x, f) => x + f.size, 0), lang)} MB` });
         return null;
       }
+      storageKnown = true;
+      document.documentElement.dataset.storage = 'known';
       for (const li of items) {
         const st = $('[data-role="storage-state"]', li);
         if (st) st.textContent = t(has.get(li.dataset.url) ? 'storage.stored' : 'storage.missing');
@@ -247,7 +253,8 @@ export async function createShell({ config: cfg = config } = {}) {
      * anywhere on the page (pasted images arrive as pegado-1.png / pasted-1.png).
      * @param {{ onFiles: (files: File[], how: 'pick'|'drop'|'paste') => void, paste?: boolean, input?: HTMLInputElement }} opts
      */
-    bindInput({ onFiles, paste = false, input = $('input[type="file"]', els.drop || document) }) {
+    bindInput({ onFiles: given, paste = false, input = $('input[type="file"]', els.drop || document) }) {
+      const onFiles = (list, how) => { shell.retryStorage(); given(list, how); };
       input?.addEventListener('change', () => { if (input.files?.length) onFiles([...input.files], 'pick'); input.value = ''; });
       els.drop?.addEventListener('dragover', e => { e.preventDefault(); });
       els.drop?.addEventListener('drop', e => {
@@ -265,11 +272,21 @@ export async function createShell({ config: cfg = config } = {}) {
         });
       }
     },
+    /** Ask the store again when the last question went unanswered (it may be back). */
+    retryStorage() {
+      if (!storageKnown && document.documentElement.dataset.storage === 'unknown' && !busy) shell.refreshStorage().catch(() => {});
+    },
   };
 
   if (choiceError) shell.showError(choiceError);
-  if (els.primary && els.primary.dataset.labelRun) await shell.labels(els.primary.dataset.labelRun, els.primary.dataset.labelDownload || els.primary.dataset.labelRun);
-  else await shell.refreshStorage();
+  // The page is usable at once; the store is asked in the background. Until it
+  // answers, the primary button says it will download the whole model, which is
+  // the most it can do; the answer may shorten that.
+  if (els.primary && els.primary.dataset.labelRun) {
+    primaryLabels = { run: els.primary.dataset.labelRun, download: els.primary.dataset.labelDownload || els.primary.dataset.labelRun };
+    if (files.length) els.primary.textContent = fill(primaryLabels.download, { size: `${formatMB(files.reduce((x, f) => x + f.size, 0), lang)} MB` });
+  }
+  shell.storageChecked = shell.refreshStorage().catch(() => null);
   document.documentElement.dataset.shell = 'ready';
   return shell;
 }
