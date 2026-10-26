@@ -5,6 +5,20 @@
   "drop": "Suelta aquí una imagen, pégala o pulsa para elegirla",
   "action.run": "Quitar el fondo",
   "action.downloadAndRun": "Descargar el modelo ({size}) y quitar el fondo",
+  "action.download": "Descargar PNG",
   "catalog.name": "Quitar el fondo",
-  "catalog.line": "Deja solo la persona o el objeto y te da un PNG con transparencia."
+  "catalog.line": "Deja solo la persona o el objeto y te da un PNG con transparencia.",
+  "preview.alt": "La imagen elegida",
+  "chosen": "{name} · {width} × {height} px",
+  "chosen.ready": "Imagen lista. Pulsa el botón para empezar.",
+  "chosen.first": "Se procesa una imagen cada vez: se ha tomado la primera de {count}.",
+  "choose.prompt": "Elige una imagen para empezar.",
+  "choose.first": "Elige antes una imagen.",
+  "compare.label": "Antes y después: mueve el control o arrastra sobre la imagen",
+  "compare.image": "A la izquierda, la imagen original; a la derecha, sin fondo",
+  "result.size": "{width} × {height} px",
+  "result.scaled": "La imagen era muy grande: se ha reducido a {width} × {height} px.",
+  "result.empty": "No se ha encontrado un sujeto claro: casi toda la imagen ha quedado transparente.",
+  "download.suffix": "sin-fondo",
+  "licenses.pillow": "El reescalado de imágenes de la tarea de quitar el fondo sigue el filtro bilineal de Pillow (de Secret Labs AB, Fredrik Lundh, Jeffrey A. Clark y colaboradores)."
 }

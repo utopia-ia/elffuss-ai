@@ -3,6 +3,42 @@
   "rules": "Every file under tests/fixtures/ (except broker/ and these lists) is listed here with its sha256, its licence and where it comes from. Only CC0-1.0, public-domain or own-work. A photo needs its page URL and author; own work names the script that makes it; a golden reference names the model id, the pinned revision and the backend it came from. None may match tests/fixtures/denylist-runonweb-samples.sha256.",
   "files": [
     {
+      "path": "tests/fixtures/cutout/foto.jpg",
+      "sha256": "9b0402e8c10ccd349b62c0b12e59c8329f1b535d11e6ffca00cfe9a2eff86b63",
+      "license": "CC0-1.0",
+      "source": {
+        "url": "https://commons.wikimedia.org/wiki/File:Dog_resting_on_the_grass.jpg",
+        "author": "Joselodos",
+        "file": "The 960-pixel-wide rendering that Wikimedia Commons serves of the original, with its Exif block (author fields) removed; the image data is untouched."
+      },
+      "purpose": "cutout: a photo with one clear subject (a dog lying on grass) whose background the site removes."
+    },
+    {
+      "path": "tests/fixtures/cutout/golden-alpha.png",
+      "sha256": "7a700d7b45e57e5314eebdbbfd392a9772bf8b5517b34af0c4784993e3ddf119",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/cutout.spec.mjs",
+        "how": "Run with ELFFUSS_AI_RECORD=cutout: the alpha channel of the PNG the cutout page gave for foto.jpg in configuration B, saved as a grey PNG."
+      },
+      "model": "remove-bg/ben2",
+      "revision": "c552aa82688edce09f0ac9d2e31ad53d9d629010",
+      "device": "wasm",
+      "dtype": "fp16",
+      "checked": "Against an independent run of the same ONNX file with ONNX Runtime for the CPU, Pillow's bilinear resize and torch's bilinear upsampling: IoU 0.9994, mean alpha error 0.0002. Against mascara.json: IoU 0.944.",
+      "purpose": "cutout: the reference mask. In both configurations the site's mask must match it with an IoU of at least 0.98 and a mean alpha error of at most 0.01."
+    },
+    {
+      "path": "tests/fixtures/cutout/mascara.json",
+      "sha256": "b53130bf3f7e7548e01913ab848d7b1a7115ad2a7c7b4f427ee937be2cefa4fa",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/cutout.spec.mjs",
+        "how": "Traced by hand over foto.jpg before any model ran on it (outline of the dog, and the grass between its front legs as a hole); the spec fills it with the even-odd rule."
+      },
+      "purpose": "cutout: the subject's outline, independent of any model. The site's mask (alpha of 128 or more) must overlap it with an IoU of at least 0.85."
+    },
+    {
       "path": "tests/fixtures/depth/foto.jpg",
       "sha256": "48bcced1f6531fd2d750d71031a1576c76240733edd4d43c78e6796d5b3700b4",
       "license": "CC0-1.0",
@@ -13,16 +49,6 @@
         "note": "The 960 × 638 rendering that Wikimedia Commons serves of the CC0 original, with its metadata segments (EXIF and colour profile) removed; the image data is unchanged."
       },
       "purpose": "depth: a photo with something clearly near (the trail sign) and clearly far (the red rock on the hill)."
-    },
-    {
-      "path": "tests/fixtures/depth/regiones.json",
-      "sha256": "f102dec6e081ba2fae5bc96f721f51def44b6602349b341a5a4b82d2be3ae72a",
-      "license": "own-work",
-      "source": {
-        "script": "tests/browser/specs/depth.spec.mjs",
-        "made": "Marked by hand, looking at foto.jpg; the spec reads it."
-      },
-      "purpose": "depth: rectangles of the near sign, the juniper in the middle and the far rock, for the near-beats-far check."
     },
     {
       "path": "tests/fixtures/depth/golden-depth.png",
@@ -38,6 +64,16 @@
       "dtype": "fp32",
       "runtimes": "Transformers.js 4.3.1 and ONNX Runtime Web 1.30.0",
       "purpose": "depth: the reference map (16-bit grey, 0-1 stored as 0-65535, lighter is nearer) that every backend must correlate with."
+    },
+    {
+      "path": "tests/fixtures/depth/regiones.json",
+      "sha256": "f102dec6e081ba2fae5bc96f721f51def44b6602349b341a5a4b82d2be3ae72a",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/depth.spec.mjs",
+        "made": "Marked by hand, looking at foto.jpg; the spec reads it."
+      },
+      "purpose": "depth: rectangles of the near sign, the juniper in the middle and the far rock, for the near-beats-far check."
     }
   ]
 }

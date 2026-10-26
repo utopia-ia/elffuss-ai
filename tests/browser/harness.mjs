@@ -63,15 +63,15 @@ export class TestRun {
     this.requests = [];
   }
 
-  /** A fresh browser profile. */
-  async newContext({ javaScriptEnabled = true } = {}) {
+  /** A fresh browser profile; `args` adds Chrome flags to the configuration's. */
+  async newContext({ javaScriptEnabled = true, args = [] } = {}) {
     const tmp = join(this.cache, 'tmp');
     mkdirSync(tmp, { recursive: true });
     const dir = mkdtempSync(join(tmp, 'profile-'));
     const ctx = await this.playwright.chromium.launchPersistentContext(dir, {
       ...(this.browser === 'chrome' ? { channel: 'chrome' } : {}),
       headless: this.headless,
-      args: CONFIGS[this.config].args,
+      args: [...CONFIGS[this.config].args, ...args],
       serviceWorkers: 'block',
       ignoreHTTPSErrors: true,
       javaScriptEnabled,

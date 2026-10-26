@@ -64,6 +64,19 @@ True when an error looks like a WebGPU shader or kernel failure. A site that
 ran with device 'auto' on WebGPU retries once on WebAssembly after any failure;
 this only labels the reason it reports.
 
+### `canGrowWasmMemory(bytes, scope = globalThis)`
+
+True when this realm can grow a WebAssembly memory to `bytes`, as the
+WebAssembly runtime will have to for a large model. It asks for the pages
+the way that runtime does, before anything is downloaded; a browser that
+caps WebAssembly lower (or cannot reserve that much) answers false. The probe
+is dropped at once, and V8 collects it before failing a later allocation.
+
+| Parameter | Type | |
+|---|---|---|
+| `bytes` | `number` |  |
+| `[scope]` | `{ WebAssembly?: any }` | replaces the global WebAssembly (tests) |
+
 ### `threadCount({ isolated = Boolean(globalThis.crossOriginIsolated), cores = globalThis.navigator?.hardwareConcurrency || 1 } = {})`
 
 Threads for ONNX Runtime's WebAssembly backend: one unless the page is

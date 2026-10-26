@@ -1,1 +1,5 @@
-/* Layout of the cutout site only (see shared/README.md). Empty until the site is built. */
+/* Layout of the cutout site only (see shared/README.md): the chosen image and
+   the comparison are never taller than most of the window, and the slider is as
+   wide as its card. */
+.stage > img, .stage > canvas { width: auto; max-height: 70vh; }
+.result input[type="range"] { width: 100%; }

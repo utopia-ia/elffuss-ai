@@ -5,6 +5,20 @@
   "drop": "Drop an image here, paste it, or click to choose one",
   "action.run": "Remove the background",
   "action.downloadAndRun": "Download the model ({size}) and remove the background",
+  "action.download": "Download PNG",
   "catalog.name": "Remove background",
-  "catalog.line": "Keeps the person or the object and gives you a transparent PNG."
+  "catalog.line": "Keeps the person or the object and gives you a transparent PNG.",
+  "preview.alt": "The chosen image",
+  "chosen": "{name} · {width} × {height} px",
+  "chosen.ready": "Image ready. Press the button to start.",
+  "chosen.first": "One image at a time: the first of {count} was taken.",
+  "choose.prompt": "Choose an image to start.",
+  "choose.first": "Choose an image first.",
+  "compare.label": "Before and after: move the control or drag across the image",
+  "compare.image": "The original image on the left, without its background on the right",
+  "result.size": "{width} × {height} px",
+  "result.scaled": "The image was very large: it was reduced to {width} × {height} px.",
+  "result.empty": "No clear subject was found: almost the whole image became transparent.",
+  "download.suffix": "no-background",
+  "licenses.pillow": "The image resampling of the background-removal task follows Pillow's bilinear filter (by Secret Labs AB, Fredrik Lundh, Jeffrey A. Clark and contributors)."
 }

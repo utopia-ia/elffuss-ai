@@ -24,7 +24,7 @@ four tasks land one by one (`docs/app-contract.md` says what each must do).
 | Module | What it does | Site | Status |
 |---|---|---|---|
 | `@elffuss/ai/core` | Model store client, backend choice, pinned runtimes, registry, Worker host, errors, progress | every site | in use |
-| `@elffuss/ai/remove-bg` | Remove the background of an image (transparent PNG) | [cutout.elffuss.com](https://cutout.elffuss.com/) | to be written (`./remove-bg/sizes` exists) |
+| `@elffuss/ai/remove-bg` | Remove the background of an image (transparent PNG) | [cutout.elffuss.com](https://cutout.elffuss.com/) | in use |
 | `@elffuss/ai/depth` | Depth map of a photo | [depth.elffuss.com](https://depth.elffuss.com/) | in use |
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | to be written (`./detect/sizes` exists) |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | to be written (`./ocr/sizes` exists) |
