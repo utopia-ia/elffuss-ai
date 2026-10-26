@@ -181,6 +181,8 @@ export function licensesMain({ site, models, runtimes, t, base }) {
   out.push(`  <h2>${esc(t['licenses.code'])}</h2>`);
   out.push(`  <p>${esc(t['licenses.siteCode'])} <a href="${esc(base)}LICENSES/Apache-2.0.txt">Apache-2.0</a> · <a href="${esc(base)}NOTICE.txt">NOTICE</a></p>`);
   out.push(`  <p>${esc(t['licenses.runonweb'])} <a href="${esc(base)}LICENSES/MIT-runonweb.txt">MIT</a></p>`);
+  // Code of other projects that this site's own modules adapt (app.json `adapted`).
+  for (const a of site.adapted || []) out.push(`  <p>${esc(t[a.key])} <a href="${esc(base)}${esc(a.file)}">${esc(a.license)}</a></p>`);
   return out.join('\n');
 }
 

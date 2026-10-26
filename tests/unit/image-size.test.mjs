@@ -54,6 +54,10 @@ test('a header that is cut or unknown gives no size', () => {
   // A PNG signature followed by anything but its header chunk: no size (left to the decoder, which fails).
   assert.equal(imageSize(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...ascii('basura que no es una imagen')])), null);
   assert.equal(imageSize(new Uint8Array([...ascii('BM'), ...new Array(12).fill(0), ...ascii('not a DIB header at all')])), null);
+  // An IHDR whose fields PNG does not allow (sides over 2^31 − 1, no such bit depth): no size.
+  const bad = png(1, 1);
+  bad.fill(0xee, 16, 29);
+  assert.equal(imageSize(bad), null, 'the broken PNG of the OCR folder fixture is left to the decoder');
 });
 
 test('the pixel budget refuses a huge picture before decoding, whatever the file weighs', async () => {
