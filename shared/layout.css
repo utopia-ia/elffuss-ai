@@ -8,11 +8,11 @@ a { color: var(--accent); }
 header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; padding: 1rem 1rem; }
 header nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
 /* The Elffuss mark (elffuss-mark.css, the same on every Elffuss site: a link to elffuss.com) and then the site's
-   name, a link to its home. The gap keeps 8 px between the mark's focus ring (6 px out) and the dot; the mark sits
-   1.5 px lower so "Elffuss" shares the baseline of the name. */
+   name, a link to its home. The gap keeps 8 px between the mark's focus ring (6 px out) and the dot; the margins put
+   the mark 1.5 px lower, without making the row taller, so "Elffuss" shares the baseline of the name. */
 .brand-row { display: flex; align-items: center; gap: 0 .9rem; min-width: 0; }
 .brand-row .elffuss-mark, .brand-sep { flex: none; }
-.brand-row .elffuss-mark { margin-top: 3px; }
+.brand-row .elffuss-mark { margin: 1.5px 0 -1.5px; }
 .brand-sep { color: var(--muted); }
 main { flex: 1; width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
 footer { width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 2rem; }
@@ -34,11 +34,15 @@ img, canvas, video { max-width: 100%; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 [hidden] { display: none !important; }
 
-/* On a phone the mark is touched: 44 px of height, without making the line taller than its 34 px. Under 360 px
-   only the leaf is shown, so the site's name stays on one line (the link keeps its label). */
+/* On a phone the mark is touched: 44 px to touch, given by an empty layer 5 px above and below the link, not by a
+   taller box. The box stays 34 px, so the line does not grow and the focus ring (6 px out) stays inside the header's
+   padding (.6rem on a phone) and off the nav when it wraps under. Under 390 px only the leaf is shown, so the
+   site's name stays on one line with any of the mark's serif fonts ("Remove background" needs 365 px with the first
+   one and some 390 px with Georgia); the link keeps its label. */
 @media (max-width: 600px) {
-  .brand-row .elffuss-mark { min-height: 44px; margin: -3.5px 0 -6.5px; }
+  .brand-row .elffuss-mark { position: relative; }
+  .brand-row .elffuss-mark::before { content: ""; position: absolute; inset: -5px 0; }
 }
-@media (max-width: 359px) {
+@media (max-width: 389px) {
   .brand-row .elffuss-mark .word { display: none; }
 }

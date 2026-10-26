@@ -133,6 +133,8 @@ test('layout sheets only lay out; their only colours are the eight variables', (
         continue;
       }
       if (selector === '.visually-hidden' && ['clip-path', 'white-space'].includes(prop)) continue;
+      // An empty box (the mark's touch area on a phone): content "" makes the box and writes nothing.
+      if (prop === 'content' && value === '""' && /::before$/.test(selector)) continue;
       assert.match(prop, LAYOUT, `${rel}: ${selector} { ${prop} } is not layout`);
     }
   }
