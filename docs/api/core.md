@@ -270,7 +270,18 @@ is released at once, and a file over the pixel budget is refused first
 | `blob` | `Blob` |  |
 | `[opts]` | `{ maxSide?: number, maxPixels?: number }` |  |
 
-Returns `Promise<ImageBitmap>`.
+Returns `Promise<{ bitmap: ImageBitmap, sourceWidth: number, sourceHeight: number }>`: the small copy, and the size of the picture (as shown, after its EXIF orientation)
+
+### `previewImage(blob, opts)`
+
+On the page: a small PNG of an image file, for an <img> (see previewBitmap).
+
+| Parameter | Type | |
+|---|---|---|
+| `blob` | `Blob` |  |
+| `[opts]` | `{ maxSide?: number, maxPixels?: number }` |  |
+
+Returns `Promise<{ blob: Blob, width: number, height: number, sourceWidth: number, sourceHeight: number }>`.
 
 ### `toTransferable(input)`
 
@@ -296,11 +307,15 @@ Returns `Promise<{ width: number, height: number, data: Uint8ClampedArray, scale
 
 ### `encodePng({ width, height, data })`
 
-Encode RGBA pixels as PNG (needs OffscreenCanvas, so a browser realm).
+Encode RGBA pixels as PNG, exactly as given. An image with any pixel that is
+not fully opaque is written without a canvas, so those pixels keep their
+colour (a canvas stores premultiplied alpha and would change it); a fully
+opaque one goes through the browser's own encoder, which is faster and loses
+nothing there. The colours are those the browser decoded the input to, sRGB.
 
 | Parameter | Type | |
 |---|---|---|
-| `img` | `{ width: number, height: number, data: Uint8ClampedArray }` |  |
+| `img` | `{ width: number, height: number, data: Uint8ClampedArray\|Uint8Array }` |  |
 
 Returns `Promise<Blob>`.
 
@@ -369,6 +384,37 @@ Release a session; never throws.
 ### `tensor(ort, data, dims)`
 
 A Float32 tensor of a shape, checking the data length.
+
+## `sdk/core/png.js`
+
+PNG files written and read without a canvas. A canvas stores premultiplied alpha, so a pixel that is not fully opaque comes back with other colours (the edge of a cut-out changed by up to half the range); and it only writes 8 bits per channel. This writer puts the given samples in the file as they are: grey or RGB, with or without alpha, at 8 or 16 bits. Compression uses the browser's CompressionStream (also in Node), so nothing else is needed.
+
+### `filterRow(row, prev, bpp)`
+
+Filter one scanline (`prev` is the raw row above, or null) with each of the
+five PNG filters and keep the one whose bytes, read as signed, add up to the
+least (the usual heuristic). Returns the filter type byte and the row.
+
+### `encodePngSamples({ width, height, channels, bitDepth = 8, data, srgb = false })`
+
+A PNG of raw samples, row by row, with no change to them.
+
+| Parameter | Type | |
+|---|---|---|
+| `img` | `{ width: number, height: number, channels: 1\|2\|3\|4, bitDepth?: 8\|16, data: Uint8Array\|Uint8ClampedArray\|Uint16Array, srgb?: boolean }` | `data` holds `channels` samples per pixel (16-bit samples in a Uint16Array); `srgb` marks the colours as sRGB (an sRGB chunk), as a browser decodes them. |
+
+Returns `Promise<Blob>`: an `image/png` Blob
+
+### `decodePng(input)`
+
+Read a PNG: greyscale, grey with alpha, RGB or RGBA, at 8 or 16 bits, not
+interlaced. Checks the signature and every chunk's CRC.
+
+| Parameter | Type | |
+|---|---|---|
+| `input` | `ArrayBuffer\|Uint8Array\|Blob` |  |
+
+Returns `Promise<{ width: number, height: number, bitDepth: 8\|16, channels: number, data: Uint8Array\|Uint16Array, srgb: boolean }>`: `data` holds `channels` samples per pixel, row by row
 
 ## `sdk/core/progress.js`
 

@@ -13,6 +13,7 @@
 // huge picture (a PNG of one colour compresses to almost nothing).
 
 import { AiError } from './errors.js';
+import { encodePngSamples } from './png.js';
 
 /**
  * The most pixels an input may have (8192 × 8192). It covers the photos of
@@ -133,7 +134,8 @@ export async function checkPixelBudget(blob, maxPixels = MAX_INPUT_PIXELS) {
  * (too-large), so showing a photo never keeps a full-size copy alive.
  * @param {Blob} blob
  * @param {{ maxSide?: number, maxPixels?: number }} [opts]
- * @returns {Promise<ImageBitmap>}
+ * @returns {Promise<{ bitmap: ImageBitmap, sourceWidth: number, sourceHeight: number }>} the small copy, and the
+ *   size of the picture (as shown, after its EXIF orientation)
  */
 export async function previewBitmap(blob, { maxSide = 2048, maxPixels = MAX_INPUT_PIXELS } = {}) {
   if (blob.size === 0) throw new AiError('decode-failed', 'the file is empty');
@@ -144,12 +146,31 @@ export async function previewBitmap(blob, { maxSide = 2048, maxPixels = MAX_INPU
   try { full = await createImageBitmap(blob, { imageOrientation: 'from-image' }); }
   catch (err) { throw new AiError('decode-failed', 'the image could not be decoded', { cause: err, details: { type } }); }
   try {
-    if (full.width * full.height > maxPixels) throw new AiError('too-large', `the image has ${full.width} × ${full.height} pixels`, { details: { maxPixels } });
-    const k = Math.min(1, maxSide / Math.max(full.width, full.height));
-    if (k === 1) { const keep = full; full = null; return keep; }
-    return await createImageBitmap(full, { resizeWidth: Math.max(1, Math.round(full.width * k)), resizeHeight: Math.max(1, Math.round(full.height * k)), resizeQuality: 'high' });
+    const sourceWidth = full.width, sourceHeight = full.height;
+    if (sourceWidth * sourceHeight > maxPixels) throw new AiError('too-large', `the image has ${sourceWidth} × ${sourceHeight} pixels`, { details: { maxPixels } });
+    const k = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+    if (k === 1) { const bitmap = full; full = null; return { bitmap, sourceWidth, sourceHeight }; }
+    const bitmap = await createImageBitmap(full, { resizeWidth: Math.max(1, Math.round(sourceWidth * k)), resizeHeight: Math.max(1, Math.round(sourceHeight * k)), resizeQuality: 'high' });
+    return { bitmap, sourceWidth, sourceHeight };
   } finally {
     full?.close();
+  }
+}
+
+/**
+ * On the page: a small PNG of an image file, for an <img> (see previewBitmap).
+ * @param {Blob} blob
+ * @param {{ maxSide?: number, maxPixels?: number }} [opts]
+ * @returns {Promise<{ blob: Blob, width: number, height: number, sourceWidth: number, sourceHeight: number }>}
+ */
+export async function previewImage(blob, opts) {
+  const { bitmap, sourceWidth, sourceHeight } = await previewBitmap(blob, opts);
+  try {
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    return { blob: await canvas.convertToBlob({ type: 'image/png' }), width: bitmap.width, height: bitmap.height, sourceWidth, sourceHeight };
+  } finally {
+    bitmap.close();
   }
 }
 
@@ -217,12 +238,22 @@ export async function decodeImage(input, { maxSide = 0, close = true, maxPixels 
 }
 
 /**
- * Encode RGBA pixels as PNG (needs OffscreenCanvas, so a browser realm).
- * @param {{ width: number, height: number, data: Uint8ClampedArray }} img
+ * Encode RGBA pixels as PNG, exactly as given. An image with any pixel that is
+ * not fully opaque is written without a canvas, so those pixels keep their
+ * colour (a canvas stores premultiplied alpha and would change it); a fully
+ * opaque one goes through the browser's own encoder, which is faster and loses
+ * nothing there. The colours are those the browser decoded the input to, sRGB.
+ * @param {{ width: number, height: number, data: Uint8ClampedArray|Uint8Array }} img
  * @returns {Promise<Blob>}
  */
 export async function encodePng({ width, height, data }) {
-  const canvas = new OffscreenCanvas(width, height);
-  canvas.getContext('2d').putImageData(new ImageData(data, width, height), 0, 0);
-  return canvas.convertToBlob({ type: 'image/png' });
+  let opaque = true;
+  for (let i = 3; i < data.length; i += 4) if (data[i] !== 255) { opaque = false; break; }
+  if (opaque && typeof OffscreenCanvas !== 'undefined') {
+    const canvas = new OffscreenCanvas(width, height);
+    const pixels = data instanceof Uint8ClampedArray ? data : new Uint8ClampedArray(data.buffer, data.byteOffset, data.length);
+    canvas.getContext('2d').putImageData(new ImageData(pixels, width, height), 0, 0);
+    return canvas.convertToBlob({ type: 'image/png' });
+  }
+  return encodePngSamples({ width, height, channels: 4, bitDepth: 8, data, srgb: true });
 }
