@@ -98,11 +98,11 @@
     },
     {
       "path": "tests/fixtures/detect/golden-outputs-wasm.json",
-      "sha256": "bc23176d89795ad27bb3360e29c8cbbfbb5927efb3e9d0dac792bd3b67753da5",
+      "sha256": "ee4afec7487c126ec59bcbc4692ce9d6ff886afd7c412beaf8ff286f7c45717f",
       "license": "own-work",
       "source": {
         "script": "tests/browser/specs/detect.spec.mjs",
-        "note": "Written by its test of the decoder's reference outputs when ELFFUSS_AI_UPDATE_DETECT_OUTPUTS=1: the raw outputs of the model for foto.jpg, the 40 queries with the highest scores."
+        "note": "Written by its test of the decoder's reference outputs when ELFFUSS_AI_UPDATE_DETECT_OUTPUTS=1: the raw outputs of the model for foto.jpg, fed the normalised input RF-DETR was trained on, the 40 queries with the highest scores."
       },
       "model": "detect/rfdetr-nano",
       "revision": "eae21cee0687a91bcf9fa071605c48d7705d2d91",
