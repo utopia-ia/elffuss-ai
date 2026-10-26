@@ -2,7 +2,7 @@
   "nav.tools": "Herramientas",
   "nav.otherLang": "English",
   "privacy.download": "Se descarga la primera vez y se guarda en este navegador.",
-  "footer.local": "Todo se procesa en tu navegador. Tus archivos no salen de tu equipo; lo único que se descarga es el modelo.",
+  "footer.local": "Todo se procesa en tu navegador y tus archivos no salen de tu equipo. Se descargan el modelo, de su repositorio de Hugging Face, y el programa que lo ejecuta, de esta web.",
   "footer.model": "Modelo: {model}, de {author}. Licencia {license}.",
   "footer.conversion": "Pesos en ONNX publicados por {author} ({license}), descargados de su repositorio de Hugging Face.",
   "footer.runtimes": "Se ejecuta con {runtimes}. Parte del código procede de runonweb.ai (MIT).",

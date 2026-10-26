@@ -2,7 +2,7 @@
   "nav.tools": "Tools",
   "nav.otherLang": "Español",
   "privacy.download": "It is downloaded the first time and kept in this browser.",
-  "footer.local": "Everything is processed in your browser. Your files do not leave your device; the only download is the model.",
+  "footer.local": "Everything is processed in your browser and your files do not leave your device. What is downloaded is the model, from its Hugging Face repository, and the software that runs it, from this site.",
   "footer.model": "Model: {model}, by {author}. Licence {license}.",
   "footer.conversion": "ONNX weights published by {author} ({license}), downloaded from their Hugging Face repository.",
   "footer.runtimes": "Runs on {runtimes}. Part of the code comes from runonweb.ai (MIT).",

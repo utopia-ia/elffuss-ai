@@ -1,13 +1,13 @@
 # Elffuss tools
 
-> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, and make depth maps. Each runs its model in the browser with WebGPU or WebAssembly; the only download is the model, from its original Hugging Face repository at a pinned revision, and it is kept in the browser for the next visit. Files the user opens never leave the device.
+> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, and make depth maps. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from its original Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool's own site. Files the user opens never leave the device.
 
 ## Tools
 
-- [Remove background](https://cutout.elffuss.com/en/): Keeps the person or the object and gives you a transparent PNG. Model: BEN2 by PramaLLC (MIT). Download: 219 MB, once per browser.
-- [Depth map](https://depth.elffuss.com/en/): Works out what is near and what is far in a photo. Model: Depth Anything V2 Small by depth-anything (Apache-2.0). Download: 27 to 99 MB, once per browser.
-- [Detect objects](https://detect.elffuss.com/en/): Finds people, cars, animals and up to 80 kinds of objects, also with your camera. Model: RF-DETR Nano by Roboflow (Apache-2.0). Download: 29 MB, once per browser.
-- [Read text](https://ocr.elffuss.com/en/): Gets the text out of photos, scans and PDFs, even whole folders. Model: PP-OCRv6 by PaddlePaddle (Apache-2.0). Download: 31 MB, once per browser.
+- [Remove background](https://cutout.elffuss.com/en/): Keeps the person or the object and gives you a transparent PNG. Model: BEN2 by PramaLLC (MIT). Model download: 219 MB, the first time; it is then kept in that browser.
+- [Depth map](https://depth.elffuss.com/en/): Works out what is near and what is far in a photo. Model: Depth Anything V2 Small by depth-anything (Apache-2.0). Model download: 27 to 99 MB, the first time; it is then kept in that browser.
+- [Detect objects](https://detect.elffuss.com/en/): Finds people, cars, animals and up to 80 kinds of objects, also with your camera. Model: RF-DETR Nano by Roboflow (Apache-2.0). Model download: 29 MB, the first time; it is then kept in that browser.
+- [Read text](https://ocr.elffuss.com/en/): Gets the text out of photos, scans and PDFs, even whole folders. Model: PP-OCRv6 by PaddlePaddle (Apache-2.0). Model download: 31 MB, the first time; it is then kept in that browser.
 - [Every tool](https://tools.elffuss.com/en/): the catalog.
 
 ## Modules
