@@ -85,9 +85,9 @@ test('stylesheets in order: tokens, layout, the site, the shared look, the Elffu
   }
 });
 
-// The mark as approved (f3d3d69): the sheet byte for byte, and on every page the markup of its header comment with the
+// The mark as approved (f3d3d69, comment reworded in 1e6e463): the sheet byte for byte, and on every page the markup of its header comment with the
 // label in the page's language, first in the header, followed by the site's name as its own link.
-const MARK_SHEET_SHA1 = '627569b7695e8a26bee673e2433adf6086b33413';
+const MARK_SHEET_SHA1 = '6e6263cacfd75a82fd700c976b3104a48850a37d';
 test('every page opens its header with the Elffuss mark, then the site name; the mark sheet is the approved one', async () => {
   const { createHash } = await import('node:crypto');
   const sheet = readFileSync(join(ROOT, 'shared', 'elffuss-mark.css'));
