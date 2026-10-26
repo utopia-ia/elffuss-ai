@@ -60,6 +60,10 @@
   "notfound.text": "Esta página no existe.",
   "licenses.licence": "licencia",
   "licenses.notices": "avisos de terceros",
+  "licenses.source": "código fuente de esta versión",
+  "licenses.eigen": "código fuente de Eigen",
+  "licenses.ortNote": "Su WebAssembly incluye Eigen, con licencia MPL-2.0: los dos enlaces de código fuente llevan a la versión exacta de ONNX Runtime y de Eigen con la que se compila.",
+  "licenses.transformersNote": "Su archivo incluye @huggingface/jinja y @huggingface/tokenizers, con sus licencias. Esta web lo sirve con un cambio: sus dos importaciones de ONNX Runtime apuntan a la copia que se sirve aquí, y la primera línea lo dice.",
   "licenses.siteCode": "Código de esta web: Apache-2.0, de UtopiaIA.",
   "licenses.catalogModels": "Cada herramienta lista en su página los modelos que usa y sus licencias.",
   "notfound.home": "Volver al inicio"
