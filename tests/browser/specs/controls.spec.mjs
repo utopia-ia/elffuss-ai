@@ -28,8 +28,24 @@ export default [
       const fetched = await page.evaluate(() => fetch('https://example.org/').then(() => 'reached', () => 'blocked'));
       t.equal(fetched, 'blocked', 'connect-src blocks other origins');
       t.ok((await t.csp(page)).some(x => x.directive === 'connect-src'), 'and the violation is recorded');
+      // A violation inside a Worker (here a module Worker of the page's own origin, like
+      // the task's or PDF.js's) is recorded too.
+      const base = await page.evaluate(() => [...document.querySelectorAll('link[rel="stylesheet"]')][0].href.replace(/shared\/tokens\.css$/, ''));
+      const before = t.workers.length;
+      await page.evaluate(async b => {
+        const { scriptUrl } = await import(b + 'sdk/core/tt.js');
+        globalThis.__w = new Worker(scriptUrl(b + '__test__/smoke-worker.js'), { type: 'module', name: 'control' });
+      }, base).catch(() => {});
+      await page.waitForTimeout(300);
+      const w = t.workers[before];
+      if (t.ok(w, 'the harness sees the Worker')) {
+        await w.evaluate(() => fetch('https://example.org/from-a-worker').catch(() => {}));
+        await page.waitForTimeout(200);
+        t.ok((await t.csp(page)).some(x => x.where?.startsWith('worker') && x.directive === 'connect-src'), 'a violation inside a Worker is recorded');
+        await w.evaluate(() => { self.__elffussCsp.length = 0; });
+      }
       // Clean up what the controls left, so this test passes on its own merits.
-      await page.evaluate(() => { globalThis.__elffuss.csp.length = 0; });
+      await page.evaluate(() => { globalThis.__elffuss.csp.length = 0; globalThis.__w?.terminate(); });
       t.requests = t.requests.filter(r => !r.url.startsWith('https://example.org'));
       t.noPageErrors();
     },

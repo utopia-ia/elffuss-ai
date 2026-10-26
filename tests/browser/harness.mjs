@@ -61,6 +61,7 @@ export class TestRun {
     this.notes = [];
     this.pageErrors = [];
     this.requests = [];
+    this.workers = [];
   }
 
   /** A fresh browser profile; `args` adds Chrome flags to the configuration's. */
@@ -86,6 +87,15 @@ export class TestRun {
     });
     const watch = page => {
       page.on('pageerror', e => this.pageErrors.push({ page: page.url(), message: String(e.message || e).slice(0, 300) }));
+      // Every Worker of the page (the task's, PDF.js's) records its own CSP violations:
+      // a Worker's are not seen by the page.
+      page.on('worker', w => {
+        this.workers.push(w);
+        w.evaluate(() => {
+          self.__elffussCsp = [];
+          self.addEventListener('securitypolicyviolation', e => self.__elffussCsp.push({ directive: e.effectiveDirective || e.violatedDirective || '', blocked: String(e.blockedURI || ''), where: 'worker ' + (self.name || '') }));
+        }).catch(() => {});
+      });
     };
     ctx.pages().forEach(watch);
     ctx.on('page', watch);
@@ -122,9 +132,14 @@ export class TestRun {
     return page.evaluate(() => JSON.parse(JSON.stringify(globalThis.__smoke)));
   }
 
-  /** CSP violations a page recorded (shell or smoke). */
-  csp(page) {
-    return page.evaluate(() => (globalThis.__elffuss?.csp || globalThis.__smoke?.csp || []).slice());
+  /** CSP violations a page recorded (shell or smoke), and those its Workers recorded. */
+  async csp(page) {
+    const own = await page.evaluate(() => (globalThis.__elffuss?.csp || globalThis.__smoke?.csp || []).slice());
+    const inWorkers = [];
+    for (const w of this.workers) {
+      try { inWorkers.push(...await w.evaluate(() => (self.__elffussCsp || []).slice())); } catch { /* the Worker has ended */ }
+    }
+    return [...own, ...inWorkers];
   }
 
   // ── checks ────────────────────────────────────────────────────────────────
