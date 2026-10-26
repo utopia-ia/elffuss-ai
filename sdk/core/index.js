@@ -5,7 +5,7 @@
 // anyone writing a new task. Importing it has no side effects.
 
 export { AiError, ERROR_CODES, isAiError, toAiError, fromStoreError, serializeError, deserializeError } from './errors.js';
-export { probeWebGPU, chooseVariant, variantFits, isShaderError, threadCount, ortVariantFor } from './device.js';
+export { probeWebGPU, chooseVariant, variantFits, isShaderError, threadCount, ortVariantFor, canGrowWasmMemory } from './device.js';
 export { createQueue } from './queue.js';
 export { createProgress, missingBytes, STATUSES } from './progress.js';
 export { HUB_ORIGIN, pinnedUrl, parsePinnedUrl, storeKey, repoPage } from './hub-url.js';
