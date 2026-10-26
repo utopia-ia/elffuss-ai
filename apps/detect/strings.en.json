@@ -11,7 +11,7 @@
   "camera.stop": "Stop the camera",
   "camera.note": "The camera picture is analysed here and never recorded.",
   "camera.asking": "Asking for permission to use the camera…",
-  "camera.ready": "Camera ready: press the detect button to start.",
+  "camera.ready": "Camera ready: press the button above to start.",
   "camera.live": "Detecting live…",
   "camera.stopped": "Camera stopped. The last analysed frame stays on the page.",
   "camera.denied": "There is no permission to use the camera. You can give it from the address bar and try again.",

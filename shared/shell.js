@@ -22,6 +22,7 @@ import { loadRegistry, getModel, variantFiles, resolveRef } from '../sdk/core/re
 import { probeWebGPU, chooseVariant } from '../sdk/core/device.js';
 import { AiError, isAiError, toAiError } from '../sdk/core/errors.js';
 import { createTaskRunner } from './runner.js';
+import { onInput, runQueued } from './autorun.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const mb = bytes => (bytes / 1e6 < 10 ? (Math.round(bytes / 1e5) / 10) : Math.round(bytes / 1e6));
@@ -90,6 +91,12 @@ export async function createShell({ config: cfg = config } = {}) {
   let primaryLabels = null; // { run, download }
   let busy = null;
   let storageKnown = false; // the store answered the last time it was asked
+  let stored = false; // ...and it had every file of the variant
+  let consented = false; // the primary button was pressed on this page (the download is agreed)
+  let primaryAction = null; // what the primary button does (onPrimary)
+  let afterAction = null; // called when it has ended
+  let queued = false; // an input arrived while an action was running: run it after
+  let lastCheck = null; // the latest question to the store
 
   const setStatus = text => { if (els.status) els.status.textContent = text || ''; };
   const showProgress = (loaded, total) => {
@@ -161,12 +168,14 @@ export async function createShell({ config: cfg = config } = {}) {
 
     /** Label the primary button from what the store has. */
     labels(run, download) { primaryLabels = { run, download }; return shell.refreshStorage(); },
+    /** Ask the store again (see check); the answer also says whether the model is all here. */
+    refreshStorage() { lastCheck = shell.check(); return lastCheck; },
     /**
      * Ask the store which files of the model this browser has; update the storage
      * panel, the model size and the primary button.
      * @returns {Promise<{ have: number, missing: number } | null>}
      */
-    async refreshStorage() {
+    async check() {
       const items = els.storage ? [...els.storage.querySelectorAll('li[data-url]')] : [];
       const urls = new Map(items.map(li => [li.dataset.url, Number(li.dataset.size)]));
       for (const f of files) urls.set(f.url, f.size);
@@ -175,6 +184,7 @@ export async function createShell({ config: cfg = config } = {}) {
         has = new Map(await Promise.all([...urls].map(async ([u, size]) => [u, await store.has(u, size)])));
       } catch (err) {
         storageKnown = false;
+        stored = false;
         document.documentElement.dataset.storage = 'unknown';
         const s = $('[data-role="storage-summary"]', els.storage || document);
         if (s) s.textContent = t('storage.unknown');
@@ -191,6 +201,7 @@ export async function createShell({ config: cfg = config } = {}) {
       }
       const missing = files.filter(f => !has.get(f.url)).reduce((s, f) => s + f.size, 0);
       const have = files.filter(f => has.get(f.url)).length;
+      stored = files.length > 0 && missing === 0;
       const summary = $('[data-role="storage-summary"]', els.storage || document);
       if (summary) summary.textContent = missing ? t('storage.summary', { have, count: files.length, size: `${formatMB(missing, lang)} MB` }) : t('storage.complete');
       if (els.modelSize && files.length) els.modelSize.textContent = t('size.mb', { n: formatMB(files.reduce((s, f) => s + f.size, 0), lang) });
@@ -200,16 +211,23 @@ export async function createShell({ config: cfg = config } = {}) {
 
     /**
      * Run an action from the primary button: one at a time, with a cancel signal,
-     * errors shown by code, and the storage panel refreshed afterwards.
+     * errors shown by code, and the storage panel refreshed afterwards. Pressing
+     * the button agrees to the download it names; from then on (and whenever the
+     * model is already in this browser) a new input runs the action by itself
+     * (inputReady).
      * @param {(ctx: { signal: AbortSignal }) => Promise<void>} fn
+     * @param {{ after?: () => void }} [o] `after`: called when each run of it has ended (the button is back)
      */
-    onPrimary(fn) {
-      els.primary?.addEventListener('click', () => shell.act(fn));
+    onPrimary(fn, { after } = {}) {
+      primaryAction = fn;
+      afterAction = after || null;
+      els.primary?.addEventListener('click', () => { consented = true; shell.act(fn); });
     },
     async act(fn) {
       if (busy) return;
       const ac = new AbortController();
       busy = ac;
+      queued = false;
       if (els.primary) els.primary.disabled = true;
       try { await fn({ signal: ac.signal }); }
       catch (err) { shell.showError(err); }
@@ -217,8 +235,31 @@ export async function createShell({ config: cfg = config } = {}) {
         busy = null;
         if (els.primary) els.primary.disabled = false;
         shell.refreshStorage().catch(() => {});
+        if (fn === primaryAction) try { afterAction?.(); } catch { /* the page's own */ }
+        const again = runQueued({ queued, aborted: ac.signal.aborted });
+        queued = false;
+        if (again && primaryAction) setTimeout(() => shell.act(primaryAction), 0);
       }
     },
+    /**
+     * A new input is ready (an image chosen, a folder listed, the camera on): run
+     * the primary action now when the model is in this browser or the person has
+     * already agreed to its download on this page; after the action in progress
+     * if there is one; otherwise leave it to the primary button, which says what
+     * it downloads, and bring that button into view.
+     * @param {{ blocked?: boolean }} [o] `blocked`: this browser cannot run it
+     * @returns {Promise<'run'|'queue'|'wait'>}
+     */
+    async inputReady({ blocked = false } = {}) {
+      if (!busy) await lastCheck?.catch(() => null);
+      const what = onInput({ busy: Boolean(busy), consented, stored: stored && storageKnown, blocked: blocked || !primaryAction });
+      if (what === 'queue') queued = true;
+      else if (what === 'run') shell.act(primaryAction);
+      else if (!blocked && els.primary && !els.primary.disabled) els.primary.scrollIntoView?.({ block: 'nearest' });
+      return what;
+    },
+    /** The model is all in this browser (the store's last answer). */
+    get stored() { return stored && storageKnown; },
     /** Cancel the action in progress, if any. */
     cancel() { busy?.abort(); },
     get busy() { return Boolean(busy); },
@@ -287,6 +328,7 @@ export async function createShell({ config: cfg = config } = {}) {
     if (files.length) els.primary.textContent = fill(primaryLabels.download, { size: `${formatMB(files.reduce((x, f) => x + f.size, 0), lang)} MB` });
   }
   shell.storageChecked = shell.refreshStorage().catch(() => null);
+  lastCheck = shell.storageChecked;
   document.documentElement.dataset.shell = 'ready';
   return shell;
 }

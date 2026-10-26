@@ -190,17 +190,32 @@ const hook = page => page.evaluate(() => {
   return d ? { runs: d.runs, last: d.last, frames: d.frames.slice(), tracks: d.tracks(), errors: globalThis.__elffuss.errors.slice() } : null;
 });
 
-/** Choose the photo, press the primary button and wait for the run to end. */
+/**
+ * Choose the photo and wait for the run to end. The first time the page waits for
+ * the primary button (it downloads the model), and it is pressed; once the model
+ * is agreed or stored the photo runs by itself. `clicked` says which.
+ */
 async function detectPhoto(page, photo = PHOTO) {
-  const before = (await hook(page)).runs;
+  const before = await page.evaluate(() => ({ runs: globalThis.__elffuss.detect.runs, errors: globalThis.__elffuss.errors.length }));
   await page.setInputFiles(sel.input, photo);
-  await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
-  await page.click(sel.primary);
-  await page.waitForFunction(n => {
+  // Either the run comes by itself, or the button stays enabled and idle for a while.
+  const how = await page.evaluate(async b => {
     const e = globalThis.__elffuss;
-    return (e.detect.runs > n || e.errors.length > 0) && !document.querySelector('main button.primary').disabled;
+    let since = performance.now();
+    for (;;) {
+      await new Promise(r => setTimeout(r, 100));
+      if (e.detect.runs > b.runs || e.errors.length > b.errors) return 'ran';
+      const p = document.querySelector('main button.primary');
+      if (p.disabled || !document.querySelector('main progress').hidden) since = performance.now();
+      else if (performance.now() - since > 2000) return 'waiting';
+    }
+  }, before);
+  if (how === 'waiting') await page.click(sel.primary);
+  await page.waitForFunction(b => {
+    const e = globalThis.__elffuss;
+    return (e.detect.runs > b.runs || e.errors.length > b.errors) && !document.querySelector('main button.primary').disabled;
   }, before, { timeout: 600000 });
-  return hook(page);
+  return { ...(await hook(page)), clicked: how === 'waiting' };
 }
 
 /** Open a page of the site and wait until the app has wired its controls (data-app="ready"). */
@@ -370,6 +385,7 @@ export default [
       t.equal(f.thresholdText, '0,50', 'slider value as the page writes it');
       const r = await detectPhoto(page);
       if (!t.ok(r.last, `no result: ${JSON.stringify(r.errors)}`)) return;
+      t.equal(r.clicked, true, 'the first time the button downloads the model and detects, in one click');
       t.equal(r.last.device, expectedDevice(site, t.registry, t.config), 'backend');
       t.equal([r.last.width, r.last.height], [HAND.width, HAND.height], 'boxes in pixels of the photo');
       const match = matchToHand(r.last.objects, HAND.boxes);
@@ -420,6 +436,7 @@ export default [
       await primarySays(en, t.strings[site.site].en['action.run']);
       const fe = await facts(en);
       t.ok(r2.last && matchToHand(r2.last.objects, HAND.boxes).ok, 'English page: the same objects');
+      t.equal(r2.clicked, false, 'English page: the model is stored, so the photo ran with no click');
       t.ok(fe.items.length > 0 && fe.items.every(i => !i.label || i.text.startsWith(i.label + ' · ')), `English names in the list: ${JSON.stringify(fe.items.map(i => i.text))}`);
       t.equal(fe.primary, t.strings[site.site].en['action.run'], 'English primary label: nothing to download');
       t.equal(t.hubTotal(), 0, 'the second page downloads nothing: whole files or probes');
@@ -478,6 +495,14 @@ export default [
       t.equal([f.video.hidden, f.frame.hidden, f.cameraHidden, f.stopHidden], [true, false, false, true], 'the last frame stays, the camera can be opened again');
       t.equal(f.status, s['camera.stopped'], 'status after Stop');
       t.equal(await page.evaluate(() => document.querySelector('[data-role="video"]').srcObject), null, 'the video lets go of the stream');
+      // The model is in this browser now: opening the camera again detects at once, with no click.
+      const framesBefore = (await hook(page)).frames.length;
+      await page.click(sel.camera);
+      await page.waitForFunction(n => globalThis.__elffuss.detect.frames.length > n || globalThis.__elffuss.errors.length > 0, framesBefore, { timeout: 120000 });
+      f = await facts(page);
+      t.equal([f.status, f.stopHidden, f.primaryDisabled], [s['camera.live'], false, true], 'the camera opened again detects with no click');
+      await page.click(sel.stop);
+      await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 120000 });
       await t.noCsp(page);
       t.noPageErrors();
       t.networkClean(site);

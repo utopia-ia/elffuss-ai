@@ -5,7 +5,9 @@
 // (a ramp read from the page's CSS variables), turns in a 3D view drawn in
 // software, and downloads as PNG in colour, in grey (lighter is nearer) and in
 // 16-bit grey. The model runs in a Worker of this page and the photo never
-// leaves the browser; nothing is downloaded before the primary button.
+// leaves the browser. The first download waits for the primary button, which
+// says its size; once the model is in this browser (or the button was pressed
+// on this page) a chosen photo is mapped at once, with no click.
 import { createShell, AiError } from './shared/shell.js';
 import { Depth, colorizeDepth, encodeDepthPng16 } from './sdk/depth/index.js';
 import { sniffImageType, DECODABLE, encodePng, previewImage, previewBitmap } from './sdk/core/image-input.js';
@@ -93,8 +95,9 @@ async function choose(file) {
   caption.textContent = t('preview.caption', { name: file.name, width: small.sourceWidth, height: small.sourceHeight });
   preview.prepend(img);
   preview.hidden = false;
-  shell.setStatus('');
-  shell.setReady(true);
+  if (!shell.busy) shell.setStatus('');
+  shell.setReady(!shell.busy);
+  await shell.inputReady();
 }
 
 /**
@@ -133,12 +136,13 @@ async function show(chosen, result, device, fallback) {
   const save = (blob, key) => shell.download(blob, t(key, { name: chosen.name }));
   section.append(el('article', { class: 'card', 'data-role': 'map' },
     el('h3', {}, t('map.title')),
-    el('img', { src: mapUrl, alt: t('map.alt', { name: chosen.file.name }), width, height }),
-    el('p', { class: 'muted' }, t('map.legend')),
     el('p', { class: 'actions' },
       colour && button('download-color', t('download.color'), () => save(colour, 'download.colorName')),
       button('download-grey', t('download.grey'), () => save(result.png, 'download.greyName')),
-      button('download-16', t('download.png16'), async () => save(await encodeDepthPng16(result.depth, width, height), 'download.png16Name')))));
+      button('download-16', t('download.png16'), async () => save(await encodeDepthPng16(result.depth, width, height), 'download.png16Name'))),
+    el('img', { src: mapUrl, alt: t('map.alt', { name: chosen.file.name }), width, height }),
+    el('p', { class: 'muted' }, t('map.legend'))));
+  section.querySelector('[data-role="map"] .actions')?.scrollIntoView?.({ block: 'nearest' });
 
   // The 3D view: the photo in relief, turned by dragging or with the arrow keys.
   // A map of less than 2 × 2 has no surface to show.
@@ -164,7 +168,7 @@ async function show(chosen, result, device, fallback) {
   if (probe) Object.assign(probe, { runs: probe.runs + 1, width, height, device, dtype: result.dtype, fallback, scaled: result.scaled, colour: Boolean(colour), view3d: Boolean(texture) });
 }
 
-shell.bindInput({ onFiles: files => { if (files[0]) choose(files[0]); }, paste: true });
+shell.bindInput({ onFiles: files => { if (files[0]) choose(files[0]).catch(err => shell.showError(err)); }, paste: true });
 cancel.addEventListener('click', () => shell.cancel());
 shell.onPrimary(async ({ signal }) => {
   if (!current) return;

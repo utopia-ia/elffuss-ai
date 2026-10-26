@@ -21,19 +21,19 @@
   <section class="result" hidden>
     <h2>{{t:result.title}}</h2>
     <article class="card">
+      <p data-role="summary"></p>
+      <p class="muted" data-role="note" hidden></p>
+      <p class="actions">
+        <button class="ghost" type="button" data-action="download-png">{{t:action.downloadPng}}</button>
+        <button class="ghost" type="button" data-action="download-json">{{t:action.downloadJson}}</button>
+      </p>
       <figure class="stage">
         <img alt="{{t:stage.alt}}" data-role="image" hidden>
         <video muted playsinline data-role="video" hidden></video>
         <canvas data-role="frame" hidden></canvas>
         <canvas class="overlay" data-role="overlay" aria-hidden="true"></canvas>
       </figure>
-      <p data-role="summary"></p>
-      <p class="muted" data-role="note" hidden></p>
       <ol data-role="objects"></ol>
-      <p class="actions">
-        <button class="ghost" type="button" data-action="download-json">{{t:action.downloadJson}}</button>
-        <button class="ghost" type="button" data-action="download-png">{{t:action.downloadPng}}</button>
-      </p>
     </article>
   </section>
 {{html:storage}}

@@ -40,8 +40,10 @@ reference (generated from the JSDoc) and `docs/MODELS.md` for every model.
 
 1. The page embeds the Elffuss model store, a hidden iframe of
    `https://models.elffuss.com/`, and asks it which files of the model this
-   browser already has (`has`). The primary button says what it will download.
-2. On the click, the task's Worker asks the store for each file at its pinned
+   browser already has (`has`). The primary button says what it will download
+   and its size; the first time, it is the one click that downloads and runs.
+   Once the model is here, choosing an input runs it with no click.
+2. On that click (or on the input, once the model is here), the task's Worker asks the store for each file at its pinned
    URL and exact size (`get`). The store keeps it in its own storage, shared by
    the Elffuss sites, and downloads only what it lacks.
 3. The SDK checks every file's hash against the registry (the first time in each browser),

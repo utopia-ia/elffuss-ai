@@ -11,7 +11,7 @@
   "camera.stop": "Parar la cámara",
   "camera.note": "La imagen de la cámara se analiza aquí y no se graba.",
   "camera.asking": "Pidiendo permiso para usar la cámara…",
-  "camera.ready": "Cámara lista: pulsa el botón de detectar para empezar.",
+  "camera.ready": "Cámara lista: pulsa el botón de arriba para empezar.",
   "camera.live": "Detectando en directo…",
   "camera.stopped": "Cámara parada. Se queda el último fotograma analizado.",
   "camera.denied": "No hay permiso para usar la cámara. Puedes darlo desde la barra de direcciones y volver a intentarlo.",

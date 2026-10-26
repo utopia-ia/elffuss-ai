@@ -3,9 +3,11 @@
 //
 // cutout.elffuss.com: one image in (drop, pick or paste), the same image with
 // its background made transparent out, as a PNG of the same size, with a
-// before/after comparison and a download. Choosing an image downloads nothing
-// and runs nothing: the primary button does, and its label says what it will
-// download first.
+// before/after comparison and a download. The first time, choosing an image
+// downloads nothing: the primary button does, and its label says what it will
+// download and its size, then runs at once. Once the model is in this browser
+// (or the button was pressed on this page), choosing an image runs it at once,
+// with no click; one chosen while another runs is run right after.
 
 import { createShell } from './shared/shell.js';
 import { RemoveBg } from './sdk/remove-bg/index.js';
@@ -51,7 +53,7 @@ function blocker() {
 }
 
 function setReady() {
-  shell.setReady(Boolean(current) && !blocker());
+  shell.setReady(Boolean(current) && !blocker() && !shell.busy);
 }
 
 function forgetResult() {
@@ -70,7 +72,7 @@ function forgetImage() {
 
 /** Take the first of the files as the image to work on. Nothing is downloaded here. */
 async function choose(files) {
-  if (shell.busy || !files.length) return;
+  if (!files.length) return;
   const pick = ++picks;
   const file = files[0];
   forgetResult();
@@ -110,8 +112,9 @@ async function choose(files) {
   preview.hidden = false;
   const blocked = blocker();
   if (blocked) shell.showError(blocked);
-  else shell.setStatus(files.length > 1 ? t('chosen.first', { count: files.length }) : t('chosen.ready'));
+  else if (!shell.busy) shell.setStatus(files.length > 1 ? t('chosen.first', { count: files.length }) : t('chosen.ready'));
   setReady();
+  await shell.inputReady({ blocked: Boolean(blocked) });
 }
 
 /** The result card: the comparison, what it ran on, and the download. */
@@ -126,17 +129,18 @@ async function show(job, result, device, fallback) {
   if (result.coverage < 0.002) notes.push(t('result.empty'));
   const card = el('article', { class: 'card' },
     el('h3', { text: name }),
+    el('p', { class: 'actions' }, download),
     el('figure', { class: 'stage' }, canvas),
     el('p', {}, el('label', {}, el('span', { text: t('compare.label') }), ' ', range)),
     el('p', { class: 'muted', 'data-role': 'facts', text: `${shell.deviceLabel(device)} · ${t('result.size', { width: result.width, height: result.height })}` }),
     ...notes.map(text => el('p', { 'data-role': 'note', text })),
-    el('p', { class: 'actions' }, download),
   );
   const compare = await createCompare({ canvas, range, before: previewImage, after: result.png, width: result.width, height: result.height });
   shell.showResult().append(card);
   preview.hidden = true;
   shown = { compare };
   download.addEventListener('click', () => shell.download(result.png, name));
+  download.scrollIntoView?.({ block: 'nearest' });
   if (shell.config.testHooks) {
     shell.diagnostics.cutout = { runs, name, width: result.width, height: result.height, device, fallback, scaled: result.scaled, coverage: result.coverage, bytes: result.png.size };
   }

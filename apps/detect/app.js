@@ -6,9 +6,11 @@
 // slider's lowest value, so moving the slider only filters what was found and
 // never runs the model again. Built on the shared shell (shared/shell.js); the
 // model runs in the SDK's Worker (sdk/detect/). The primary button is the only
-// thing that downloads the model: the camera button opens the camera, and the
-// primary button then detects on its picture, one frame after another, until
-// the camera is stopped.
+// thing that starts the model's first download, and its label says the size;
+// the camera button opens the camera, and detection on its picture runs one
+// frame after another until the camera is stopped. Once the model is in this
+// browser (or the button was pressed on this page), a chosen photo or the
+// camera's picture is analysed at once, with no click.
 
 import { createShell, AiError } from './shared/shell.js';
 import { Detect } from './sdk/detect/index.js';
@@ -122,7 +124,9 @@ function render() {
     items.push(li);
   }
   el.objects.replaceChildren(...items);
+  const fresh = last && el.json.hidden;
   el.json.hidden = el.png.hidden = !last;
+  if (fresh && last.kind === 'image') el.png.scrollIntoView?.({ block: 'nearest' });
   if (hooks) hooks.last = last && { kind: last.kind, device: last.device, fallback: last.fallback, width: last.result.width, height: last.result.height, objects: last.result.objects, shown: shown.map(o => o.label), threshold: threshold() };
 }
 
@@ -155,8 +159,9 @@ async function chooseFile(file) {
   el.frame.hidden = true;
   render();
   shell.showResult();
-  shell.setStatus(t('file.chosen', { name: file.name }));
-  shell.setReady(true);
+  if (!shell.busy) shell.setStatus(t('file.chosen', { name: file.name }));
+  shell.setReady(!shell.busy);
+  await shell.inputReady();
 }
 
 async function detectFile(signal) {
@@ -202,8 +207,9 @@ async function showCamera() {
   catch (err) { stopCamera({ keepFrame: false }); shell.setStatus(t(cameraErrorKey(err))); return; }
   el.camera.hidden = true;
   el.stop.hidden = false;
-  shell.setReady(true);
+  shell.setReady(!shell.busy);
   shell.setStatus(t('camera.ready'));
+  await shell.inputReady();
 }
 
 /**

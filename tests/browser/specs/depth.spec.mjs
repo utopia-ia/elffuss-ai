@@ -152,6 +152,17 @@ async function press(page, timeout = 900000) {
   return state(page);
 }
 
+/**
+ * Once the model is in this browser (or its download was agreed on this page) a
+ * new photo runs by itself: wait for that run, with no click.
+ */
+async function autoRun(page, before, timeout = 900000) {
+  await page.waitForFunction(b => (globalThis.__elffuss?.depth?.runs ?? 0) > b.runs || (globalThis.__elffuss?.errors?.length ?? 0) > b.errors, before, { timeout, polling: 250 });
+  await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000, polling: 250 });
+  return state(page);
+}
+const counts = page => page.evaluate(() => ({ runs: globalThis.__elffuss?.depth?.runs ?? 0, errors: globalThis.__elffuss?.errors?.length ?? 0 }));
+
 /** Click a download button of the result and read the file it saves. */
 async function download(page, action) {
   const [dl] = await Promise.all([
@@ -228,6 +239,7 @@ async function check3d(t, page) {
   const share = first.opaque / (first.w * first.h);
   t.ok(share > 0.3 && share < 1, `3D: the photo covers ${Math.round(share * 100)}% of the view, with the page around it`);
   const canvas = page.locator('main article[data-role="view3d"] canvas');
+  await canvas.scrollIntoViewIfNeeded();
   const box = await canvas.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
@@ -556,6 +568,7 @@ export default [
       const page = await t.open(ctx, site, '/');
       const s = t.strings.depth.es;
       for (const [w, h, name] of [[1, 1, 'punto.png'], [2400, 200, 'tira.png']]) {
+        const before = await counts(page);
         await page.evaluate(async ([w, h, name]) => {
           const canvas = new OffscreenCanvas(w, h);
           const g = canvas.getContext('2d');
@@ -567,8 +580,12 @@ export default [
           input.files = dt.files;
           input.dispatchEvent(new Event('change', { bubbles: true }));
         }, [w, h, name]);
-        await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
-        const st = await press(page);
+        // The first photo waits for the button (the download); the second runs by itself.
+        let st;
+        if (w === 1) {
+          await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
+          st = await press(page);
+        } else st = await autoRun(page, before);
         const elongated = await page.evaluate(() => document.querySelector('main [data-role="elongated"]')?.textContent ?? null);
         if (w === 1) {
           t.equal([st.status, st.cards], [s['status.done'], ['map']], '1 × 1: done, the map and no 3D view');

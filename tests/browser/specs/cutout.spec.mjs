@@ -220,6 +220,17 @@ async function pressAndWait(page) {
   await page.waitForFunction(() => !document.querySelector('main button.primary').disabled || !document.querySelector('main section.result').hidden, null, { timeout: 60000 });
 }
 
+/**
+ * Choose an image once the model is agreed or stored: the page runs it by itself;
+ * wait for that run (or an error), with no click.
+ */
+async function chooseAndAuto(page, input, file) {
+  const before = await page.evaluate(() => ({ runs: globalThis.__elffuss?.cutout?.runs ?? 0, errors: globalThis.__elffuss?.errors?.length ?? 0 }));
+  await page.setInputFiles(input, file);
+  await page.waitForFunction(b => (globalThis.__elffuss?.cutout?.runs ?? 0) > b.runs || (globalThis.__elffuss?.errors?.length ?? 0) > b.errors, before, { timeout: RUN_TIMEOUT });
+  await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
+}
+
 const variantUrls = (t, site) => {
   const m = t.registry.models[site.models[0]];
   return variantFiles(m, chooseVariant(m, 'auto', t.probe).variant).map(f => f.url).sort();
@@ -533,20 +544,17 @@ export default [
       t.equal(t.hub.counts.full.length, t.hubFull().length, 'the new Worker read the model from the store, not the Hub');
 
       // A photo whose Exif says to turn it: the page and the PNG follow the orientation.
-      await page.setInputFiles(input, { name: 'girada.jpg', mimeType: 'image/jpeg', buffer: withOrientation(photo()) });
-      await page.waitForFunction(() => /girada/.test(document.querySelector('[data-role="chosen"]').textContent));
+      // From here on the model is in the store: a chosen image runs by itself.
+      await chooseAndAuto(page, input, { name: 'girada.jpg', mimeType: 'image/jpeg', buffer: withOrientation(photo()) });
       f = await cutoutFacts(page);
-      t.equal(f.chosen, fill(s.chosen, { name: 'girada.jpg', width: 640, height: 960 }), 'the chosen image is shown upright');
-      await pressAndWait(page);
-      f = await cutoutFacts(page);
+      t.equal(f.title, `girada-${s['download.suffix']}.png`, 'the rotated image ran with no click');
+      t.equal(f.chosen, fill(s.chosen, { name: 'girada.jpg', width: 640, height: 960 }), 'the chosen image is named upright');
       t.equal([f.diag?.cutout?.runs, f.diag?.cutout?.width, f.diag?.cutout?.height], [2, 640, 960], 'the PNG is upright too');
       t.ok(f.diag?.cutout?.coverage > 0.15, `and the dog is still found (coverage ${f.diag?.cutout?.coverage})`);
 
       // An image longer than MAX_SIDE is reduced first, and the card says so.
       const wide = encodeGreyPng(9000, 40, new Uint8Array(9000 * 40).fill(128));
-      await page.setInputFiles(input, { name: 'ancha.png', mimeType: 'image/png', buffer: wide });
-      await page.waitForFunction(() => /ancha/.test(document.querySelector('[data-role="chosen"]').textContent));
-      await pressAndWait(page);
+      await chooseAndAuto(page, input, { name: 'ancha.png', mimeType: 'image/png', buffer: wide });
       f = await cutoutFacts(page);
       t.equal([f.diag?.cutout?.runs, f.diag?.cutout?.width, f.diag?.cutout?.height, f.diag?.cutout?.scaled], [3, 4096, 18, true], 'scaled to 4096 px on its long side');
       t.ok(f.notes.includes(fill(s['result.scaled'], { width: 4096, height: 18 })), `the card says it was reduced: ${JSON.stringify(f.notes)}`);

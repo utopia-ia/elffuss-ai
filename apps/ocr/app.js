@@ -3,8 +3,9 @@
 //
 // ocr.elffuss.com: read the text of images, photos, scans and PDF files, also
 // whole folders with their subfolders. The list is made first (nothing is
-// decoded), then the primary button reads it file by file and page by page in
-// this browser; each card fills in when its file is done, with its text, its
+// decoded), then it is read file by file and page by page in this browser: at
+// once when the model is already here (or its download was agreed on this
+// page), else after the primary button, which says what it downloads; each card fills in when its file is done, with its text, its
 // lines and their boxes. The results are kept per file and page and leave as
 // one .txt per file, a Markdown and a JSON document, or all of them in a ZIP
 // made here. Nothing is sent anywhere: what is downloaded is the model (through
@@ -144,7 +145,8 @@ async function add(entries, how) {
   shell.showResult();
   refreshExports();
   setControls();
-  shell.setStatus(summaryText());
+  if (!state.reading) shell.setStatus(summaryText());
+  if (items.some(i => i.status === 'pending')) await shell.inputReady();
 }
 
 function clearList() {
@@ -264,6 +266,7 @@ function progress(p) {
 }
 
 async function readAll({ signal }) {
+  if (!state.items.some(i => i.status === 'pending')) return; // all read already (added while reading)
   state.reading = true;
   state.done = false;
   setControls();
@@ -288,7 +291,6 @@ async function readAll({ signal }) {
     refreshExports();
   }
   if (stopped) throw stopped;
-  state.done = true;
   const n = s => state.items.filter(i => finalStatus(i) === s && i.reason !== 'hidden').length;
   shell.setStatus(t('read.done', { ok: n('ok'), skipped: n('skipped'), errors: n('error') }) + (state.fallback ? ' ' + t('fallback.wasm') : ''));
   // One image or one page read: show its boxes at once.
@@ -299,6 +301,9 @@ async function readAll({ signal }) {
     const figure = li?.querySelector('figure.stage');
     if (button && figure) await toggleBoxes(visible[0], visible[0].pages[0], figure, button);
   }
+  // The downloads of what was read, on screen as the reading ends.
+  if (!ui.exports.hidden) ui.exports.scrollIntoView?.({ block: 'center' });
+  state.done = true;
 }
 
 /** The queue waits here between pages while paused; the page says so. */
@@ -381,7 +386,7 @@ ui.pause.addEventListener('click', pause);
 ui.resume.addEventListener('click', resume);
 ui.cancel.addEventListener('click', () => { resume(); shell.cancel(); });
 ui.clear.addEventListener('click', clearList);
-els.primary.addEventListener('click', () => { shell.act(readAll).then(setControls); });
+shell.onPrimary(readAll, { after: setControls });
 
 if (config.testHooks) {
   shell.diagnostics.ocr = {

@@ -95,6 +95,7 @@ shell.onPrimary(async ({ signal }) => {                  // busy state, errors b
   …; shell.download(result.png, 'name.png');             // secondary actions are button.ghost
 });
 shell.setReady(true); shell.setStatus(text); shell.showError(err); shell.t(key, vars); shell.deviceLabel(device);
+await shell.inputReady();   // a new input is ready: runs the primary action now if the model is stored or agreed (see below)
 ```
 
 Rules of the page: one `button.primary`; every other button `.ghost`; results in
@@ -103,6 +104,18 @@ attribute or element, no inline script, no `innerHTML`; colours on a canvas read
 from the CSS variables when painting; the device actually used shown with
 `shell.deviceLabel()`; `?device=webgpu|wasm` is honoured by the shell; nothing is
 downloaded before the primary button.
+
+The fewest clicks: the first time, the primary button is the only click between
+the input and the result; its label names the action and the exact size
+(«Descargar el modelo (31 MB) y quitar el fondo»), next to the model line with
+the size and the privacy line, and it downloads and runs in one go. Once the
+model is in this browser, or the button was pressed on this page, a new input
+(picked, dropped, pasted, a folder, the camera's picture) runs at once with no
+click: the site calls `shell.inputReady()` when its input is ready, and an input
+that arrives while an action runs is run right after it (not after a cancel).
+The result's download button sits at the top of its card, on screen when the
+result appears, and saves in one click. `tests/browser/specs/clicks.spec.mjs`
+counts the clicks of every site.
 
 ## 3. Tests the site must add and pass
 
