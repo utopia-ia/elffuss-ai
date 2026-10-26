@@ -94,14 +94,25 @@ Every code an AiError can carry.
 - decode-failed: an input could not be decoded
 - unsupported-format: an input of a type the task does not take
 - too-large: an input too large even after scaling it down
+- out-of-memory: the runtime could not get the memory the model needs in this browser
 - run-failed: anything else while running, with the original error as `cause`
 - disposed: the task instance was disposed
 
 ### Type `AiErrorCode`
 
 ```ts
-'store-unavailable'|'store-permission'|'store-quota'|'store-network'|'integrity'|'not-in-registry'| 'device-unsupported'|'webgpu-unavailable'|'runtime-mismatch'|'model-mismatch'|'aborted'|'decode-failed'| 'unsupported-format'|'too-large'|'run-failed'|'disposed'
+'store-unavailable'|'store-permission'|'store-quota'|'store-network'|'integrity'|'not-in-registry'| 'device-unsupported'|'webgpu-unavailable'|'runtime-mismatch'|'model-mismatch'|'aborted'|'decode-failed'| 'unsupported-format'|'too-large'|'out-of-memory'|'run-failed'|'disposed'
 ```
+
+### `INPUT_ERROR_CODES`
+
+Codes of errors about the input itself, raised before the model runs: the runtime is intact.
+
+### `isOutOfMemory(err)`
+
+True when an error says that memory could not be had: a C++ allocation that
+failed inside the WebAssembly runtime (std::bad_alloc), a WebAssembly memory
+that could not grow, or a buffer the browser would not allocate.
 
 ### `class AiError`
 
@@ -206,6 +217,13 @@ Link to the page of a repository on the Hub, at a revision.
 ## `sdk/core/image-input.js`
 
 Images in and out of a task. On the page, anything image-like becomes what a Worker can receive without copying (Blob, ImageBitmap, ImageData). In the Worker, a Blob is sniffed by its first bytes (never by its name), decoded with its EXIF orientation applied, and scaled down when it is too large.
+ Browsers decode a file at its full size even when asked for a smaller bitmap (createImageBitmap's resize options scale after decoding), so the size is read from the file's header first and a file of more than MAX_INPUT_PIXELS is refused with too-large before anything is decoded. A small file can declare a huge picture (a PNG of one colour compresses to almost nothing).
+
+### `MAX_INPUT_PIXELS`
+
+The most pixels an input may have (8192 × 8192). It covers the photos of
+today's cameras; above it, a single decode would take more memory than a page
+should, so the file is refused (too-large) before it is decoded.
 
 ### `sniffImageType(head)`
 
@@ -214,6 +232,45 @@ Image types the tasks decode, by their first bytes.
 ### `DECODABLE`
 
 Types the browser decodes for the tasks. HEIC and TIFF are refused on purpose.
+
+### `imageSize(head)`
+
+Width and height of an image from the first bytes of its file, without
+decoding it (the size as stored: an EXIF rotation swaps them but does not
+change the number of pixels). Null when the header does not say, or is cut.
+
+| Parameter | Type | |
+|---|---|---|
+| `head` | `Uint8Array\|ArrayBuffer` | the start of the file (the first megabyte is plenty) |
+
+Returns `{ width: number, height: number } \| null`.
+
+### `checkPixelBudget(blob, maxPixels = MAX_INPUT_PIXELS)`
+
+Refuse an image file whose picture has more than `maxPixels` pixels, from its
+header, before anything decodes it. Files whose header does not say are left
+to the decoder (and checked again after it).
+
+| Parameter | Type | |
+|---|---|---|
+| `blob` | `Blob` |  |
+| `[maxPixels]` | `number` |  |
+
+Returns `Promise<{ width: number, height: number } \| null>`: the size the header gives
+
+### `previewBitmap(blob, { maxSide = 2048, maxPixels = MAX_INPUT_PIXELS } = {})`
+
+On the page: a small copy of an image file to show, at most `maxSide` on its
+longest side, with its EXIF orientation applied. The full-size decode it needs
+is released at once, and a file over the pixel budget is refused first
+(too-large), so showing a photo never keeps a full-size copy alive.
+
+| Parameter | Type | |
+|---|---|---|
+| `blob` | `Blob` |  |
+| `[opts]` | `{ maxSide?: number, maxPixels?: number }` |  |
+
+Returns `Promise<ImageBitmap>`.
 
 ### `toTransferable(input)`
 
@@ -226,14 +283,14 @@ copying. Returns the value and the list of objects to transfer.
 
 Returns `Promise<{ value: Blob\|ImageBitmap\|ImageData, transfer: Transferable[] }>`.
 
-### `decodeImage(input, { maxSide = 0, close = true } = {})`
+### `decodeImage(input, { maxSide = 0, close = true, maxPixels = MAX_INPUT_PIXELS } = {})`
 
 In the Worker (or the page): decode an input to RGBA pixels.
 
 | Parameter | Type | |
 |---|---|---|
 | `input` | `Blob\|ImageBitmap\|ImageData` |  |
-| `[opts]` | `{ maxSide?: number, close?: boolean }` | `maxSide` scales the longest side down to it |
+| `[opts]` | `{ maxSide?: number, close?: boolean, maxPixels?: number }` | `maxSide` scales the longest side down to it; a file whose picture has more than `maxPixels` pixels is refused (too-large) before decoding |
 
 Returns `Promise<{ width: number, height: number, data: Uint8ClampedArray, scaled: boolean, sourceWidth: number, sourceHeight: number }>`.
 
@@ -725,7 +782,7 @@ Returns `TrustedScriptURL\|string`.
 
 ## `sdk/core/worker-host.js`
 
-The page side of a task Worker. It creates the Worker through the Trusted Types policy, answers its store requests with the page's store client, and replaces it after any failure: Transformers.js 4.3.1 keeps session creation and runs on global promise chains that stay broken after one rejection, so a failed Worker is never reused. The files come back from the store, so a new Worker does not download anything again.
+The page side of a task Worker. It creates the Worker through the Trusted Types policy, answers its store requests with the page's store client, and replaces it after any failure of the runtime: Transformers.js 4.3.1 keeps session creation and runs on global promise chains that stay broken after one rejection, so a Worker whose runtime failed is never reused. The files come back from the store, so a new Worker does not download anything again. A run refused for its input (a file that is not an image, or that cannot be decoded) never reached the runtime, so that Worker and its model are kept.
  Cancelling a call cancels the downloads it started (elffuss-model-cancel) and terminates the Worker, because ONNX Runtime cannot stop a run halfway.
 
 ### `createWorkerHost({ workerUrl, store, onCspViolation, readyTimeout = 30000, name = 'elffuss-ai-task' })`

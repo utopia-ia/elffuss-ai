@@ -7,6 +7,9 @@
 // scripts); credit the model as the registry says; ask the store what it has
 // and label the primary button with what is left to download; and, without the
 // store, say so and never reach the Hub.
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chooseVariant } from '../../../sdk/core/device.js';
 import { fill } from '../../../scripts/lib/template.mjs';
 import { formatMB } from '../../../scripts/lib/pages.mjs';
@@ -100,4 +103,41 @@ export default [
       t.noPageErrors();
     },
   },
+  {
+    // A store that is down when the page loads must not leave the page broken: the
+    // page is usable before the store answers, and once the store is back the next
+    // click works, without a reload.
+    name: 'the store is down at load and comes back: usable at once, and the next click works',
+    sites: 'apps',
+    async run(t, site) {
+      const input = SAMPLE_INPUT[site.site] && join(ROOT, 'tests', 'fixtures', SAMPLE_INPUT[site.site]);
+      if (!input || !existsSync(input)) { t.note('not run: this site has no sample input yet'); return; }
+      const s = t.strings[site.site].es;
+      const ctx = await t.newContext();
+      await t.blockStore(ctx);
+      const page = await t.open(ctx, site, '/', { wait: 'shell-only' });
+      const early = await page.evaluate(() => ({ storage: document.documentElement.dataset.storage ?? null, label: document.querySelector('main button.primary')?.textContent }));
+      t.equal(early.storage, null, 'the page is ready before the store has answered');
+      const m = t.registry.models[site.models[0]];
+      const choice = chooseVariant(m, 'auto', t.probe);
+      t.equal(early.label, fill(s['action.downloadAndRun'], { size: `${formatMB(choice.variant.bytes, 'es')} MB` }), 'until then the button says it will download the whole model');
+      await page.waitForFunction(() => document.documentElement.dataset.storage === 'unknown', null, { timeout: 90000 });
+      t.equal(await page.textContent('main p.status'), s['error.store-unavailable'], 'then the page says the store is unavailable');
+      await t.unblockStore(ctx);
+      await page.setInputFiles('main label.drop input[type="file"]', input);
+      await page.waitForFunction(() => !document.querySelector('main button.primary')?.disabled, null, { timeout: 30000 });
+      await page.click('main button.primary');
+      await page.waitForFunction(() => globalThis.__elffuss?.device || (globalThis.__elffuss?.errors?.length > 1), null, { timeout: 600000 });
+      const d = await page.evaluate(() => ({ device: globalThis.__elffuss.device, errors: globalThis.__elffuss.errors.slice() }));
+      t.ok(Boolean(d.device), `the click after the store came back ran the model (errors: ${JSON.stringify(d.errors)})`);
+      t.equal(d.errors.filter(e => e !== 'store-unavailable').length, 0, 'no other error');
+      t.ok(t.hub.counts.full.length > 0, 'the model was downloaded through the store once it was back');
+      t.noPageErrors();
+      await t.noCsp(page);
+    },
+  },
 ];
+
+/** One input each site can run on (fixtures of the site's own tests). */
+const SAMPLE_INPUT = { cutout: 'cutout/foto.jpg', depth: 'depth/foto.jpg', detect: 'detect/foto.jpg', ocr: 'ocr/factura.png' };
+const ROOT = fileURLToPath(new URL('../../../', import.meta.url));

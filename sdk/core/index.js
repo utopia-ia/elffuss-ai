@@ -15,7 +15,7 @@ export { createWorkerStore, serveStore } from './store-bridge.js';
 export { createVerifiedMemo, verifyFile, sha256Hex, gitBlobSha1 } from './integrity.js';
 export { PINS, VENDOR_DIRS } from './runtime-pins.js';
 export { ORT_VARIANTS, PDFJS_FILES, runtimeUrls, transformersDir, assertTransformersRuntime, assertOrtRuntime, assertPdfjsRuntime } from './runtimes.js';
-export { sniffImageType, DECODABLE, toTransferable, decodeImage, encodePng } from './image-input.js';
+export { sniffImageType, DECODABLE, MAX_INPUT_PIXELS, imageSize, checkPixelBudget, previewBitmap, toTransferable, decodeImage, encodePng } from './image-input.js';
 export { scriptUrl, isAllowedScriptUrl } from './tt.js';
 export { loadTransformers, configureTransformers, createStoreFetch, createPipeline } from './tf-env.js';
 export { loadOrt, createSession, releaseSession, tensor } from './ort-env.js';

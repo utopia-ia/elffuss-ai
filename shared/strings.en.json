@@ -45,6 +45,7 @@
   "error.decode-failed": "The file could not be opened.",
   "error.unsupported-format": "Format not supported.",
   "error.too-large": "The file is too large.",
+  "error.out-of-memory": "This browser cannot give the model the memory it needs. Close other tabs and try again, or try another browser.",
   "error.run-failed": "It could not be processed.",
   "error.disposed": "The tool was closed. Reload the page.",
   "licenses.title": "Licences",

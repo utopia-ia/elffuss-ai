@@ -47,31 +47,45 @@ export function createStoreClient({ url = DEFAULT_STORE_URL, document: doc = glo
     waiting.get(d.id)?.onMessage(d);
   };
 
+  /**
+   * Open the store once. A store that does not open is not remembered: its frame
+   * is removed and the next question opens a new one, so a store that was down
+   * when the page loaded works as soon as it is back, without a reload.
+   */
   function ready() {
     if (readyPromise) return readyPromise;
-    if (!doc?.createElement) return (readyPromise = Promise.reject(new AiError('store-unavailable', 'the model store needs a document')));
-    readyPromise = new Promise((resolve, reject) => {
-      iframe = doc.createElement('iframe');
-      iframe.hidden = true;
-      iframe.setAttribute('aria-hidden', 'true');
-      iframe.setAttribute('tabindex', '-1');
-      iframe.referrerPolicy = 'no-referrer';
-      const timer = setTimeout(() => { cleanup(); reject(new AiError('store-unavailable', 'the model store did not open', { details: { origin } })); }, readyTimeout);
+    if (!doc?.createElement) return Promise.reject(new AiError('store-unavailable', 'the model store needs a document'));
+    const frame = doc.createElement('iframe');
+    iframe = frame;
+    const p = new Promise((resolve, reject) => {
+      frame.hidden = true;
+      frame.setAttribute('aria-hidden', 'true');
+      frame.setAttribute('tabindex', '-1');
+      frame.referrerPolicy = 'no-referrer';
+      const fail = err => { cleanup(); forget(frame); reject(err); };
+      const timer = setTimeout(() => fail(new AiError('store-unavailable', 'the model store did not open', { details: { origin } })), readyTimeout);
       const onReady = e => {
-        if (e.source !== iframe.contentWindow || e.origin !== origin || e.data?.kind !== MSG.ready) return;
+        if (e.source !== frame.contentWindow || e.origin !== origin || e.data?.kind !== MSG.ready) return;
+        const can = Array.isArray(e.data.puede) ? e.data.puede : [];
+        if (!can.includes('get') || !can.includes('has')) { fail(new AiError('store-unavailable', 'the model store does not offer get and has')); return; }
         cleanup();
         globalThis.addEventListener('message', listener);
-        const can = Array.isArray(e.data.puede) ? e.data.puede : [];
-        if (!can.includes('get') || !can.includes('has')) reject(new AiError('store-unavailable', 'the model store does not offer get and has'));
-        else resolve({ version: e.data.v, can });
+        resolve({ version: e.data.v, can });
       };
       const cleanup = () => { clearTimeout(timer); globalThis.removeEventListener('message', onReady); };
       globalThis.addEventListener('message', onReady);
-      iframe.src = url;
-      (doc.body || doc.documentElement).appendChild(iframe);
+      frame.src = url;
+      (doc.body || doc.documentElement).appendChild(frame);
     });
-    readyPromise.catch(() => {});
-    return readyPromise;
+    readyPromise = p;
+    p.catch(() => {});
+    return p;
+  }
+
+  /** Drop a frame that never became ready, so that the next call starts again. */
+  function forget(frame) {
+    try { frame.remove(); } catch { /* gone */ }
+    if (iframe === frame) { iframe = null; readyPromise = null; }
   }
 
   /** Send one request and wait for its answer. `onId` learns the request id. */
