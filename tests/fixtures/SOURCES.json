@@ -1,5 +1,43 @@
 {
   "schema": 1,
   "rules": "Every file under tests/fixtures/ (except broker/ and these lists) is listed here with its sha256, its licence and where it comes from. Only CC0-1.0, public-domain or own-work. A photo needs its page URL and author; own work names the script that makes it; a golden reference names the model id, the pinned revision and the backend it came from. None may match tests/fixtures/denylist-runonweb-samples.sha256.",
-  "files": []
+  "files": [
+    {
+      "path": "tests/fixtures/depth/foto.jpg",
+      "sha256": "48bcced1f6531fd2d750d71031a1576c76240733edd4d43c78e6796d5b3700b4",
+      "license": "CC0-1.0",
+      "source": {
+        "url": "https://commons.wikimedia.org/wiki/File:Bear_Mountain_Trail_No._54_(35249005535).jpg",
+        "author": "Coconino National Forest (USDA Forest Service), published on Flickr",
+        "title": "Bear Mountain Trail No. 54",
+        "note": "The 960 × 638 rendering that Wikimedia Commons serves of the CC0 original, with its metadata segments (EXIF and colour profile) removed; the image data is unchanged."
+      },
+      "purpose": "depth: a photo with something clearly near (the trail sign) and clearly far (the red rock on the hill)."
+    },
+    {
+      "path": "tests/fixtures/depth/regiones.json",
+      "sha256": "f102dec6e081ba2fae5bc96f721f51def44b6602349b341a5a4b82d2be3ae72a",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/depth.spec.mjs",
+        "made": "Marked by hand, looking at foto.jpg; the spec reads it."
+      },
+      "purpose": "depth: rectangles of the near sign, the juniper in the middle and the far rock, for the near-beats-far check."
+    },
+    {
+      "path": "tests/fixtures/depth/golden-depth.png",
+      "sha256": "1335cbe1195752ab31ef85a95426726d38ee6c66194c066226506bab379d654c",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/depth.spec.mjs",
+        "made": "ELFFUSS_AI_DEPTH_GOLDEN=write in configuration B (Chrome without WebGPU): the depth page on foto.jpg with the WASM fp32 variant, saved through its 16-bit download."
+      },
+      "model": "depth/depth-anything-v2-small",
+      "revision": "4472b7362082ad9968fee890ca0f1e5aca36b93d",
+      "device": "wasm",
+      "dtype": "fp32",
+      "runtimes": "Transformers.js 4.3.1 and ONNX Runtime Web 1.30.0",
+      "purpose": "depth: the reference map (16-bit grey, 0-1 stored as 0-65535, lighter is nearer) that every backend must correlate with."
+    }
+  ]
 }

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { check, readManifest, SPECS } from '../../scripts/vendor.mjs';
-import { rewriteTransformers, ORT_IMPORTS } from '../../scripts/lib/rewrite-transformers.mjs';
+import { rewriteTransformers, ORT_IMPORTS, MODIFIED_NOTICE } from '../../scripts/lib/rewrite-transformers.mjs';
 import { PINS, VENDOR_DIRS } from '../../sdk/core/runtime-pins.js';
 import { ORT_VARIANTS, ortSpecifierFromTransformers, runtimeUrls } from '../../sdk/core/runtimes.js';
 
@@ -32,14 +32,16 @@ test('exact versions, every package has a licence file, nothing from a CDN', () 
   }
 });
 
-test('the Transformers.js rewrite touches exactly the two ONNX Runtime imports', () => {
+test('the Transformers.js rewrite touches exactly the two ONNX Runtime imports, and says so on its first line', () => {
   const src = readFileSync(new URL(`vendor/${VENDOR_DIRS.transformers}/dist/transformers.web.min.js`, root), 'utf8');
   for (const variant of Object.keys(ORT_VARIANTS)) {
     const spec = ortSpecifierFromTransformers(variant);
     const out = rewriteTransformers(src, spec);
+    assert.ok(out.startsWith(MODIFIED_NOTICE), 'the modified file starts with its notice');
+    assert.match(MODIFIED_NOTICE, /^\/\*! Modified by UtopiaIA[^\n]*\*\/\n$/, 'one comment line');
     assert.equal(out.split(`from"${spec}"`).length - 1, 2);
     for (const clause of ORT_IMPORTS) assert.equal(out.includes(clause), false);
-    assert.equal(out.length, src.length + 2 * spec.length - ORT_IMPORTS.reduce((s, c) => s + c.length, 0) + 2 * 'from""'.length);
+    assert.equal(out.length, MODIFIED_NOTICE.length + src.length + 2 * spec.length - ORT_IMPORTS.reduce((s, c) => s + c.length, 0) + 2 * 'from""'.length);
   }
   assert.throws(() => rewriteTransformers(src.replace(ORT_IMPORTS[1], ''), ortSpecifierFromTransformers('wasm')), /exactly one/);
   assert.throws(() => rewriteTransformers(src + ORT_IMPORTS[0], ortSpecifierFromTransformers('wasm')), /exactly one/);

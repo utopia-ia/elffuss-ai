@@ -1,0 +1,11 @@
+{
+  "image": "foto.jpg",
+  "width": 960,
+  "height": 638,
+  "units": "Pixels of foto.jpg: the top-left corner (x, y), then the width and the height. Marked by hand, looking at the photo.",
+  "regions": {
+    "cerca": { "x": 435, "y": 432, "w": 140, "h": 52, "what": "the board of the trail sign, in the foreground" },
+    "medio": { "x": 490, "y": 270, "w": 200, "h": 100, "what": "the juniper in the middle distance" },
+    "lejos": { "x": 280, "y": 45, "w": 220, "h": 65, "what": "the red rock at the top of the hill, far away" }
+  }
+}

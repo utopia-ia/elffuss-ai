@@ -1,8 +1,8 @@
 {
-  "what": "The model-store page the browser tests serve at http://localhost:8789/: the broker page that models.elffuss.com serves, with the read-only permission for the tool sites proposed alongside this repository (two blocks, copied in tools-permission.js).",
+  "what": "The model-store page the browser tests serve at http://localhost:8789/: the broker page that models.elffuss.com serves, with the read-only permission for the tool sites proposed alongside this repository (version 3 of the patch: the exact files of the registry with their sizes, and tool requests never delete a stored copy; two blocks, copied in tools-permission.js).",
   "file": "server/broker/index.html of the broker repository",
   "cachePath": "$ELFFUSS_AI_CACHE/broker/index.html",
   "baseSha256": "631e00c6d5c86261384c56a5f5d28d5d21d536d34815b110d1e6da30eb3acd5d",
-  "sha256": "cd7043926b1dfa047f54a65e39d27ac6bc5017f224a148a9342ac51662ff3a7c",
+  "sha256": "4dc44b50ffac9e11a1b2279a73d8754b50efbdb098469b7417e9f12c2ca381a0",
   "make": "node scripts/make-broker-fixture.mjs --base <server/broker/index.html as served today> --patch <the proposed tools patch>"
 }
