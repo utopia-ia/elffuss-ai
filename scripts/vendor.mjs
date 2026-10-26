@@ -18,7 +18,9 @@
 //
 // Licences that a package does not ship (onnxruntime-web has no LICENSE in npm)
 // come from the upstream repository at the commit of the release tag, checked
-// by their git blob hash.
+// by their git blob hash. Licences of code a file bundles (Transformers.js
+// carries @huggingface/jinja and @huggingface/tokenizers) come from those
+// packages, checked by their tarball's sha512, or from their repository.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync, renameSync } from 'node:fs';
 import { join, dirname, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -35,7 +37,15 @@ export const SPECS = {
   '@huggingface/transformers': {
     key: 'transformers',
     select: ['dist/transformers.web.min.js'],
-    licenses: [{ path: 'LICENSE', from: 'package' }],
+    licenses: [
+      { path: 'LICENSE', from: 'package' },
+      // dist/transformers.web.min.js bundles its two Hugging Face dependencies, at the
+      // versions that were current when 4.3.1 was built: their licences go with it.
+      // @huggingface/jinja publishes no licence file in npm: it is the one of its
+      // repository, at the commit that released 0.5.10.
+      { path: 'bundled/@huggingface/jinja@0.5.10/LICENSE', from: 'github', repo: 'huggingface/huggingface.js', commit: '6fca37c92522e9142c219ddb049c4112cebe0cd1', file: 'LICENSE', bundled: '@huggingface/jinja@0.5.10', license: 'MIT' },
+      { path: 'bundled/@huggingface/tokenizers@0.2.0/LICENSE', from: 'npm', package: '@huggingface/tokenizers', version: '0.2.0', file: 'LICENSE', bundled: '@huggingface/tokenizers@0.2.0', license: 'Apache-2.0' },
+    ],
   },
   'onnxruntime-web': {
     key: 'onnxruntimeWeb',
@@ -183,13 +193,24 @@ async function materialise(name, version, pinned) {
   }
   for (const lic of spec.licenses) {
     let b, entry;
+    const extra = lic.bundled ? { bundled: lic.bundled, license: lic.license } : {};
     if (lic.from === 'package') {
       b = inPkg.get(lic.path);
       if (!b) throw new Error(`${name}@${version}: the package has no ${lic.path}`);
       entry = { from: 'package', size: b.length, sha256: sha256(b) };
+    } else if (lic.from === 'npm') {
+      // Another package's file, from its tarball, checked against the registry's sha512.
+      const meta2 = await getJSON(`https://registry.npmjs.org/${lic.package.replace('/', '%2F')}/${lic.version}`);
+      const tgz2 = await getBytes(meta2.dist.tarball);
+      const integrity2 = sha512b64(tgz2);
+      if (integrity2 !== meta2.dist.integrity) throw new Error(`${lic.package}@${lic.version}: tarball sha512 differs from the registry's`);
+      if (pinned?.licenses?.[lic.path] && pinned.licenses[lic.path].integrity !== integrity2) throw new Error(`${lic.package}@${lic.version}: tarball sha512 differs from the manifest`);
+      b = readTgz(tgz2).get('package/' + lic.file);
+      if (!b) throw new Error(`${lic.package}@${lic.version}: the package has no ${lic.file}`);
+      entry = { from: meta2.dist.tarball, integrity: integrity2, file: lic.file, size: b.length, sha256: sha256(b), ...extra };
     } else {
-      const tag = lic.tag.replace('{version}', version);
-      const commit = pinned?.licenses?.[lic.path]?.commit || await tagCommit(lic.repo, tag);
+      const tag = lic.tag ? lic.tag.replace('{version}', version) : undefined;
+      const commit = lic.commit || pinned?.licenses?.[lic.path]?.commit || await tagCommit(lic.repo, tag);
       const url = `https://raw.githubusercontent.com/${lic.repo}/${commit}/${lic.file}`;
       b = await getBytes(url);
       const oid = gitOid(b);
@@ -197,7 +218,7 @@ async function materialise(name, version, pinned) {
         const contents = await getJSON(`https://api.github.com/repos/${lic.repo}/contents/${lic.file}?ref=${commit}`);
         if (contents.sha !== oid) throw new Error(`${url}: git blob hash differs from the repository tree`);
       }
-      entry = { from: url, tag, commit, size: b.length, gitOid: oid, sha256: sha256(b) };
+      entry = { from: url, ...(tag ? { tag } : {}), commit, size: b.length, gitOid: oid, sha256: sha256(b), ...extra };
     }
     out.licenses[lic.path] = entry;
     out.bytes.set(lic.path, b);

@@ -100,6 +100,45 @@ test('auto without WebGPU: a run broken by the hook fails, and the next run of t
   assert.equal(made.length, 1);
 });
 
+/** Tasks whose load fails on one backend, like a WebGPU session that cannot be created. */
+function failingLoadTasks(plan) {
+  const made = [];
+  const factory = opts => {
+    const target = opts.device === 'wasm' ? 'wasm' : plan.autoDevice;
+    let info = null;
+    const t = {
+      opts, disposed: false,
+      get device() { return info?.device ?? null; },
+      async load() { if (plan.loadFails === target) throw new AiError('run-failed', 'session could not be created'); info = { device: target }; return info; },
+      async run(x) { if (!info) await t.load(); return `${target}:${x}`; },
+      async dispose() { t.disposed = true; },
+    };
+    made.push(t);
+    return t;
+  };
+  return { made, factory };
+}
+
+test('auto: a WebGPU failure while loading is repeated once on WASM too', async () => {
+  const { made, factory } = failingLoadTasks({ autoDevice: 'webgpu', loadFails: 'webgpu' });
+  const seen = [];
+  const r = createTaskRunner({ requested: 'auto', factory, options: device => ({ device }), attempted: () => 'webgpu', onDevice: (d, f) => seen.push([d, f]) });
+  const out = await r.run('img');
+  assert.deepEqual(out, { result: 'wasm:img', device: 'wasm', fallback: { from: 'webgpu', reason: 'run-failed' } });
+  assert.equal(made.length, 2);
+  assert.equal(made[0].disposed, true);
+  assert.deepEqual(seen, [['wasm', { from: 'webgpu', reason: 'run-failed' }]]);
+});
+
+test('a load failure is not retried when the attempt was on WASM, or with an explicit device', async () => {
+  for (const [requested, attempted, autoDevice] of [['auto', 'wasm', 'wasm'], ['webgpu', 'webgpu', 'webgpu']]) {
+    const { made, factory } = failingLoadTasks({ autoDevice, loadFails: autoDevice });
+    const r = createTaskRunner({ requested, factory, options: device => ({ device }), attempted: () => attempted });
+    await assert.rejects(r.run('img'), { code: 'run-failed' });
+    assert.equal(made.length, 1, `${requested} on ${attempted}`);
+  }
+});
+
 test('a failure on WASM is not retried', async () => {
   const { made, factory } = fakeTasks({ autoDevice: 'wasm', wasm: new AiError('run-failed', 'x') });
   const r = createTaskRunner({ requested: 'auto', factory, options: device => ({ device }) });

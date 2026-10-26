@@ -120,6 +120,21 @@ export function registryRepos(registry) {
   return [...set].sort();
 }
 
+/**
+ * The files the tool sites may ask the store for: those of every variant of every
+ * model, each pinned URL once, with its size, sorted by URL. The model store's
+ * rule for the tools lists exactly these (scripts/broker-repos.mjs prints it).
+ * @param {Registry} registry
+ * @returns {{ url: string, size: number }[]}
+ */
+export function toolFiles(registry) {
+  const seen = new Map();
+  for (const m of Object.values(registry.models)) {
+    for (const list of Object.values(m.devices)) for (const v of list) for (const f of variantFiles(m, v)) seen.set(f.url, f.size);
+  }
+  return [...seen].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([url, size]) => ({ url, size }));
+}
+
 /** Every pinned URL of the registry with its size (what the catalog asks the store about). */
 export function registryUrls(registry) {
   const out = [];
