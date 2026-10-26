@@ -51,6 +51,9 @@ test('a header that is cut or unknown gives no size', () => {
   assert.equal(imageSize(jpeg(100, 100).subarray(0, 4000)), null);
   assert.equal(imageSize(new Uint8Array(ascii('hello, world, not an image'))), null);
   assert.equal(imageSize(png(0, 10)), null, 'no pixels is no size');
+  // A PNG signature followed by anything but its header chunk: no size (left to the decoder, which fails).
+  assert.equal(imageSize(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...ascii('basura que no es una imagen')])), null);
+  assert.equal(imageSize(new Uint8Array([...ascii('BM'), ...new Array(12).fill(0), ...ascii('not a DIB header at all')])), null);
 });
 
 test('the pixel budget refuses a huge picture before decoding, whatever the file weighs', async () => {

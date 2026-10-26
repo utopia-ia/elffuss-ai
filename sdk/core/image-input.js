@@ -62,11 +62,13 @@ export function imageSize(head) {
   const i32le = i => b[i] | (b[i + 1] << 8) | (b[i + 2] << 16) | (b[i + 3] << 24);
   const ok = (width, height) => (width > 0 && height > 0 ? { width, height } : null);
   const has = n => b.length >= n;
-  if (type === 'image/png') return has(24) ? ok(u32be(16), u32be(20)) : null;
+  if (type === 'image/png') return has(24) && b[12] === 0x49 && b[13] === 0x48 && b[14] === 0x44 && b[15] === 0x52 ? ok(u32be(16), u32be(20)) : null;
   if (type === 'image/gif') return has(10) ? ok(u16le(6), u16le(8)) : null;
   if (type === 'image/bmp') {
     if (!has(26)) return null;
-    return i32le(14) === 12 ? ok(u16le(18), u16le(20)) : ok(Math.abs(i32le(18)), Math.abs(i32le(22)));
+    const dib = i32le(14);
+    if (dib === 12) return ok(u16le(18), u16le(20));
+    return [16, 40, 52, 56, 64, 108, 124].includes(dib) ? ok(Math.abs(i32le(18)), Math.abs(i32le(22))) : null;
   }
   if (type === 'image/webp') {
     if (!has(30)) return null;
