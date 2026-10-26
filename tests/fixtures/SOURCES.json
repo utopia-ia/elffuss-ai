@@ -74,6 +74,40 @@
         "made": "Marked by hand, looking at foto.jpg; the spec reads it."
       },
       "purpose": "depth: rectangles of the near sign, the juniper in the middle and the far rock, for the near-beats-far check."
+    },
+    {
+      "path": "tests/fixtures/detect/cajas.json",
+      "sha256": "a572f134e61c229219d7004fa5ac5092184155dd48f7717612f27dcd3cb33ff8",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/detect.spec.mjs",
+        "how": "Drawn by hand on foto.jpg before any model ran on it: the smallest box around everything visible of each animal, tails included, in pixels of the image (no script makes them)."
+      },
+      "purpose": "detect: the hand boxes every detection is checked against (image, camera and decoder tests)"
+    },
+    {
+      "path": "tests/fixtures/detect/foto.jpg",
+      "sha256": "2083f91418e4c7ef13bd984fe4d9307240358165de8a52c4e922e93f506fa128",
+      "license": "CC0-1.0",
+      "source": {
+        "url": "https://commons.wikimedia.org/wiki/File:Dog_and_cat,_Arco,_Madeira.jpg",
+        "author": "Gerda Arendt",
+        "note": "The 960 × 720 rendition that Wikimedia Commons serves of the original photo, unchanged. The file page gives CC0 1.0 (own work of its author, no attribution required)."
+      },
+      "purpose": "detect: a photo with two COCO classes, a dog and a cat, for the image test, the fake camera and the decoder's reference outputs"
+    },
+    {
+      "path": "tests/fixtures/detect/golden-outputs-wasm.json",
+      "sha256": "bc23176d89795ad27bb3360e29c8cbbfbb5927efb3e9d0dac792bd3b67753da5",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/detect.spec.mjs",
+        "note": "Written by its test of the decoder's reference outputs when ELFFUSS_AI_UPDATE_DETECT_OUTPUTS=1: the raw outputs of the model for foto.jpg, the 40 queries with the highest scores."
+      },
+      "model": "detect/rfdetr-nano",
+      "revision": "eae21cee0687a91bcf9fa071605c48d7705d2d91",
+      "device": "wasm",
+      "purpose": "detect: real logits and boxes for the unit test of the decoder"
     }
   ]
 }

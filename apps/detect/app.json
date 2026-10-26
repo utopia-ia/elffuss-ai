@@ -7,5 +7,5 @@
   "camera": true,
   "pdfjs": false,
   "accept": "image/*",
-  "status": "scaffold"
+  "status": "ready"
 }
