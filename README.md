@@ -15,8 +15,9 @@ runs it, from the site itself. The files you open never leave your device.
 | [depth.elffuss.com](https://depth.elffuss.com/) | Work out what is near and what is far in a photo | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
 | [tools.elffuss.com](https://tools.elffuss.com/) | The catalog of every Elffuss tool | none | |
 
-This repository is being built: the shared parts are done and tested, and the
-four tasks land one by one (`docs/app-contract.md` says what each must do).
+The four sites and the catalog are built and tested in a real browser on both
+backends; none is published yet (`deploy/DEPLOY.md` is the way to do it, and
+`docs/app-contract.md` says what each site must do).
 
 ## Modules
 
@@ -68,7 +69,7 @@ ask deletes a stored copy: the store only accepts from them the files of
 | `apps/<site>/` | Each tool site: descriptor, texts, page, script |
 | `catalog/` | The `tools.elffuss.com` catalog |
 | `shared/` | The page template, layout CSS, colour variables and the page shell |
-| `deploy/` | Headers and CSP (one source), generated nginx vhosts, deploy scripts |
+| `deploy/` | Headers and CSP (one source), generated nginx vhosts, deploy scripts, `DEPLOY.md` (the steps to publish) |
 | `scripts/` | Build, registry, vendor, weights for tests, docs, publication sweep |
 | `tests/unit/`, `tests/browser/` | Node tests; the browser harness and its specs |
 | `docs/` | Generated reference, models, `llms.txt`, and the site contract |

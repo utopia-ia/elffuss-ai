@@ -2,6 +2,8 @@
 
 Nothing here has been run against a server. This is the order to follow when the
 sites go out; every step that touches the server is done by hand, by the owner.
+The exact commands, step by step, with the checks and the way back, are in
+[`DEPLOY.md`](DEPLOY.md).
 
 ## What exists
 
@@ -16,6 +18,7 @@ sites go out; every step that touches the server is done by hand, by the owner.
 | `nginx/sites-available/<host>.conf` | The vhost: port 80 (ACME and redirect) and 443 |
 | `nginx/sites-available/<host>.80.conf` | Port 80 only, for the first certificate |
 | `deploy-<site>.sh` | Deploy one site (calls `lib/deploy-site.sh`) |
+| `DEPLOY.md` | The publication, command by command: store, CORS map, nginx, certificates, PRE, PRO, checks, rollback |
 
 Each site has its own docroot (`/var/www/<host>/site/`), vhost, certificate, log
 and CSP. They share no files on the server: the SDK and the runtimes are copied
