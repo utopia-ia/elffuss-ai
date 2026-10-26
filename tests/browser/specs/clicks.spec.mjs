@@ -155,4 +155,34 @@ export default [
       t.noPageErrors();
     },
   },
+  {
+    name: 'clicks: ocr, a file added after a cancel waits for the button (the cancelled rest is not read again by itself)',
+    sites: ['ocr'],
+    configs: ['B'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/');
+      const snap = () => page.evaluate(() => {
+        const o = globalThis.__elffuss.ocr;
+        return { reading: o.reading, pending: o.items().filter(i => i.status === 'not-processed').length, n: o.items().length, primary: !document.querySelector('main button.primary').disabled };
+      });
+      await page.setInputFiles('input[data-input="folder"]', join(FIX, 'ocr/carpeta'));
+      await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
+      await page.click('main button.primary');
+      await page.waitForFunction(() => globalThis.__elffuss.ocr.reading, null, { timeout: 60000 });
+      await page.click('button[data-action="cancel"]');
+      await page.waitForFunction(() => !globalThis.__elffuss.ocr.reading, null, { timeout: RUN_TIMEOUT });
+      const cancelled = await snap();
+      t.ok(cancelled.pending > 0, `files left after the cancel (${JSON.stringify(cancelled)})`);
+      await page.setInputFiles('input[data-input="files"]', join(FIX, 'ocr/factura.png'));
+      await page.waitForFunction(n => globalThis.__elffuss.ocr.items().length > n, cancelled.n, { timeout: 30000 });
+      await new Promise(r => setTimeout(r, QUIET));
+      const after = await snap();
+      t.equal([after.reading, after.primary], [false, true], 'after a cancel, a file added does not start the reading; the button does');
+      await page.click('main button.primary');
+      await page.waitForFunction(() => globalThis.__elffuss.ocr.done, null, { timeout: RUN_TIMEOUT });
+      t.equal((await snap()).pending, 0, 'the button reads the rest and the new file');
+      t.noPageErrors();
+    },
+  },
 ];

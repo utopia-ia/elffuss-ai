@@ -112,7 +112,9 @@ the size and the privacy line, and it downloads and runs in one go. Once the
 model is in this browser, or the button was pressed on this page, a new input
 (picked, dropped, pasted, a folder, the camera's picture) runs at once with no
 click: the site calls `shell.inputReady()` when its input is ready, and an input
-that arrives while an action runs is run right after it (not after a cancel).
+that arrives while an action runs is run right after it (not after a cancel; in
+OCR, a file added after a cancel waits for the button, so the cancelled rest of
+the list is not read again by itself).
 The result's download button sits at the top of its card, on screen when the
 result appears, and saves in one click. `tests/browser/specs/clicks.spec.mjs`
 counts the clicks of every site.

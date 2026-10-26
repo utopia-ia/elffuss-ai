@@ -56,7 +56,7 @@ const ghost = (text, action, onClick) => {
   return b;
 };
 
-const state = { items: [], root: null, reading: false, pause: null, device: null, fallback: null, shown: null, done: false };
+const state = { items: [], root: null, reading: false, pause: null, device: null, fallback: null, shown: null, done: false, cancelled: false };
 const cards = new Map(); // item → li
 const ui = {
   files: $('input[data-input="files"]'),
@@ -146,7 +146,9 @@ async function add(entries, how) {
   refreshExports();
   setControls();
   if (!state.reading) shell.setStatus(summaryText());
-  if (items.some(i => i.status === 'pending')) await shell.inputReady();
+  // After a cancel, what was left of the list waits for the button: a file added
+  // then must not restart the reading of everything that was cancelled.
+  if (items.some(i => i.status === 'pending') && !state.cancelled) await shell.inputReady();
 }
 
 function clearList() {
@@ -156,6 +158,7 @@ function clearList() {
   state.root = null;
   state.fallback = null;
   state.done = false;
+  state.cancelled = false;
   cards.clear();
   ui.list.replaceChildren();
   ui.queue.hidden = true;
@@ -269,6 +272,7 @@ async function readAll({ signal }) {
   if (!state.items.some(i => i.status === 'pending')) return; // all read already (added while reading)
   state.reading = true;
   state.done = false;
+  state.cancelled = false;
   setControls();
   shell.showResult();
   const onAbort = () => resume();
@@ -384,7 +388,7 @@ document.addEventListener('paste', e => {
 
 ui.pause.addEventListener('click', pause);
 ui.resume.addEventListener('click', resume);
-ui.cancel.addEventListener('click', () => { resume(); shell.cancel(); });
+ui.cancel.addEventListener('click', () => { if (state.reading) state.cancelled = true; resume(); shell.cancel(); });
 ui.clear.addEventListener('click', clearList);
 shell.onPrimary(readAll, { after: setControls });
 
