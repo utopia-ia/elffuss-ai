@@ -172,8 +172,9 @@ ssh -i <key> <server> 'for h in tools cutout ocr detect depth; do sudo install -
 ## 6. The sites, PRE first
 
 Each site is copied on its own, from a build of the commit (never the working
-tree), with `deploy/deploy-<site>.sh`. It runs the unit tests and the sweep on
-the build, uploads the new `v/<build>/`, adds to `vendor/`, swaps the pages in
+tree), with `deploy/deploy-<site>.sh`. It runs the unit tests and the sweep over
+the whole `dist/`, uploads the new `v/<build>/`, adds to `vendor/` (tools has
+none), swaps the pages in
 with `mv -f`, prunes old builds, and checks by `curl` that what is served is the
 build. Nothing is synced with `--delete`.
 
