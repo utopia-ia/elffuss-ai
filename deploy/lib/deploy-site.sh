@@ -56,7 +56,9 @@ DEST="/var/www/$SITE_HOST/site"
 OUT="$ROOT/dist"
 node scripts/build.mjs "$SITE" --channel "$CHANNEL" --out "$OUT"
 node --test "tests/unit/*.test.mjs"
-node scripts/sweep.mjs --release --git --dist "$OUT/$SITE"
+# the whole dist/: the sweep keys vendored files by <site>/vendor/…, so a single site's
+# folder would flag every vendored file as a finding.
+node scripts/sweep.mjs --release --git --dist "$OUT"
 LOCAL="$OUT/$SITE"
 PAGES_DIR=.; [ "$CHANNEL" = pre ] && PAGES_DIR=beta
 PAGES=$(cd "$LOCAL" && find "$PAGES_DIR" \( -name '*.html' -o -name 'robots.txt' \) -not -path '*/v/*' -not -path '*/vendor/*' -not -name '._*' | sed 's|^\./||' | sort)
@@ -70,7 +72,8 @@ fi
 # 4. Upload: the build's files, the runtimes, then the pages, swapped in atomically.
 "${SSH[@]}" "mkdir -p '$DEST/v' '$DEST/vendor'"
 "${RSYNC[@]}" "$LOCAL/v/$BUILD/" "$HOST:$DEST/v/$BUILD/"
-"${RSYNC[@]}" "$LOCAL/vendor/" "$HOST:$DEST/vendor/"
+# a site with no runtime (tools) builds no vendor/
+if [ -d "$LOCAL/vendor" ]; then "${RSYNC[@]}" "$LOCAL/vendor/" "$HOST:$DEST/vendor/"; fi
 TMP=".new-$BUILD"
 for p in $PAGES; do
   "${SSH[@]}" "mkdir -p '$DEST/$(dirname "$p")'"
@@ -87,7 +90,7 @@ KEEP=$( { echo "$BUILD"; ls -1t; } | awk 'NF && !seen[$0]++' | head -3)
 for d in *; do
   if ! printf '%s\n' "$KEEP" | grep -qxF -- "$d"; then echo "prune v/$d"; rm -rf -- "$d"; fi
 done
-USED=$(cat ./*/config.js | grep -o '"/vendor/[^"]*' | sed -E 's|^"/vendor/((@[^/]+/)?[^/]+)/.*|\1|' | sort -u)
+USED=$(cat ./*/config.js | { grep -o '"/vendor/[^"]*' || true; } | sed -E 's|^"/vendor/((@[^/]+/)?[^/]+)/.*|\1|' | sort -u)
 cd "$DEST/vendor"
 for d in */ @*/*/; do
   d=${d%/}
