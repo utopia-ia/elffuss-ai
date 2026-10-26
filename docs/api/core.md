@@ -507,6 +507,18 @@ The part of a model that lives in this repo, or null.
 
 Every Hugging Face repo the registry pins, sorted.
 
+### `toolFiles(registry)`
+
+The files the tool sites may ask the store for: those of every variant of every
+model, each pinned URL once, with its size, sorted by URL. The model store's
+rule for the tools lists exactly these (scripts/broker-repos.mjs prints it).
+
+| Parameter | Type | |
+|---|---|---|
+| `registry` | `Registry` |  |
+
+Returns `{ url: string, size: number }[]`.
+
 ### `registryUrls(registry)`
 
 Every pinned URL of the registry with its size (what the catalog asks the store about).

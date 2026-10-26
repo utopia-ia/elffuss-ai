@@ -52,8 +52,10 @@ reference (generated from the JSDoc) and `docs/MODELS.md` for every model.
    never talks to the Hub: its Content Security Policy only allows its own
    origin, the store's frame, and WebAssembly. Trusted Types are required.
 
-The sites cannot empty the store, save copies into it or list it; the store only
-accepts from them pinned files of the repositories in `registry/tasks.json`.
+The sites cannot empty the store, save copies into it or list it, and nothing they
+ask deletes a stored copy: the store only accepts from them the files of
+`registry/tasks.json`, each at its pinned URL and with its exact size
+(`node scripts/broker-repos.mjs` prints that list for the store).
 
 ## Repository
 
