@@ -8,13 +8,17 @@
 // leaves the browser; nothing is downloaded before the primary button.
 import { createShell, AiError } from './shared/shell.js';
 import { Depth, colorizeDepth, encodeDepthPng16 } from './sdk/depth/index.js';
-import { sniffImageType, DECODABLE, encodePng } from './sdk/core/image-input.js';
+import { sniffImageType, DECODABLE, encodePng, previewImage, previewBitmap } from './sdk/core/image-input.js';
 import { createView3d } from './view3d.js';
 import { readRamp } from './colors.js';
 import { VIEW, LIMITS } from './relief.js';
 
 /** Longest side of the photo the map is computed at (the model itself works at about 518). */
 const MAX_SIDE = 2048;
+/** Longest side of the chosen photo as the page shows it (a small copy, never the full photo). */
+const PREVIEW_SIDE = 1024;
+/** Above this ratio of sides the model sees the photo with very few pixels across, and the map says little. */
+const ELONGATED = 4;
 
 const shell = await createShell();
 const { t } = shell;
@@ -58,7 +62,11 @@ function forgetShown() {
   shell.clearResult();
 }
 
-/** A photo was picked, dropped or pasted: check its first bytes, show it, enable the button. */
+/**
+ * A photo was picked, dropped or pasted: check its first bytes and its size,
+ * show a small copy of it, enable the button. A photo over the pixel budget is
+ * refused here, before anything decodes it.
+ */
 async function choose(file) {
   const pick = ++picks;
   forgetShown();
@@ -75,20 +83,26 @@ async function choose(file) {
     shell.showError(new AiError(file.size ? 'unsupported-format' : 'decode-failed', 'not an image this site reads', { details: { type } }));
     return;
   }
-  const url = URL.createObjectURL(file);
+  let small;
+  try { small = await previewImage(file, { maxSide: PREVIEW_SIDE }); }
+  catch (err) { if (pick === picks) shell.showError(err); return; }
+  if (pick !== picks) return;
+  const url = URL.createObjectURL(small.blob);
   current = { file, name: baseName(file.name), url };
-  const img = el('img', { src: url, alt: t('preview.alt', { name: file.name }) });
-  img.addEventListener('load', () => { caption.textContent = t('preview.caption', { name: file.name, width: img.naturalWidth, height: img.naturalHeight }); }, { once: true });
-  caption.textContent = file.name;
+  const img = el('img', { src: url, alt: t('preview.alt', { name: file.name }), width: small.width, height: small.height });
+  caption.textContent = t('preview.caption', { name: file.name, width: small.sourceWidth, height: small.sourceHeight });
   preview.prepend(img);
   preview.hidden = false;
   shell.setStatus('');
   shell.setReady(true);
 }
 
-/** The photo's pixels at the map's size (with its EXIF orientation), for the 3D view. */
+/**
+ * The photo's pixels at the map's size (with its EXIF orientation), for the 3D
+ * view: from a copy scaled to the map, so the full photo is not kept decoded.
+ */
 async function textureOf(file, width, height) {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const { bitmap } = await previewBitmap(file, { maxSide: Math.max(width, height) });
   try {
     const ctx = new OffscreenCanvas(width, height).getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bitmap, 0, 0, width, height);
@@ -108,6 +122,7 @@ async function show(chosen, result, device, fallback) {
   section.append(el('p', { 'data-role': 'result-meta' }, t('result.meta', { device: shell.deviceLabel(device), width, height })));
   if (fallback) section.append(el('p', { 'data-role': 'fallback' }, t('fallback.wasm')));
   if (result.scaled) section.append(el('p', { class: 'muted', 'data-role': 'scaled' }, t('result.scaled', { sourceWidth: result.sourceWidth, sourceHeight: result.sourceHeight, width, height })));
+  if (Math.max(width, height) / Math.min(width, height) > ELONGATED) section.append(el('p', { 'data-role': 'elongated' }, t('result.elongated')));
 
   // The map in colour, along the ramp of the CSS variables (in grey if one is not a colour).
   const ramp = readRamp();
@@ -126,8 +141,11 @@ async function show(chosen, result, device, fallback) {
       button('download-16', t('download.png16'), async () => save(await encodeDepthPng16(result.depth, width, height), 'download.png16Name')))));
 
   // The 3D view: the photo in relief, turned by dragging or with the arrow keys.
+  // A map of less than 2 × 2 has no surface to show.
   let texture = null;
-  try { texture = await textureOf(chosen.file, width, height); } catch { texture = null; }
+  if (width >= 2 && height >= 2) {
+    try { texture = await textureOf(chosen.file, width, height); } catch { texture = null; }
+  }
   if (stale()) return;
   if (texture) {
     const canvas = el('canvas', { tabindex: 0, role: 'img', 'aria-label': t('view.label', { name: chosen.file.name }) });

@@ -11,6 +11,7 @@
   "preview.caption": "{name} · {width} × {height} px",
   "result.meta": "{device} · {width} × {height} px",
   "result.scaled": "The photo is {sourceWidth} × {sourceHeight} px; it was scaled down to {width} × {height} px for the depth map.",
+  "result.elongated": "The photo is very elongated: the model sees it with very few pixels one way, and the map says little.",
   "map.title": "Depth map",
   "map.alt": "Colour depth map of {name}: lighter tones are nearer",
   "map.legend": "The lighter, the nearer. This is relative depth: it orders what is near and far, it does not measure distances.",
@@ -22,7 +23,7 @@
   "download.png16Name": "{name}-depth-16bit.png",
   "view.title": "3D view",
   "view.label": "3D view of {name}. Drag it or use the arrow keys to turn it.",
-  "view.hint": "Drag it to turn it, or use the arrow keys. Home goes back to the first view.",
+  "view.hint": "Drag it to turn it, or use the arrow keys. The Home key goes back to the first view.",
   "view.relief": "Relief",
   "view.reset": "Back to the first view",
   "file.name": "image"

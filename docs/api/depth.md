@@ -102,7 +102,7 @@ Returns `Uint8ClampedArray`.
 
 ## `sdk/depth/png.js`
 
-A 16-bit greyscale PNG for depth maps, and a small PNG reader. Canvas only writes 8 bits per channel, which leaves 256 levels of depth; the 16-bit file keeps 65,536, enough for 3D tools and for comparing two maps. Both directions use the browser's CompressionStream and DecompressionStream (also in Node), so nothing else is needed.
+A 16-bit greyscale PNG for depth maps. Canvas only writes 8 bits per channel, which leaves 256 levels of depth; the 16-bit file keeps 65,536, enough for 3D tools and for comparing two maps. The writer and the reader are the core's (sdk/core/png.js), which need nothing but CompressionStream.
 
 ### `encodeDepthPng16(depth, width, height)`
 
@@ -116,17 +116,6 @@ A 16-bit greyscale PNG of a depth map: 0 becomes 0 and 1 becomes 65535
 | `height` | `number` |  |
 
 Returns `Promise<Blob>`: an `image/png` Blob
-
-### `decodePng(input)`
-
-Read a PNG: greyscale, grey with alpha, RGB or RGBA, at 8 or 16 bits, not
-interlaced. Checks the signature and every chunk's CRC.
-
-| Parameter | Type | |
-|---|---|---|
-| `input` | `ArrayBuffer\|Uint8Array\|Blob` |  |
-
-Returns `Promise<{ width: number, height: number, bitDepth: 8\|16, channels: number, data: Uint8Array\|Uint16Array }>`: `data` holds `channels` samples per pixel, row by row
 
 ## `sdk/depth/sizes.js`
 

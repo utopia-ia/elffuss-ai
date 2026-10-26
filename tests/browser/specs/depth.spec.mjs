@@ -98,6 +98,13 @@ async function withRegistry(ctx, change) {
   });
 }
 
+/** A valid-looking PNG header of w × h pixels with almost no data: a decoder bomb. */
+function hugePng(w, h) {
+  const be = n => Buffer.from([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]);
+  const ihdr = Buffer.concat([be(13), Buffer.from('IHDR'), be(w), be(h), Buffer.from([8, 6, 0, 0, 0]), be(0)]);
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), ihdr, be(0), Buffer.from('IEND'), be(0)]);
+}
+
 /** What the page shows and what its test hooks recorded. */
 function state(page) {
   return page.evaluate(() => {
@@ -435,13 +442,13 @@ export default [
         const st = await state(page);
         t.equal([st.status, st.primary.disabled, st.previewHidden], [s[key], true, true], `${file.name}: ${key}, nothing enabled, no preview`);
       }
-      t.equal(t.hubTotal(), 0, 'nothing downloaded for files the page refused');
-      // A PNG whose header is right and whose data is not: the page lets it through, the Worker cannot decode it.
+      // A PNG whose signature is right and whose data is not: the page cannot make
+      // its preview, says so, and enables nothing.
       const broken = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from('basura que no es una imagen')]);
-      await page.setInputFiles('main label.drop input[type="file"]', { name: 'rota.png', mimeType: 'image/png', buffer: broken });
-      await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 30000 });
-      const st = await press(page);
-      t.equal([st.status, st.probe.runs ?? 0, st.resultHidden], [s['error.decode-failed'], 0, true], 'a broken image says it cannot be opened');
+      await pickRefused(page, { name: 'rota.png', mimeType: 'image/png', buffer: broken });
+      const st = await state(page);
+      t.equal([st.status, st.primary.disabled, st.previewHidden, st.probe.runs ?? 0], [s['error.decode-failed'], true, true, 0], 'a broken image says it cannot be opened');
+      t.equal(t.hubTotal(), 0, 'nothing downloaded for files the page refused');
       await pick(page);
       const good = await press(page);
       t.equal([good.probe.runs, good.status], [1, s['status.done']], 'and the next photo works');
@@ -520,6 +527,85 @@ export default [
       const st = await press(page);
       t.equal([st.status, st.probe.runs], [s['error.webgpu-unavailable'], 0], 'after the click');
       t.equal(t.hubTotal(), 0, 'nothing downloaded');
+      t.noPageErrors();
+    },
+  },
+  {
+    // A picture of 20000 × 20000 px in a file of a few kilobytes: refused from its
+    // header, before the page or the Worker decodes it.
+    name: 'a photo over the pixel budget is refused before anything decodes it',
+    sites: ['depth'],
+    configs: ['B'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/');
+      const s = t.strings.depth.es;
+      await pickRefused(page, { name: 'enorme.png', mimeType: 'image/png', buffer: hugePng(20000, 20000) });
+      const st = await state(page);
+      t.equal([st.status, st.primary.disabled, st.previewHidden], [s['error.too-large'], true, true], 'too large, nothing enabled, no preview');
+      t.equal(t.hubTotal(), 0, 'nothing downloaded');
+      t.noPageErrors();
+    },
+  },
+  {
+    name: 'a 1 × 1 photo gives its map without the 3D view, and a very elongated photo gets a warning',
+    sites: ['depth'],
+    configs: ['B'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/');
+      const s = t.strings.depth.es;
+      for (const [w, h, name] of [[1, 1, 'punto.png'], [2400, 200, 'tira.png']]) {
+        await page.evaluate(async ([w, h, name]) => {
+          const canvas = new OffscreenCanvas(w, h);
+          const g = canvas.getContext('2d');
+          g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+          g.fillStyle = '#202020'; g.fillRect(0, 0, Math.ceil(w / 3), h);
+          const dt = new DataTransfer();
+          dt.items.add(new File([await canvas.convertToBlob({ type: 'image/png' })], name, { type: 'image/png' }));
+          const input = document.querySelector('main label.drop input[type="file"]');
+          input.files = dt.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }, [w, h, name]);
+        await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
+        const st = await press(page);
+        const elongated = await page.evaluate(() => document.querySelector('main [data-role="elongated"]')?.textContent ?? null);
+        if (w === 1) {
+          t.equal([st.status, st.cards], [s['status.done'], ['map']], '1 × 1: done, the map and no 3D view');
+          t.equal(elongated, null, '1 × 1: no warning');
+        } else {
+          t.equal([st.status, st.cards], [s['status.done'], ['map', 'view3d']], `${w} × ${h}: done, with the map and the 3D view`);
+          t.equal(elongated, s['result.elongated'], `${w} × ${h}: the page says the map says little`);
+        }
+      }
+      t.noPageErrors();
+      await t.noCsp(page);
+    },
+  },
+  {
+    // The 3D view of each result must be let go when the next one replaces it.
+    name: 'many runs on one page: the memory of a result is given back when the next replaces it',
+    sites: ['depth'],
+    configs: ['B'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/');
+      const cdp = await ctx.newCDPSession(page);
+      const used = async () => {
+        await cdp.send('HeapProfiler.collectGarbage');
+        const h = await cdp.send('Runtime.getHeapUsage');
+        return h.usedSize + (h.backingStorageSize || 0) + (h.embedderHeapUsedSize || 0);
+      };
+      await pick(page);
+      const sizes = [];
+      for (let i = 0; i < 6; i++) {
+        const st = await press(page);
+        if (st.cards.join() !== 'map,view3d') { t.ok(false, `run ${i + 1}: ${st.status}`); break; }
+        sizes.push(await used());
+      }
+      const perRun = (sizes.at(-1) - sizes[1]) / (sizes.length - 2);
+      t.note(`growth per run after the second: ${(perRun / 1e6).toFixed(2)} MB`);
+      t.ok(perRun < 2e6, `the page keeps less than 2 MB per run (it kept ${(perRun / 1e6).toFixed(2)} MB)`);
       t.noPageErrors();
     },
   },

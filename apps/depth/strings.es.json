@@ -11,6 +11,7 @@
   "preview.caption": "{name} · {width} × {height} px",
   "result.meta": "{device} · {width} × {height} px",
   "result.scaled": "La foto mide {sourceWidth} × {sourceHeight} px; se ha reducido a {width} × {height} px para calcular la profundidad.",
+  "result.elongated": "La foto es muy alargada: el modelo la ve con muy pocos píxeles en un sentido y el mapa dice poco.",
   "map.title": "Mapa de profundidad",
   "map.alt": "Mapa de profundidad de {name} en color: los tonos claros están más cerca",
   "map.legend": "Cuanto más claro, más cerca. Es una profundidad relativa: ordena lo cercano y lo lejano, no mide distancias.",
@@ -22,7 +23,7 @@
   "download.png16Name": "{name}-profundidad-16bits.png",
   "view.title": "Vista 3D",
   "view.label": "Vista 3D de {name}. Arrástrala o usa las flechas del teclado para girarla.",
-  "view.hint": "Arrástrala para girarla, o usa las flechas del teclado. Inicio vuelve a la vista de partida.",
+  "view.hint": "Arrástrala para girarla, o usa las flechas del teclado. La tecla Inicio vuelve a la vista de partida.",
   "view.relief": "Relieve",
   "view.reset": "Volver a la vista de partida",
   "file.name": "imagen"

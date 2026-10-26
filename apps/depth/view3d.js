@@ -13,7 +13,7 @@ import { buildMesh, renderRelief, clampView, dragView, keyView, VIEW } from './r
  *   texture: { width: number, height: number, data: Uint8ClampedArray }, onRender?: (state: object) => void }} o
  */
 export function createView3d({ canvas, map, texture, onRender }) {
-  const mesh = buildMesh(map);
+  let mesh = buildMesh(map);
   const ctx = canvas.getContext('2d');
   const aspect = Math.min(1.25, Math.max(0.5, map.height / map.width));
   let view = { ...VIEW };
@@ -29,6 +29,7 @@ export function createView3d({ canvas, map, texture, onRender }) {
 
   function draw() {
     frame = 0;
+    if (!mesh) return;
     fit();
     if (!image) { image = ctx.createImageData(canvas.width, canvas.height); zbuffer = new Float32Array(canvas.width * canvas.height); }
     ({ drawn } = renderRelief(mesh, texture, image, { ...view, zbuffer }));
@@ -89,7 +90,13 @@ export function createView3d({ canvas, map, texture, onRender }) {
     get stats() { return { renders, drawn }; },
     dispose() {
       if (frame) cancelAnimationFrame(frame);
+      frame = 0;
       resize?.disconnect();
+      // Let go of the large arrays at once (the mesh, the photo, the frame and its
+      // depth buffer), and of the canvas's pixels, even if something still holds
+      // this view; a page that runs many photos must not keep them all.
+      mesh = null; texture = null; image = null; zbuffer = null; drag = null;
+      canvas.width = 0; canvas.height = 0;
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
