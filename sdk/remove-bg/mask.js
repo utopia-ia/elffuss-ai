@@ -1,8 +1,13 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 AND MIT-CMU
 // Copyright (c) 2026 UtopiaIA
+// resampleWeights() is adapted from Pillow (src/libImaging/Resample.c,
+// precompute_coeffs), MIT-CMU License, see LICENSES/MIT-CMU-Pillow.txt:
+//   Copyright © 1997-2011 by Secret Labs AB
+//   Copyright © 1995-2011 by Fredrik Lundh and contributors
+//   Copyright © 2010 by Jeffrey A. Clark and contributors
 //
 // The image maths of background removal, with no browser API so that Node tests
-// them: the model input (the photo resized to the model's square with PIL's
+// them: the model input (the photo resized to the model's square with Pillow's
 // bilinear filter, which averages every pixel when it shrinks instead of
 // sampling a few, then normalised as the model's preprocessor config says), the
 // mask brought back to the photo's size, and the alpha put on the photo's pixels.
@@ -11,14 +16,19 @@
 
 import { AiError } from '../core/errors.js';
 
-/** Largest side the task processes; a larger image is scaled down to it first. */
-export const MAX_SIDE = 8192;
+/**
+ * Largest side the task processes; a larger image is scaled down to it first,
+ * and the result says so. It keeps the full size of the photos of most cameras
+ * and bounds what one run holds: the output PNG, its mask and the photo.
+ */
+export const MAX_SIDE = 4096;
 
 /**
- * Coefficients of a one-dimensional resampling with PIL's bilinear filter: a
+ * Coefficients of a one-dimensional resampling with Pillow's bilinear filter: a
  * triangle one pixel wide when enlarging (plain bilinear, pixel centres at
  * half-integers, as `align_corners=False`) and as wide as the scale when
- * shrinking, so that every input pixel counts. Each row sums to 1.
+ * shrinking, so that every input pixel counts. Each row sums to 1. Adapted from
+ * Pillow's precompute_coeffs (MIT-CMU; see the top of this file).
  * @param {number} inSize
  * @param {number} outSize
  * @returns {{ start: Int32Array, count: Int32Array, weights: Float32Array, ksize: number }}

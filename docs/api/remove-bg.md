@@ -3,9 +3,33 @@
 
 Imported as `@elffuss/ai/remove-bg`, `@elffuss/ai/remove-bg/sizes`.
 
+## `sdk/remove-bg/impl.js`
+
+Background removal where the model runs (a Worker). The context builds BEN2's Transformers.js pipeline from the model store; this module feeds its model directly, with the input and the mask computed in mask.js rather than by the pipeline's own canvas resizes, so the result is the same on every browser and backend and the maths are tested in Node.
+ Backend lessons. runonweb found (packages/runonweb/src/remove-bg/index.ts:4-21, README "What we learned testing backends") that BEN2, whose only ONNX weight is fp16, loads on WebGPU and then fails at its first run in the fused LayerNorm (fp16 activation with fp32 scale and bias), with ONNX Runtime Web 1.30.0 as with 1.31.0-dev (onnxruntime#32627). With the pinned 1.30.0 our own canary also sees the first run fail inside OrtRun on WebGPU, but in a WebGPU buffer allocation, so the cause is not settled; either way the registry lists WebAssembly only, and the browser tests keep the canary, which records the error it gets, to learn when an upgrade makes it run.
+ Its size. At 1024 × 1024 BEN2 needs a WebAssembly heap of about 3.5 GiB: with 3 GiB every run fails inside OrtRun with std::bad_alloc. Before anything is downloaded, load() checks that this browser can give it that (and, where the browser says how much the device has, that it is not a small device), and says out-of-memory if not; an allocation that fails later says the same.
+
+### `WASM_HEAP`
+
+The WebAssembly heap one run of BEN2 needs, in bytes (measured: 3 GiB is not enough).
+
+### `MIN_DEVICE_GIB`
+
+The least `navigator.deviceMemory` (in GiB, as browsers round it) a device needs for it.
+
+### `checkCanRun(nav = globalThis.navigator)`
+
+Whether this browser can run BEN2, before downloading it: the WebAssembly heap
+can grow to WASM_HEAP, and the device is not one that says it has less than
+MIN_DEVICE_GIB. Throws out-of-memory when not.
+
+| Parameter | Type | |
+|---|---|---|
+| `[nav]` | `{ deviceMemory?: number }` |  |
+
 ## `sdk/remove-bg/index.js`
 
-Remove the background of an image in the browser: a PNG with transparency at the size of the input, and its mask. The model is BEN2 (MIT, by PramaLLC), downloaded once from its pinned Hugging Face repository through the Elffuss model store; it runs in a Worker, on WebAssembly.
+Remove the background of an image in the browser: a PNG with transparency at the size of the input, and its mask. The model is BEN2 (MIT, by PramaLLC), downloaded the first time from its pinned Hugging Face repository through the Elffuss model store, and kept in this browser; it runs in a Worker, on WebAssembly.
 
 ### Type `RemoveBgResult`
 
@@ -30,7 +54,7 @@ WebGPU variant, so 'webgpu' fails with `device-unsupported`), `onProgress`,
     await remover.dispose()
 
 - `.constructor(options)`
-- `.run(input, opts)`: Remove the background of one image. Accepts a Blob or File (PNG, JPEG, GIF, WebP, BMP or AVIF, by its first bytes), an ImageBitmap, an ImageData, or an image, canvas or video element (turned into an ImageBitmap here). EXIF orientation is applied. Fails with `decode-failed`, `unsupported-format`, `too-large`, `aborted` or `run-failed`.
+- `.run(input, opts)`: Remove the background of one image. Accepts a Blob or File (PNG, JPEG, GIF, WebP, BMP or AVIF, by its first bytes), an ImageBitmap, an ImageData, or an image, canvas or video element (turned into an ImageBitmap here). EXIF orientation is applied. Fails with `decode-failed`, `unsupported-format`, `too-large` (a picture over the pixel budget), `out-of-memory` (this browser cannot give the model the heap it needs; checked before the download), `aborted` or `run-failed`.
 
 ### `removeBg`
 
@@ -39,18 +63,22 @@ Takes the options of RemoveBg and of its run in one object.
 
 ## `sdk/remove-bg/mask.js`
 
-The image maths of background removal, with no browser API so that Node tests them: the model input (the photo resized to the model's square with PIL's bilinear filter, which averages every pixel when it shrinks instead of sampling a few, then normalised as the model's preprocessor config says), the mask brought back to the photo's size, and the alpha put on the photo's pixels. The same numbers come out on every browser and backend: nothing here goes through a canvas.
+resampleWeights() is adapted from Pillow (src/libImaging/Resample.c, precompute_coeffs), MIT-CMU License, see LICENSES/MIT-CMU-Pillow.txt:
+ The image maths of background removal, with no browser API so that Node tests them: the model input (the photo resized to the model's square with Pillow's bilinear filter, which averages every pixel when it shrinks instead of sampling a few, then normalised as the model's preprocessor config says), the mask brought back to the photo's size, and the alpha put on the photo's pixels. The same numbers come out on every browser and backend: nothing here goes through a canvas.
 
 ### `MAX_SIDE`
 
-Largest side the task processes; a larger image is scaled down to it first.
+Largest side the task processes; a larger image is scaled down to it first,
+and the result says so. It keeps the full size of the photos of most cameras
+and bounds what one run holds: the output PNG, its mask and the photo.
 
 ### `resampleWeights(inSize, outSize)`
 
-Coefficients of a one-dimensional resampling with PIL's bilinear filter: a
+Coefficients of a one-dimensional resampling with Pillow's bilinear filter: a
 triangle one pixel wide when enlarging (plain bilinear, pixel centres at
 half-integers, as `align_corners=False`) and as wide as the scale when
-shrinking, so that every input pixel counts. Each row sums to 1.
+shrinking, so that every input pixel counts. Each row sums to 1. Adapted from
+Pillow's precompute_coeffs (MIT-CMU; see the top of this file).
 
 | Parameter | Type | |
 |---|---|---|

@@ -7,22 +7,53 @@
 // pipeline's own canvas resizes, so the result is the same on every browser and
 // backend and the maths are tested in Node.
 //
-// Backend lessons, from runonweb (packages/runonweb/src/remove-bg/index.ts:4-21,
-// README "What we learned testing backends"): BEN2's only ONNX weight is fp16;
-// on WebGPU it loads and then its first run fails in the fused LayerNorm (fp16
-// activation with fp32 scale and bias), with ONNX Runtime Web 1.30.0 as with
-// 1.31.0-dev (onnxruntime#32627). The registry therefore lists WebAssembly
-// only; the browser tests keep a canary that runs it on WebGPU anyway.
+// Backend lessons. runonweb found (packages/runonweb/src/remove-bg/index.ts:4-21,
+// README "What we learned testing backends") that BEN2, whose only ONNX weight
+// is fp16, loads on WebGPU and then fails at its first run in the fused
+// LayerNorm (fp16 activation with fp32 scale and bias), with ONNX Runtime Web
+// 1.30.0 as with 1.31.0-dev (onnxruntime#32627). With the pinned 1.30.0 our own
+// canary also sees the first run fail inside OrtRun on WebGPU, but in a WebGPU
+// buffer allocation, so the cause is not settled; either way the registry lists
+// WebAssembly only, and the browser tests keep the canary, which records the
+// error it gets, to learn when an upgrade makes it run.
+//
+// Its size. At 1024 × 1024 BEN2 needs a WebAssembly heap of about 3.5 GiB: with
+// 3 GiB every run fails inside OrtRun with std::bad_alloc. Before anything is
+// downloaded, load() checks that this browser can give it that (and, where the
+// browser says how much the device has, that it is not a small device), and
+// says out-of-memory if not; an allocation that fails later says the same.
 
 import { AiError, toAiError } from '../core/errors.js';
 import { decodeImage, encodePng } from '../core/image-input.js';
+import { canGrowWasmMemory } from '../core/device.js';
 import { inputSpec, toModelInput, maskToAlpha, applyAlpha, coverage, sideLimit } from './mask.js';
 
 export const task = 'remove-bg';
 
+/** The WebAssembly heap one run of BEN2 needs, in bytes (measured: 3 GiB is not enough). */
+export const WASM_HEAP = 3.5 * 2 ** 30;
+/** The least `navigator.deviceMemory` (in GiB, as browsers round it) a device needs for it. */
+export const MIN_DEVICE_GIB = 4;
+
+/**
+ * Whether this browser can run BEN2, before downloading it: the WebAssembly heap
+ * can grow to WASM_HEAP, and the device is not one that says it has less than
+ * MIN_DEVICE_GIB. Throws out-of-memory when not.
+ * @param {{ deviceMemory?: number }} [nav]
+ */
+export function checkCanRun(nav = globalThis.navigator) {
+  const gib = Number(nav?.deviceMemory);
+  if (Number.isFinite(gib) && gib > 0 && gib < MIN_DEVICE_GIB) {
+    throw new AiError('out-of-memory', `this device says it has ${gib} GiB; the model needs more`, { details: { deviceMemory: gib } });
+  }
+  if (!canGrowWasmMemory(WASM_HEAP)) throw new AiError('out-of-memory', 'this browser cannot give WebAssembly the heap the model needs', { details: { heap: WASM_HEAP } });
+}
+
 // Create the pipeline (through the context: model store, pinned commit, checked
-// files and runtimes) and read what the model takes.
+// files and runtimes) and read what the model takes. Nothing is downloaded when
+// this browser cannot run the model.
 export async function load(ctx) {
+  if (ctx.device === 'wasm') checkCanRun();
   const tf = await ctx.transformers();
   const pipe = await ctx.pipeline();
   if (ctx.test?.failLoad) throw new AiError('run-failed', 'test hook: the load fails on purpose');
@@ -72,7 +103,8 @@ export async function run(state, input, opts = {}, ctx) {
       transfer: [alpha.buffer],
     };
   } catch (err) {
-    if (err instanceof RangeError) throw new AiError('too-large', 'the image is too large to process here', { cause: err, details: { width: img.width, height: img.height } });
+    // An allocation that fails inside the runtime or for the result is out-of-memory
+    // (toAiError recognises it); the Worker is replaced, as after any runtime failure.
     throw toAiError(err, 'run-failed');
   }
 }

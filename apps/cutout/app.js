@@ -9,10 +9,10 @@
 
 import { createShell } from './shared/shell.js';
 import { RemoveBg } from './sdk/remove-bg/index.js';
-import { sniffImageType, DECODABLE } from './sdk/core/image-input.js';
+import { sniffImageType, DECODABLE, previewImage as smallCopy } from './sdk/core/image-input.js';
 import { chooseVariant } from './sdk/core/device.js';
 import { AiError } from './sdk/core/errors.js';
-import { createCompare } from './compare.js';
+import { createCompare, PREVIEW_SIDE } from './compare.js';
 import { outputName } from './names.js';
 
 const shell = await createShell();
@@ -82,7 +82,18 @@ async function choose(files) {
     shell.showError(new AiError('unsupported-format', 'not an image this site reads', { details: { type } }));
     return;
   }
-  const url = URL.createObjectURL(file);
+  // A small copy to show (the full photo is never kept decoded on the page); a
+  // picture over the pixel budget is refused here, before it is decoded.
+  let small;
+  try {
+    small = await smallCopy(file, { maxSide: PREVIEW_SIDE });
+  } catch (err) {
+    if (pick !== picks) return;
+    shell.showError(err);
+    return;
+  }
+  if (pick !== picks) return;
+  const url = URL.createObjectURL(small.blob);
   previewImage.src = url;
   try {
     await previewImage.decode();
@@ -94,7 +105,7 @@ async function choose(files) {
     return;
   }
   if (pick !== picks) { URL.revokeObjectURL(url); return; }
-  current = { file, url, width: previewImage.naturalWidth, height: previewImage.naturalHeight };
+  current = { file, url, width: small.sourceWidth, height: small.sourceHeight };
   chosen.textContent = t('chosen', { name: file.name, width: current.width, height: current.height });
   preview.hidden = false;
   const blocked = blocker();

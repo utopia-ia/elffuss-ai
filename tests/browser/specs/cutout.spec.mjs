@@ -11,8 +11,10 @@
 // before any download, paste and drop choose an image, cancel stops the
 // download and the next run resumes, a failure inside the runtime is followed by
 // a working run, an image with an Exif orientation comes out upright, one longer
-// than 8192 px is scaled down and the card says so; and a canary runs BEN2 on
-// WebGPU anyway, to learn when the pinned ONNX Runtime stops failing on it.
+// than 4096 px is scaled down and the card says so, one over the pixel budget is
+// refused before it is decoded, a browser that cannot give BEN2 its WebAssembly
+// heap says so before downloading anything; and a canary runs BEN2 on WebGPU
+// anyway, to learn when the pinned ONNX Runtime stops failing on it.
 //
 // ELFFUSS_AI_RECORD=cutout writes tests/fixtures/cutout/golden-alpha.png from
 // the configuration B run (WebAssembly, the reference backend) instead of
@@ -243,6 +245,28 @@ function colourError(page, pngB64, jpgB64) {
   }, [pngB64, jpgB64]);
 }
 
+/** The photo's RGBA as the browser decodes it (opaque, so a canvas gives it back exactly). */
+async function photoRgba(page, jpgB64) {
+  const b64 = await page.evaluate(async jpg => {
+    const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(jpg), c => c.charCodeAt(0))], { type: 'image/jpeg' }));
+    const c = new OffscreenCanvas(bmp.width, bmp.height);
+    const x = c.getContext('2d');
+    x.drawImage(bmp, 0, 0);
+    const d = x.getImageData(0, 0, bmp.width, bmp.height).data;
+    let s = '';
+    for (let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode(...d.subarray(i, i + 0x8000));
+    return btoa(s);
+  }, jpgB64);
+  return new Uint8Array(Buffer.from(b64, 'base64'));
+}
+
+/** A valid-looking PNG header of w × h pixels with almost no data: a decoder bomb. */
+function hugePng(w, h) {
+  const be = n => Buffer.from([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]);
+  const ihdr = Buffer.concat([be(13), Buffer.from('IHDR'), be(w), be(h), Buffer.from([8, 6, 0, 0, 0]), be(0)]);
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), ihdr, be(0), Buffer.from('IEND'), be(0)]);
+}
+
 /** Pixels of the comparison canvas at points given as fractions of its size, after setting the slider. */
 function comparePixels(page, value, points) {
   return page.evaluate(([v, pts]) => {
@@ -292,6 +316,7 @@ export default [
       t.equal(f.title, `foto-${s['download.suffix']}.png`, 'the card is named after the file it gives');
       t.equal(f.primary, { text: s['action.run'], disabled: false }, 'after the run the model is stored: the button no longer downloads');
       t.equal(f.cancelHidden, true, 'cancel is hidden again');
+      t.equal(f.status, s['status.done'], 'the status line says it is done, not that the image is ready');
       t.equal(f.previewHidden, true, 'the comparison replaces the preview');
       t.ok(f.buttons.filter(c => c === 'primary').length === 1 && f.buttons.every(c => c === 'primary' || c === 'ghost'), `one primary button, the rest ghost: ${f.buttons}`);
       t.equal(f.styleAttrs, 0, 'no style attributes after a full run');
@@ -330,6 +355,19 @@ export default [
       // Where the PNG is opaque, its colours are the photo's.
       const colours = await colourError(page, pngBytes.toString('base64'), jpg.toString('base64'));
       t.ok(colours.opaque > 0.1 * W * H && colours.mean !== null && colours.mean <= THRESHOLDS.colourError, `opaque pixels keep the photo's colours: ${JSON.stringify(colours)}`);
+      // And so do the half-transparent ones of the edge, read from the file itself
+      // (a canvas would premultiply them on the way in and change them).
+      if (png.channels === 4) {
+        const src = await photoRgba(page, jpg.toString('base64'));
+        let sum = 0, n = 0, worst = 0;
+        for (let i = 0; i < W * H; i++) {
+          const a = png.data[i * 4 + 3];
+          if (a === 0 || a === 255) continue;
+          for (let c = 0; c < 3; c++) { const d = Math.abs(png.data[i * 4 + c] - src[i * 4 + c]); sum += d; worst = Math.max(worst, d); }
+          n++;
+        }
+        t.ok(n > 500 && sum / (3 * n) <= THRESHOLDS.colourError, `half-transparent pixels keep the photo's colours: ${n} pixels, mean error ${(sum / (3 * n)).toFixed(3)}, worst ${worst}`);
+      }
 
       // The comparison: the original left of the split, the cut-out over the checkerboard right of it.
       const grass = [0.05, 0.05], dog = [460 / W, 330 / H];
@@ -510,8 +548,34 @@ export default [
       await page.waitForFunction(() => /ancha/.test(document.querySelector('[data-role="chosen"]').textContent));
       await pressAndWait(page);
       f = await cutoutFacts(page);
-      t.equal([f.diag?.cutout?.runs, f.diag?.cutout?.width, f.diag?.cutout?.height, f.diag?.cutout?.scaled], [3, 8192, 36, true], 'scaled to 8192 px on its long side');
-      t.ok(f.notes.includes(fill(s['result.scaled'], { width: 8192, height: 36 })), `the card says it was reduced: ${JSON.stringify(f.notes)}`);
+      t.equal([f.diag?.cutout?.runs, f.diag?.cutout?.width, f.diag?.cutout?.height, f.diag?.cutout?.scaled], [3, 4096, 18, true], 'scaled to 4096 px on its long side');
+      t.ok(f.notes.includes(fill(s['result.scaled'], { width: 4096, height: 18 })), `the card says it was reduced: ${JSON.stringify(f.notes)}`);
+
+      // A picture of 20000 × 20000 px in a file of a few kilobytes: refused from its header.
+      const before = await page.evaluate(() => globalThis.__elffuss.errors.length);
+      await page.setInputFiles(input, { name: 'enorme.png', mimeType: 'image/png', buffer: hugePng(20000, 20000) });
+      await page.waitForFunction(n => globalThis.__elffuss.errors.length > n, before, { timeout: 30000 });
+      f = await cutoutFacts(page);
+      t.equal([f.status, f.primary.disabled, f.previewHidden], [s['error.too-large'], true, true], 'a picture over the pixel budget is refused before it is decoded');
+      t.noPageErrors();
+    },
+  },
+  {
+    // A browser that caps WebAssembly below the heap BEN2 needs (here 3 GiB, by a
+    // V8 flag): the page says so when the button is pressed, before the download.
+    name: 'cutout: where WebAssembly cannot grow enough, out-of-memory before anything is downloaded',
+    sites: ['cutout'],
+    configs: ['B'],
+    async run(t, site) {
+      const ctx = await t.newContext({ args: ['--js-flags=--wasm-max-mem-pages=49152'] });
+      const s = t.strings[site.site].es;
+      const page = await t.open(ctx, site, '/');
+      await page.setInputFiles('main label.drop input[type="file"]', join(FIX, 'foto.jpg'));
+      await page.waitForFunction(() => !document.querySelector('[data-role="preview"]').hidden && !document.querySelector('main button.primary').disabled);
+      await pressAndWait(page);
+      const f = await cutoutFacts(page);
+      t.equal([f.status, f.diag?.errors?.at(-1), f.cards], [s['error.out-of-memory'], 'out-of-memory', 0], 'the page says the browser cannot give the model what it needs');
+      t.equal(t.hubTotal(), 0, 'and nothing was downloaded');
       t.noPageErrors();
     },
   },
@@ -564,8 +628,11 @@ export default [
       }
       t.equal(r.info?.device, 'webgpu', 'the session was created on WebGPU (the premise of the canary)');
       t.equal(r.stage, 'run', 'it fails at its first run, not at loading');
+      // The canary records the error it gets; it does not claim a cause (runonweb saw
+      // the fused LayerNorm; our runs have seen a WebGPU buffer allocation fail).
       const err = r.errors?.[0];
-      t.ok(err && (isShaderError(new Error(err.message)) || err.code === 'timeout'), `with a WebGPU shader error (or no answer): ${err?.message}`);
+      t.ok(err && (isShaderError(new Error(err.message)) || err.code === 'timeout'), `with a failure inside ONNX Runtime's WebGPU run (or no answer): ${err?.message}`);
+      t.note(`where: ${/LayerNorm/i.test(err?.message || '') ? 'LayerNorm' : /buffer_manager|buffer/i.test(err?.message || '') ? 'a WebGPU buffer allocation' : 'not named in the message'}`);
     },
   },
 ];

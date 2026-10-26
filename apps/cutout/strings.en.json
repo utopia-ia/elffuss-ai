@@ -19,5 +19,6 @@
   "result.size": "{width} × {height} px",
   "result.scaled": "The image was very large: it was reduced to {width} × {height} px.",
   "result.empty": "No clear subject was found: almost the whole image became transparent.",
-  "download.suffix": "no-background"
+  "download.suffix": "no-background",
+  "licenses.pillow": "The image resampling of the background-removal task follows Pillow's bilinear filter (by Secret Labs AB, Fredrik Lundh, Jeffrey A. Clark and contributors)."
 }

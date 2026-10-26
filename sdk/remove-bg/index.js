@@ -3,8 +3,9 @@
 //
 // Remove the background of an image in the browser: a PNG with transparency at
 // the size of the input, and its mask. The model is BEN2 (MIT, by PramaLLC),
-// downloaded once from its pinned Hugging Face repository through the Elffuss
-// model store; it runs in a Worker, on WebAssembly.
+// downloaded the first time from its pinned Hugging Face repository through the
+// Elffuss model store, and kept in this browser; it runs in a Worker, on
+// WebAssembly.
 //
 //   import { RemoveBg, removeBg } from '@elffuss/ai/remove-bg'
 //   const remover = new RemoveBg({ onProgress })
@@ -53,7 +54,9 @@ export class RemoveBg extends Task {
    * WebP, BMP or AVIF, by its first bytes), an ImageBitmap, an ImageData, or an
    * image, canvas or video element (turned into an ImageBitmap here). EXIF
    * orientation is applied. Fails with `decode-failed`, `unsupported-format`,
-   * `too-large`, `aborted` or `run-failed`.
+   * `too-large` (a picture over the pixel budget), `out-of-memory` (this browser
+   * cannot give the model the heap it needs; checked before the download),
+   * `aborted` or `run-failed`.
    * @param {Blob|ImageBitmap|ImageData|HTMLImageElement|HTMLCanvasElement} input
    * @param {{ signal?: AbortSignal, maxSide?: number }} [opts] `maxSide` lowers MAX_SIDE for this run
    * @returns {Promise<RemoveBgResult>}

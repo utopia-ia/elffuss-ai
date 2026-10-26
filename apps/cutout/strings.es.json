@@ -19,5 +19,6 @@
   "result.size": "{width} × {height} px",
   "result.scaled": "La imagen era muy grande: se ha reducido a {width} × {height} px.",
   "result.empty": "No se ha encontrado un sujeto claro: casi toda la imagen ha quedado transparente.",
-  "download.suffix": "sin-fondo"
+  "download.suffix": "sin-fondo",
+  "licenses.pillow": "El reescalado de imágenes de la tarea de quitar el fondo sigue el filtro bilineal de Pillow (de Secret Labs AB, Fredrik Lundh, Jeffrey A. Clark y colaboradores)."
 }

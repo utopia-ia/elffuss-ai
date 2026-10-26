@@ -10,6 +10,12 @@ runonweb (https://github.com/midudev/runonweb.ai, commit 878f193)
   Adapted in sdk/core/device.js, sdk/core/queue.js, sdk/core/tf-env.js and
   sdk/core/ort-env.js. Each file says which parts, and where they come from.
 
+Pillow (https://github.com/python-pillow/Pillow)
+  Copyright © 1997-2011 by Secret Labs AB; © 1995-2011 by Fredrik Lundh and contributors;
+  © 2010 by Jeffrey A. Clark and contributors. MIT-CMU License, see LICENSES/MIT-CMU-Pillow.txt.
+  resampleWeights() in sdk/remove-bg/mask.js follows its bilinear resampling
+  (src/libImaging/Resample.c, precompute_coeffs).
+
 Served with the sites from vendor/, unmodified unless noted. Each licence file is
 kept and served next to its files; vendor/manifest.json pins every byte.
   Transformers.js 4.3.1 (@huggingface/transformers) - Hugging Face - Apache License 2.0.

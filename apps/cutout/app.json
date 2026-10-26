@@ -3,9 +3,18 @@
   "host": "cutout.elffuss.com",
   "testPort": 8791,
   "task": "remove-bg",
-  "models": ["remove-bg/ben2"],
+  "models": [
+    "remove-bg/ben2"
+  ],
   "camera": false,
   "pdfjs": false,
   "accept": "image/*",
-  "status": "ready"
+  "status": "ready",
+  "adapted": [
+    {
+      "key": "licenses.pillow",
+      "file": "LICENSES/MIT-CMU-Pillow.txt",
+      "license": "MIT-CMU"
+    }
+  ]
 }

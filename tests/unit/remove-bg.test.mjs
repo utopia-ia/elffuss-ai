@@ -117,7 +117,7 @@ test('coverage and the side limit', () => {
   assert.equal(coverage(new Uint8Array([0, 127, 128, 255])), 0.5);
   assert.equal(coverage(new Uint8Array(0)), 0);
   assert.equal(coverage(new Uint8Array([10, 20]), 15), 0.5);
-  assert.equal(MAX_SIDE, 8192);
+  assert.equal(MAX_SIDE, 4096);
   assert.equal(sideLimit(undefined), MAX_SIDE);
   assert.equal(sideLimit(2048), 2048);
   assert.equal(sideLimit(100000), MAX_SIDE, 'never above the limit');
@@ -149,4 +149,27 @@ test('asking for WebGPU is refused before anything loads: the registry declares 
   const runtime = { ortBundle: '/x.mjs', ortMjs: '/y.mjs', ortWasm: '/z.wasm', transformers: '/t.js' };
   const t = new RemoveBg({ worker: false, device: 'webgpu', registry, store, runtime });
   await assert.rejects(t.load(), { code: 'device-unsupported' }, 'the registry declares no WebGPU variant');
+});
+
+test('the model is not downloaded where it cannot run: a small device or a capped WebAssembly heap', async () => {
+  const { checkCanRun, WASM_HEAP, MIN_DEVICE_GIB } = await import('../../sdk/remove-bg/impl.js');
+  assert.ok(WASM_HEAP > 3 * 2 ** 30 && WASM_HEAP <= 4 * 2 ** 30, 'more than the 3 GiB that failed, within what WebAssembly addresses');
+  assert.throws(() => checkCanRun({ deviceMemory: 2 }), e => e.code === 'out-of-memory' && e.details.deviceMemory === 2);
+  assert.throws(() => checkCanRun({ deviceMemory: MIN_DEVICE_GIB / 2 }), { code: 'out-of-memory' });
+  // A device that says enough, or says nothing: the heap probe decides.
+  for (const nav of [{ deviceMemory: 8 }, {}, undefined]) {
+    try { checkCanRun(nav); } catch (e) { assert.equal(e.code, 'out-of-memory', 'only ever out-of-memory'); }
+  }
+  // The load of a WebAssembly variant checks before it reads anything from the store.
+  const impl = await import('../../sdk/remove-bg/impl.js');
+  let asked = false;
+  const ctx = { device: 'wasm', test: null, transformers: async () => { asked = true; }, pipeline: async () => { asked = true; } };
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', { value: { deviceMemory: 1 }, configurable: true });
+  try {
+    await assert.rejects(impl.load(ctx), { code: 'out-of-memory' });
+    assert.equal(asked, false, 'nothing loaded or downloaded');
+  } finally {
+    if (saved) Object.defineProperty(globalThis, 'navigator', saved); else delete globalThis.navigator;
+  }
 });
