@@ -92,7 +92,8 @@ Returns `DetectedObject[]`.
 
 ## `sdk/detect/impl.js`
 
-Where the detector runs (a Worker, or the page with worker: false). The Transformers.js pipeline of the model, fed by the model store, gives its image processor and its ONNX model; the pipeline's own post-processing is not used (see decode.js). Each run decodes the image, resizes it once with a high-quality filter to the model's input, lets the processor turn it into a tensor, runs the model and decodes the boxes at the size of the image the caller gave. Never fetches, never touches the DOM.
+Where the detector runs (a Worker, or the page with worker: false). The Transformers.js pipeline of the model, fed by the model store, gives its image processor settings and its ONNX model; the pipeline's own pre- and post-processing are not used (see pixelValues below and decode.js). Each run decodes the image, resizes it once with a high-quality filter to the model's input, turns it into the tensor RF-DETR was trained on, runs the model and decodes the boxes at the size of the image the caller gave. Never fetches, never touches the DOM.
+ The input. RF-DETR is trained on pixels scaled to 0-1 and then normalised with the ImageNet mean and deviation, the ones its preprocessor_config.json lists; but that file says do_normalize: false, so the image processor would hand the model x/255 only. Fed that way it finds noticeably fewer objects (on 200 COCO images, recall at score ≥ 0.5 and IoU ≥ 0.5 went from 0.727 to 0.649, with the same q8 file on a CPU). So the tensor is built here: rescaled and normalised with the file's own image_mean and image_std, whatever do_normalize says.
 
 ### `DECODE_MAX_SIDE`
 
@@ -102,6 +103,31 @@ Larger photos are scaled down first, which keeps the memory of one run small.
 ### `inputSize(size)`
 
 The model's input size from its image processor (RF-DETR Nano: 384 × 384).
+
+### `normalisation(p)`
+
+The normalisation the model takes, from its image processor: the rescale
+factor and the mean and deviation of each channel. RF-DETR was trained with
+them even though its config says do_normalize: false (see the top of the file).
+
+| Parameter | Type | |
+|---|---|---|
+| `p` | `{ rescale_factor?: number, do_rescale?: boolean, image_mean?: number[], image_std?: number[] }` |  |
+
+Returns `{ rescale: number, mean: number[], std: number[] }`.
+
+### `pixelValues(rgba, { width, height }, { rescale, mean, std })`
+
+The model input from RGBA pixels at its size: planar RGB (channels first),
+(value · rescale − mean) / std. The alpha is not read.
+
+| Parameter | Type | |
+|---|---|---|
+| `rgba` | `ArrayLike<number>` | width × height × 4 bytes |
+| `size` | `{ width: number, height: number }` |  |
+| `norm` | `{ rescale: number, mean: number[], std: number[] }` |  |
+
+Returns `Float32Array`: 3 × height × width values
 
 ### `forward(state, img)`
 

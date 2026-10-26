@@ -3,11 +3,20 @@
 //
 // Where the detector runs (a Worker, or the page with worker: false). The
 // Transformers.js pipeline of the model, fed by the model store, gives its image
-// processor and its ONNX model; the pipeline's own post-processing is not used
-// (see decode.js). Each run decodes the image, resizes it once with a high-quality
-// filter to the model's input, lets the processor turn it into a tensor, runs the
-// model and decodes the boxes at the size of the image the caller gave. Never
-// fetches, never touches the DOM.
+// processor settings and its ONNX model; the pipeline's own pre- and
+// post-processing are not used (see pixelValues below and decode.js). Each run
+// decodes the image, resizes it once with a high-quality filter to the model's
+// input, turns it into the tensor RF-DETR was trained on, runs the model and
+// decodes the boxes at the size of the image the caller gave. Never fetches,
+// never touches the DOM.
+//
+// The input. RF-DETR is trained on pixels scaled to 0-1 and then normalised with
+// the ImageNet mean and deviation, the ones its preprocessor_config.json lists;
+// but that file says do_normalize: false, so the image processor would hand the
+// model x/255 only. Fed that way it finds noticeably fewer objects (on 200 COCO
+// images, recall at score ≥ 0.5 and IoU ≥ 0.5 went from 0.727 to 0.649, with the
+// same q8 file on a CPU). So the tensor is built here: rescaled and normalised
+// with the file's own image_mean and image_std, whatever do_normalize says.
 
 import { decodeImage } from '../core/image-input.js';
 import { AiError } from '../core/errors.js';
@@ -37,13 +46,51 @@ export async function load(ctx) {
   if (typeof pipe.processor !== 'function' || typeof pipe.model !== 'function') {
     throw new AiError('model-mismatch', 'the pipeline has no image processor or no model');
   }
+  const processor = pipe.processor.image_processor ?? pipe.processor;
   return {
     tf,
     pipe,
-    size: inputSize(pipe.processor.image_processor?.size),
+    size: inputSize(processor?.size),
+    norm: normalisation(processor),
     id2label: pipe.model.config?.id2label || {},
     labels: null,
   };
+}
+
+/**
+ * The normalisation the model takes, from its image processor: the rescale
+ * factor and the mean and deviation of each channel. RF-DETR was trained with
+ * them even though its config says do_normalize: false (see the top of the file).
+ * @param {{ rescale_factor?: number, do_rescale?: boolean, image_mean?: number[], image_std?: number[] }} p
+ * @returns {{ rescale: number, mean: number[], std: number[] }}
+ */
+export function normalisation(p) {
+  const rescale = p?.do_rescale === false ? 1 : p?.rescale_factor ?? 1 / 255;
+  const mean = p?.image_mean, std = p?.image_std;
+  const three = (a, ok) => Array.isArray(a) && a.length === 3 && a.every(x => typeof x === 'number' && Number.isFinite(x) && ok(x));
+  if (!(Number.isFinite(rescale) && rescale > 0) || !three(mean, () => true) || !three(std, x => x > 0)) {
+    throw new AiError('model-mismatch', 'the image processor does not give a rescale factor and three channel means and deviations', { details: { rescale, mean, std } });
+  }
+  return { rescale, mean: [...mean], std: [...std] };
+}
+
+/**
+ * The model input from RGBA pixels at its size: planar RGB (channels first),
+ * (value · rescale − mean) / std. The alpha is not read.
+ * @param {ArrayLike<number>} rgba width × height × 4 bytes
+ * @param {{ width: number, height: number }} size
+ * @param {{ rescale: number, mean: number[], std: number[] }} norm
+ * @returns {Float32Array} 3 × height × width values
+ */
+export function pixelValues(rgba, { width, height }, { rescale, mean, std }) {
+  const n = width * height;
+  if (rgba.length !== n * 4) throw new RangeError(`RGBA ${width}×${height} needs ${n * 4} bytes, not ${rgba.length}`);
+  const out = new Float32Array(3 * n);
+  for (let c = 0; c < 3; c++) {
+    const m = mean[c], s = std[c], plane = c * n;
+    for (let i = 0; i < n; i++) out[plane + i] = (rgba[i * 4 + c] * rescale - m) / s;
+  }
+  return out;
 }
 
 /** RGBA pixels at the model's input size, resized with the browser's best filter. */
@@ -68,15 +115,15 @@ async function resized(img, { width, height }) {
  * @param {{ width: number, height: number, data: Uint8ClampedArray }} img
  */
 export async function forward(state, img) {
+  const { width, height } = state.size;
   const pixels = await resized(img, state.size);
-  const raw = new state.tf.RawImage(pixels, state.size.width, state.size.height, 4);
-  const { pixel_values: pixelValues } = await state.pipe.processor([raw]);
+  const input = new state.tf.Tensor('float32', pixelValues(pixels, state.size, state.norm), [1, 3, height, width]);
   try {
-    const out = await state.pipe.model({ pixel_values: pixelValues });
+    const out = await state.pipe.model({ pixel_values: input });
     if (!out?.logits || !out?.pred_boxes) throw new AiError('model-mismatch', 'the model did not return logits and boxes');
     return { logits: out.logits, boxes: out.pred_boxes };
   } finally {
-    try { pixelValues?.dispose?.(); } catch { /* released */ }
+    try { input.dispose?.(); } catch { /* released */ }
   }
 }
 

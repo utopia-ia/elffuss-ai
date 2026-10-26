@@ -50,15 +50,27 @@ export function paint(g, { width, height, objects, name, score, palette, display
   g.restore();
 }
 
+/** The size a drawing of `width` × `height` gets when its longest side may be at most `maxSide`. */
+export function fitSide(width, height, maxSide) {
+  const k = Math.min(1, maxSide / Math.max(width, height, 1));
+  return { width: Math.max(1, Math.round(width * k)), height: Math.max(1, Math.round(height * k)), scale: k };
+}
+
 /**
- * Size a canvas to the image and paint the boxes on it (cleared first).
+ * Size a canvas to the image (at most `maxSide` on its longest side, so a very
+ * large photo does not get a canvas of its full size) and paint the boxes on it
+ * (cleared first), in the image's own pixels.
  * @param {HTMLCanvasElement} canvas
- * @param {Parameters<typeof paint>[1]} o
+ * @param {Parameters<typeof paint>[1] & { maxSide?: number }} o
  */
-export function drawOverlay(canvas, o) {
-  if (canvas.width !== o.width) canvas.width = o.width;
-  if (canvas.height !== o.height) canvas.height = o.height;
+export function drawOverlay(canvas, { maxSide = Infinity, ...o }) {
+  const size = fitSide(o.width, o.height, maxSide);
+  if (canvas.width !== size.width) canvas.width = size.width;
+  if (canvas.height !== size.height) canvas.height = size.height;
   const g = canvas.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, canvas.width, canvas.height);
+  g.setTransform(size.width / o.width, 0, 0, size.height / o.height, 0, 0);
   paint(g, o);
+  g.setTransform(1, 0, 0, 1, 0, 0);
 }

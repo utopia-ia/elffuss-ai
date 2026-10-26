@@ -10,10 +10,11 @@
 // primary button then detects on its picture, one frame after another, until
 // the camera is stopped.
 
-import { createShell } from './shared/shell.js';
+import { createShell, AiError } from './shared/shell.js';
 import { Detect } from './sdk/detect/index.js';
+import { previewImage, previewBitmap } from './sdk/core/image-input.js';
 import { openCamera, stopStream, cameraErrorKey, captureFrame } from './camera.js';
-import { readPalette, drawOverlay, paint } from './overlay.js';
+import { readPalette, drawOverlay, paint, fitSide } from './overlay.js';
 import { visible, percent, formatThreshold, className, roundBox, normalizeBox, resultJson, downloadName } from './view.js';
 
 const shell = await createShell();
@@ -43,6 +44,10 @@ async function loadNames() {
 }
 let names = null; // filled in without holding up the page; English names until then
 const runAt = Number(el.threshold.min) || 0.3;
+/** Longest side of the photo and of the boxes as the page shows them (a small copy, never the full photo). */
+const SHOW_SIDE = 2048;
+/** Longest side of the PNG with the boxes: a larger photo is saved scaled down to it. */
+const EXPORT_SIDE = 4096;
 
 const state = {
   mode: 'none',     // 'image' | 'camera'
@@ -105,7 +110,7 @@ function render() {
   const shown = last ? visible(last.result.objects, threshold()) : [];
   if (last) {
     const displayWidth = el.overlay.getBoundingClientRect().width || last.result.width;
-    drawOverlay(el.overlay, { width: last.result.width, height: last.result.height, objects: shown, name: nameOf, score: scoreText, palette: readPalette(), displayWidth });
+    drawOverlay(el.overlay, { width: last.result.width, height: last.result.height, objects: shown, name: nameOf, score: scoreText, palette: readPalette(), displayWidth, maxSide: SHOW_SIDE });
   } else clearOverlay();
   el.summary.textContent = last ? `${shown.length === 1 ? t('result.one') : t('result.many', { n: shown.length })} · ${shell.deviceLabel(last.device)}` : '';
   el.note.hidden = !last?.fallback;
@@ -122,15 +127,28 @@ function render() {
 }
 
 // ── a photo ──────────────────────────────────────────────────────────────────
-function chooseFile(file) {
+/**
+ * A photo was chosen: show a small copy of it (never the full photo, which may be
+ * huge) and enable the button. A picture over the pixel budget, or one that
+ * cannot be read, is refused here.
+ */
+async function chooseFile(file) {
   if (!file) return;
   stopCamera({ keepFrame: false });
-  state.picks++;
+  const pick = ++state.picks;
   state.mode = 'image';
-  state.file = file;
+  state.file = null;
   state.last = null;
-  if (state.imageUrl) URL.revokeObjectURL(state.imageUrl);
-  state.imageUrl = URL.createObjectURL(file);
+  if (state.imageUrl) { URL.revokeObjectURL(state.imageUrl); state.imageUrl = null; }
+  el.image.removeAttribute('src');
+  el.image.hidden = true;
+  shell.setReady(false);
+  let small;
+  try { small = await previewImage(file, { maxSide: SHOW_SIDE }); }
+  catch (err) { if (pick === state.picks) { render(); shell.showError(err); } return; }
+  if (pick !== state.picks) return;
+  state.file = file;
+  state.imageUrl = URL.createObjectURL(small.blob);
   el.image.src = state.imageUrl;
   el.image.hidden = false;
   el.video.hidden = true;
@@ -248,22 +266,40 @@ function downloadJson() {
   shell.download(new Blob([text], { type: 'application/json' }), downloadName(last.source, t('download.objects'), 'json'));
 }
 
+/**
+ * The PNG with the boxes: the photo (or the camera frame) at most EXPORT_SIDE on
+ * its longest side, with the boxes painted in its pixels. It says so when the
+ * browser cannot make the file, instead of failing without a word.
+ */
 async function downloadPng() {
   const last = state.last;
   if (!last) return;
   const { width, height } = last.result;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const g = canvas.getContext('2d');
-  g.drawImage(last.kind === 'frame' ? el.frame : el.image, 0, 0, width, height);
-  paint(g, { width, height, objects: visible(last.result.objects, threshold()), name: nameOf, score: scoreText, palette: readPalette() });
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-  if (blob) shell.download(blob, downloadName(last.source, t('download.boxes'), 'png'));
+  const size = fitSide(width, height, EXPORT_SIDE);
+  let source = el.frame, bitmap = null;
+  try {
+    if (last.kind !== 'frame') ({ bitmap } = await previewBitmap(state.file, { maxSide: Math.max(size.width, size.height) }));
+    if (bitmap) source = bitmap;
+    const canvas = document.createElement('canvas');
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const g = canvas.getContext('2d');
+    g.drawImage(source, 0, 0, size.width, size.height);
+    g.setTransform(size.width / width, 0, 0, size.height / height, 0, 0);
+    paint(g, { width, height, objects: visible(last.result.objects, threshold()), name: nameOf, score: scoreText, palette: readPalette() });
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    canvas.width = 0;
+    if (!blob) throw new AiError('too-large', 'the browser could not make the PNG');
+    shell.download(blob, downloadName(last.source, t('download.boxes'), 'png'));
+  } catch (err) {
+    shell.showError(err);
+  } finally {
+    bitmap?.close();
+  }
 }
 
 // ── wiring ───────────────────────────────────────────────────────────────────
-shell.bindInput({ paste: true, onFiles: files => chooseFile(files[0]) });
+shell.bindInput({ paste: true, onFiles: files => { chooseFile(files[0]).catch(err => shell.showError(err)); } });
 el.camera.addEventListener('click', () => { startCamera(); });
 el.stop.addEventListener('click', () => stopCamera({ keepFrame: true }));
 el.threshold.addEventListener('input', () => { showThreshold(); render(); });

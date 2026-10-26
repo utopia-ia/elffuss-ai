@@ -191,9 +191,10 @@ const hook = page => page.evaluate(() => {
 });
 
 /** Choose the photo, press the primary button and wait for the run to end. */
-async function detectPhoto(page) {
+async function detectPhoto(page, photo = PHOTO) {
   const before = (await hook(page)).runs;
-  await page.setInputFiles(sel.input, PHOTO);
+  await page.setInputFiles(sel.input, photo);
+  await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
   await page.click(sel.primary);
   await page.waitForFunction(n => {
     const e = globalThis.__elffuss;
@@ -321,6 +322,34 @@ const variantUrls = (t, site) => {
   const m = t.registry.models[site.models[0]];
   return variantFiles(m, chooseVariant(m, 'auto', t.probe).variant).map(f => f.url).sort();
 };
+
+/**
+ * The labelled photos of the repository, each with the objects drawn by hand on
+ * it (the cutout photo's box is the one around the outline traced by hand in
+ * cutout/mascara.json), and one photo with no COCO object at all. A photo whose
+ * fixture is not in this tree is left out.
+ */
+export function labelledSet(root = ROOT) {
+  const set = [{ name: 'detect/foto.jpg', photo: PHOTO, boxes: HAND.boxes }];
+  const cutout = join(root, 'tests', 'fixtures', 'cutout');
+  if (existsSync(join(cutout, 'mascara.json'))) {
+    const m = JSON.parse(readFileSync(join(cutout, 'mascara.json'), 'utf8'));
+    const pts = m.polygons.flat();
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    set.push({ name: 'cutout/foto.jpg', photo: join(cutout, 'foto.jpg'), boxes: [{ label: 'dog', box: { xmin: Math.min(...xs), ymin: Math.min(...ys), xmax: Math.max(...xs), ymax: Math.max(...ys) } }] });
+  }
+  const depth = join(root, 'tests', 'fixtures', 'depth', 'foto.jpg');
+  if (existsSync(depth)) set.push({ name: 'depth/foto.jpg', photo: depth, boxes: [] });
+  return set;
+}
+
+/**
+ * What the model must reach on the labelled set with its input normalised as it
+ * was trained (ImageNet mean and deviation). Fed x/255 only, as its config says,
+ * the cat of detect/foto.jpg scores about 0.66 and a second, duplicate cat
+ * about 0.38; normalised, about 0.83 and 0.12.
+ */
+export const RECALL = Object.freeze({ minScore: 0.5, minIou: 0.5, catScore: 0.75, duplicate: 0.3 });
 
 // ── tests ────────────────────────────────────────────────────────────────────
 
@@ -568,6 +597,73 @@ export default [
         for (let k = 0; k < 4; k++) worst = Math.max(worst, Math.abs(row.box[k] - now.box[k]) * 10);
       }
       t.ok(worst < 0.05, `the saved outputs of the two best queries are within tolerance (worst ${worst})`);
+    },
+  },
+  {
+    // A small labelled check of recall: every object drawn by hand on the
+    // repository's photos is found, with the scores the normalised input gives,
+    // and the photo without objects gets none. It fails with the input the
+    // model's config describes (x/255, without the normalisation).
+    name: 'recall on the labelled photos, with the input the model was trained on',
+    sites: ['detect'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await openApp(t, ctx, site, '/');
+      const found = [];
+      for (const item of labelledSet()) {
+        const r = await detectPhoto(page, item.photo);
+        if (!t.ok(r.last, `${item.name}: no result: ${JSON.stringify(r.errors)}`)) continue;
+        const m = matchToHand(r.last.objects, item.boxes, { minIou: RECALL.minIou, minScore: RECALL.minScore });
+        t.ok(m.misses.length === 0, `${item.name}: every hand-labelled object found (${describeMatch(m)})`);
+        t.ok(m.extra.length === 0, `${item.name}: nothing else at 0.7 or more (${describeMatch(m)})`);
+        found.push(`${item.name}: ${describeMatch(m) || 'nothing'}`);
+        if (item.name === 'detect/foto.jpg') {
+          const cats = r.last.objects.filter(o => o.label === 'cat').sort((a, b) => b.score - a.score);
+          t.ok(cats[0]?.score >= RECALL.catScore, `the cat scores ${cats[0]?.score?.toFixed(3)}, at least ${RECALL.catScore}`);
+          t.ok(!(cats[1]?.score >= RECALL.duplicate), `no second cat at ${RECALL.duplicate} or more (${cats[1]?.score?.toFixed(3) ?? 'none'})`);
+        }
+      }
+      t.note(found.join(' | '));
+      t.noPageErrors();
+      await t.noCsp(page);
+    },
+  },
+  {
+    name: 'large photos: refused over the pixel budget before decoding; the PNG with boxes is capped and always saved',
+    sites: ['detect'],
+    configs: ['B'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await openApp(t, ctx, site, '/');
+      const s = t.strings[site.site].es;
+      // A picture of 20000 × 20000 px in a file of a few kilobytes.
+      const be = n => Buffer.from([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255]);
+      const bomb = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), be(13), Buffer.from('IHDR'), be(20000), be(20000), Buffer.from([8, 6, 0, 0, 0]), be(0), be(0), Buffer.from('IEND'), be(0)]);
+      const before = await page.evaluate(() => globalThis.__elffuss.errors.length);
+      await page.setInputFiles(sel.input, { name: 'enorme.png', mimeType: 'image/png', buffer: bomb });
+      await page.waitForFunction(n => globalThis.__elffuss.errors.length > n, before, { timeout: 30000 });
+      const f = await facts(page);
+      t.equal([f.status, f.primaryDisabled], [s['error.too-large'], true], 'refused before decoding, nothing enabled');
+      t.equal(t.hubTotal(), 0, 'nothing downloaded');
+      // A wide photo of 6000 px: detected, and its PNG with boxes saved at 4096 px.
+      const wide = await page.evaluate(async b64 => {
+        const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: 'image/jpeg' }));
+        const c = new OffscreenCanvas(6000, 4500);
+        c.getContext('2d').drawImage(bmp, 0, 0, 6000, 4500);
+        const bytes = new Uint8Array(await (await c.convertToBlob({ type: 'image/jpeg', quality: 0.9 })).arrayBuffer());
+        let x = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) x += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        return btoa(x);
+      }, readFileSync(PHOTO).toString('base64'));
+      const r = await detectPhoto(page, { name: 'grande.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(wide, 'base64') });
+      t.equal([r.last?.width, r.last?.height], [6000, 4500], 'boxes in pixels of the photo');
+      const scaled = { boxes: HAND.boxes.map(b => ({ label: b.label, box: Object.fromEntries(Object.entries(b.box).map(([k, v]) => [k, v * 6000 / HAND.width])) })) };
+      t.ok(matchToHand(r.last?.objects || [], scaled.boxes).ok, 'the same objects, at the larger size');
+      const shown = await page.evaluate(() => { const i = document.querySelector('[data-role="image"]'); const o = document.querySelector('[data-role="overlay"]'); return { natural: [i.naturalWidth, i.naturalHeight], overlay: [o.width, o.height] }; });
+      t.ok(Math.max(...shown.natural) <= 2048 && Math.max(...shown.overlay) <= 2048, `the page shows a small copy and a small overlay: ${JSON.stringify(shown)}`);
+      const [dp] = await Promise.all([page.waitForEvent('download'), page.click(sel.png)]);
+      t.equal(pngSize(readFileSync(await dp.path())), [4096, 3072], 'the PNG with boxes is saved at 4096 px on its long side');
+      t.noPageErrors();
     },
   },
 ];

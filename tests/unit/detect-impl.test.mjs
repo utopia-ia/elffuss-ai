@@ -2,9 +2,11 @@
 // Copyright (c) 2026 UtopiaIA
 //
 // sdk/detect/impl.js with a fake runtime: what load() keeps, how run() prepares
-// the image (one high-quality resize to the processor's size), what it hands the
-// model, how it decodes the outputs at the caller's image size, the test hooks,
-// the errors, and that every tensor and bitmap it makes is released.
+// the image (one high-quality resize to the processor's size, then rescaled and
+// normalised with the ImageNet mean and deviation the model was trained with,
+// even though its config says do_normalize: false), what it hands the model, how
+// it decodes the outputs at the caller's image size, the test hooks, the errors,
+// and that every tensor and bitmap it makes is released.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { logitOf } from '../../sdk/detect/decode.js';
@@ -45,7 +47,7 @@ function fakePipe({ size = { height: 384, width: 384 }, outputs = true } = {}) {
     seen.tensors.push(t);
     return { pixel_values: t };
   };
-  processor.image_processor = { size };
+  processor.image_processor = { size, do_normalize: false, do_rescale: true, rescale_factor: 1 / 255, image_mean: [0.485, 0.456, 0.406], image_std: [0.229, 0.224, 0.225] };
   const model = async inputs => {
     seen.model.push(inputs);
     const dims = inputs.pixel_values.dims;
@@ -71,6 +73,20 @@ function fakeCtx(pipe, { test: hooks = null, device = 'wasm' } = {}) {
 
 const image = (w, h) => new ImageData(new Uint8ClampedArray(w * h * 4), w, h);
 
+test('the normalisation comes from the image processor, whatever do_normalize says', () => {
+  const p = { do_normalize: false, rescale_factor: 1 / 255, image_mean: [0.485, 0.456, 0.406], image_std: [0.229, 0.224, 0.225] };
+  assert.deepEqual(impl.normalisation(p), { rescale: 1 / 255, mean: p.image_mean, std: p.image_std });
+  assert.equal(impl.normalisation({ ...p, do_rescale: false }).rescale, 1);
+  for (const bad of [{ ...p, image_mean: undefined }, { ...p, image_std: [0.2, 0, 0.2] }, { ...p, image_mean: [0.5, 0.5] }, { ...p, rescale_factor: -1 }]) {
+    assert.throws(() => impl.normalisation(bad), { code: 'model-mismatch' });
+  }
+  const px = impl.pixelValues(Uint8Array.from([255, 0, 128, 7, 0, 255, 128, 9]), { width: 2, height: 1 }, impl.normalisation(p));
+  assert.equal(px.length, 6, 'planar RGB, the alpha is not read');
+  assert.ok(Math.abs(px[0] - (1 - 0.485) / 0.229) < 1e-6 && Math.abs(px[1] - (0 - 0.485) / 0.229) < 1e-6, 'red plane');
+  assert.ok(Math.abs(px[4] - (128 / 255 - 0.406) / 0.225) < 1e-6, 'blue plane');
+  assert.throws(() => impl.pixelValues(new Uint8Array(7), { width: 2, height: 1 }, impl.normalisation(p)), RangeError);
+});
+
 test('the task name, and the input size from the image processor', () => {
   assert.equal(impl.task, 'detect');
   assert.deepEqual(impl.inputSize({ height: 384, width: 384 }), { width: 384, height: 384 });
@@ -89,7 +105,7 @@ test('load keeps the pipeline, the input size and the class names; the test hook
   await assert.rejects(impl.load(fakeCtx(noModel)), { code: 'model-mismatch' });
 });
 
-test('run: one high-quality resize, the processor and the model, boxes at the caller\'s size', async () => {
+test('run: one high-quality resize, the normalised input, the model, boxes at the caller\'s size', async () => {
   const pipe = fakePipe();
   const ctx = fakeCtx(pipe);
   const state = await impl.load(ctx);
@@ -97,17 +113,22 @@ test('run: one high-quality resize, the processor and the model, boxes at the ca
   const out = await impl.run(state, image(200, 100), {}, ctx);
   assert.deepEqual(log.bitmaps.map(b => b.opts), [{ resizeWidth: 384, resizeHeight: 384, resizeQuality: 'high' }]);
   assert.equal(log.closed, 1, 'the resized bitmap is released');
-  const raw = pipe.seen.processor[0][0];
-  assert.ok(raw instanceof FakeRawImage);
-  assert.deepEqual([raw.width, raw.height, raw.channels], [384, 384, 4]);
+  assert.equal(pipe.seen.processor.length, 0, 'the image processor, which would not normalise, is not used');
   assert.deepEqual(Object.keys(pipe.seen.model[0]), ['pixel_values'], 'only the input the model has');
+  const input = pipe.seen.model[0].pixel_values;
+  assert.deepEqual(input.dims, [1, 3, 384, 384]);
+  // Every resized pixel is 200 here: (200/255 − mean) / std, channel by channel.
+  const n = 384 * 384;
+  const norm = [0, 1, 2].map(c => (200 / 255 - [0.485, 0.456, 0.406][c]) / [0.229, 0.224, 0.225][c]);
+  for (const c of [0, 1, 2]) for (const i of [0, n - 1]) assert.ok(Math.abs(input.data[c * n + i] - norm[c]) < 1e-5, `channel ${c}: ${input.data[c * n + i]} vs ${norm[c]}`);
+  assert.equal(input.disposed, true, 'the input tensor is released');
   assert.deepEqual(out.transfer, undefined);
   const v = out.value;
   assert.deepEqual([v.width, v.height, v.device], [200, 100, 'wasm']);
   assert.deepEqual(v.objects.map(o => o.label), ['dog', 'cat'], 'default threshold 0.5, highest score first');
   const want = { xmin: 80, ymin: 30, xmax: 120, ymax: 70 };
   for (const k of Object.keys(want)) assert.ok(Math.abs(v.objects[0].box[k] - want[k]) < 1e-4, `${k}: ${v.objects[0].box[k]}`);
-  assert.ok(pipe.seen.tensors.every(t => t.disposed), 'input and output tensors are released');
+  assert.ok(pipe.seen.tensors.every(t => t.disposed), 'output tensors are released');
   assert.deepEqual(ctx.statuses, ['running', 'done']);
 });
 

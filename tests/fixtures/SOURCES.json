@@ -16,11 +16,10 @@
     {
       "path": "tests/fixtures/detect/cajas.json",
       "sha256": "a572f134e61c229219d7004fa5ac5092184155dd48f7717612f27dcd3cb33ff8",
-      "license": "CC0-1.0",
+      "license": "own-work",
       "source": {
-        "url": "https://commons.wikimedia.org/wiki/File:Dog_and_cat,_Arco,_Madeira.jpg",
-        "author": "UtopiaIA",
-        "note": "Boxes drawn by hand on foto.jpg (no script makes them), dedicated to the public domain under CC0 1.0."
+        "script": "tests/browser/specs/detect.spec.mjs",
+        "how": "Drawn by hand on foto.jpg before any model ran on it: the smallest box around everything visible of each animal, tails included, in pixels of the image (no script makes them)."
       },
       "purpose": "detect: the hand boxes every detection is checked against (image, camera and decoder tests)"
     },

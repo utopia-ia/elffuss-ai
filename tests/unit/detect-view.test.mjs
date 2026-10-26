@@ -107,7 +107,15 @@ test('painting: a box and a label per object, colours from the palette slots, no
   calls.length = 0;
   drawOverlay(canvas, { width: 960, height: 720, objects: [], name: l => l, score: n => n, palette });
   assert.deepEqual([canvas.width, canvas.height], [960, 720]);
-  assert.deepEqual(calls[0], ['clearRect', 0, 0, 960, 720]);
+  assert.deepEqual(calls.filter(c => c[0] !== 'setTransform')[0], ['clearRect', 0, 0, 960, 720]);
+  // A very large photo gets a canvas of at most maxSide, and the boxes are painted
+  // in the photo's pixels through a scale.
+  calls.length = 0;
+  drawOverlay(canvas, { width: 12000, height: 9000, objects, name: l => l, score: n => `${n}`, palette, maxSide: 2048 });
+  assert.deepEqual([canvas.width, canvas.height], [2048, 1536]);
+  const scales = calls.filter(c => c[0] === 'setTransform').map(c => c[1]);
+  assert.ok(scales.some(k => Math.abs(k - 2048 / 12000) < 1e-9), `painted through a scale of 2048/12000: ${scales}`);
+  assert.equal(calls.filter(c => c[0] === 'strokeRect').length, 3, 'the boxes, in the photo\'s pixels');
 });
 
 const domError = name => Object.assign(new Error(name), { name });
