@@ -22,7 +22,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test \"tests/unit/*.test.mjs\"",
+    "test": "node scripts/vendor.mjs --ensure && node --test \"tests/unit/*.test.mjs\"",
+    "vendor:fetch": "node scripts/vendor.mjs --fetch",
     "test:browser": "node tests/browser/run.mjs",
     "build": "node scripts/build.mjs",
     "registry": "node scripts/build-registry.mjs",

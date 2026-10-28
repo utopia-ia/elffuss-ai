@@ -15,7 +15,9 @@ import { ORT_VARIANTS, ortSpecifierFromTransformers, runtimeUrls } from '../../s
 const root = new URL('../../', import.meta.url);
 
 test('vendor/ matches the manifest byte for byte, and the pins match it', () => {
-  assert.deepEqual(check(), []);
+  const problems = check();
+  const hint = problems.some(p => p.endsWith(': missing')) ? ' (the runtimes are not in git: run `node scripts/vendor.mjs --fetch`, or `npm test`, which fetches them)' : '';
+  assert.deepEqual(problems, [], 'vendor/ differs from vendor/manifest.json' + hint);
 });
 
 test('exact versions, every package has a licence file, nothing from a CDN', () => {
@@ -54,11 +56,16 @@ test('runtime URLs stay under /vendor/ of the same origin', () => {
   assert.throws(() => runtimeUrls({ variant: 'jsep' }));
 });
 
-test('every pinned file is committed, not left out by an ignore rule', () => {
-  const tracked = new Set(execFileSync('/usr/bin/git', ['-C', new URL('.', root).pathname, 'ls-files', 'vendor'], { encoding: 'utf8' }).split('\n').filter(Boolean));
+test('only vendor/manifest.json is committed under vendor/: the runtimes are fetched by their pins', () => {
+  const dir = new URL('.', root).pathname;
+  const tracked = execFileSync('/usr/bin/git', ['-C', dir, 'ls-files', 'vendor'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+  assert.deepEqual(tracked, ['vendor/manifest.json']);
   const m = readManifest();
   for (const [id, e] of Object.entries(m.packages)) {
-    for (const p of Object.keys({ ...e.files, ...e.licenses })) assert.ok(tracked.has(`vendor/${id}/${p}`), `vendor/${id}/${p} is not committed`);
+    for (const p of Object.keys({ ...e.files, ...e.licenses })) {
+      // git check-ignore exits 0 when the path is ignored.
+      execFileSync('/usr/bin/git', ['-C', dir, 'check-ignore', '-q', '--no-index', `vendor/${id}/${p}`]);
+    }
   }
-  assert.ok(tracked.has('vendor/manifest.json'));
+  assert.throws(() => execFileSync('/usr/bin/git', ['-C', dir, 'check-ignore', '-q', '--no-index', 'vendor/manifest.json'], { stdio: 'ignore' }));
 });

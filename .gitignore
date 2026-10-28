@@ -4,3 +4,7 @@ node_modules/
 *.log
 .DS_Store
 ._*
+# The third-party runtimes are not in git: only their pins are.
+# node scripts/vendor.mjs --fetch downloads them and checks every byte.
+/vendor/*
+!/vendor/manifest.json

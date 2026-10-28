@@ -38,7 +38,7 @@ node --test "tests/unit/*.test.mjs"                  # all pass
 node scripts/build-docs.mjs --check                  # docs match the code
 node deploy/build-nginx.mjs --check                  # deploy/nginx matches deploy/headers.mjs
 node scripts/build-registry.mjs --check              # network: the registry matches the Hub
-node scripts/vendor.mjs --check                      # the runtimes match their pins
+node scripts/vendor.mjs --ensure                     # the runtimes match their pins (not in git: fetched if missing)
 ELFFUSS_SWEEP_PRIVATE=<file of private terms> node scripts/sweep.mjs --release --git
 node scripts/broker-repos.mjs                        # the lines the store needs (step 1)
 ```

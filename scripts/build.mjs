@@ -19,6 +19,9 @@
 //             registry/tasks.json, LICENSES/, NOTICE.txt
 //   vendor/   only the runtimes this site uses, with their licences; Transformers.js
 //             rewritten to import the site's ONNX Runtime variant
+// The runtimes are not in git: they come from the working tree's vendor/, which
+// must match vendor/manifest.json byte for byte (fetched first when missing,
+// see scripts/vendor.mjs --ensure).
 // test channel only: the policy in a <meta>, the store at http://localhost:8789/,
 //   test hooks on, and the core smoke page at __test__/core.html.
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, statSync, copyFileSync, mkdtempSync } from 'node:fs';
@@ -32,6 +35,7 @@ import { sitePages, configSource, siteOrtVariant, siteModels } from './lib/pages
 import { rewriteTransformers } from './lib/rewrite-transformers.mjs';
 import { ORT_VARIANTS, transformersDir, ortSpecifierFromTransformers } from '../sdk/core/runtimes.js';
 import { VENDOR_DIRS } from '../sdk/core/runtime-pins.js';
+import { ensure as ensureVendor } from './vendor.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const GIT = '/usr/bin/git';
@@ -69,9 +73,10 @@ export function mergeStrings(root, dir) {
 
 /**
  * Build one site into `outDir/<site>/`. Returns the list of written paths.
- * @param {{ root: string, site: object, sites: object[], channel: 'pro'|'pre'|'test', buildId: string, outDir: string }} o
+ * `vendorDir` is where the runtimes are read from (default `<root>/vendor`).
+ * @param {{ root: string, site: object, sites: object[], channel: 'pro'|'pre'|'test', buildId: string, outDir: string, vendorDir?: string }} o
  */
-export function buildSite({ root, site, sites, channel, buildId, outDir }) {
+export function buildSite({ root, site, sites, channel, buildId, outDir, vendorDir = join(root, 'vendor') }) {
   const registry = readJSON(join(root, 'registry', 'tasks.json'));
   const manifest = readJSON(join(root, 'vendor', 'manifest.json'));
   const dst = join(outDir, site.site);
@@ -107,22 +112,25 @@ export function buildSite({ root, site, sites, channel, buildId, outDir }) {
 
   // /vendor/: only what this site runs.
   if (!site.catalog) {
+    for (const id of Object.values(VENDOR_DIRS)) {
+      if (!existsSync(join(vendorDir, id))) throw new Error(`vendor/${id} is missing (the runtimes are not in git): run \`node scripts/vendor.mjs --fetch\``);
+    }
     const variant = siteOrtVariant(site, registry);
     const ortId = VENDOR_DIRS.onnxruntimeWeb;
     const ort = manifest.packages[ortId];
-    for (const f of Object.values(ORT_VARIANTS[variant])) w(`vendor/${ortId}/${f}`, { from: join(root, 'vendor', ortId, f) });
-    for (const f of Object.keys(ort.licenses)) w(`vendor/${ortId}/${f}`, { from: join(root, 'vendor', ortId, f) });
+    for (const f of Object.values(ORT_VARIANTS[variant])) w(`vendor/${ortId}/${f}`, { from: join(vendorDir, ortId, f) });
+    for (const f of Object.keys(ort.licenses)) w(`vendor/${ortId}/${f}`, { from: join(vendorDir, ortId, f) });
     if (siteModels(site, registry).some(m => m.runtime === 'transformers.js')) {
       const tfId = VENDOR_DIRS.transformers;
-      const src = readFileSync(join(root, 'vendor', tfId, 'dist', 'transformers.web.min.js'), 'utf8');
+      const src = readFileSync(join(vendorDir, tfId, 'dist', 'transformers.web.min.js'), 'utf8');
       w(`vendor/${transformersDir(variant)}/transformers.web.min.js`, rewriteTransformers(src, ortSpecifierFromTransformers(variant)));
       // Its licence and those of the libraries its file bundles.
-      for (const f of Object.keys(manifest.packages[tfId].licenses)) w(`vendor/${transformersDir(variant)}/${f}`, { from: join(root, 'vendor', tfId, f) });
+      for (const f of Object.keys(manifest.packages[tfId].licenses)) w(`vendor/${transformersDir(variant)}/${f}`, { from: join(vendorDir, tfId, f) });
     }
     if (site.pdfjs) {
       const pdfId = VENDOR_DIRS.pdfjs;
       const p = manifest.packages[pdfId];
-      for (const f of [...Object.keys(p.files), ...Object.keys(p.licenses)]) w(`vendor/${pdfId}/${f}`, { from: join(root, 'vendor', pdfId, f) });
+      for (const f of [...Object.keys(p.files), ...Object.keys(p.licenses)]) w(`vendor/${pdfId}/${f}`, { from: join(vendorDir, pdfId, f) });
     }
   }
 
@@ -171,13 +179,14 @@ export function parseArgs(argv) {
 
 async function main(argv) {
   const { which, channel, dev, outDir } = parseArgs(argv);
+  await ensureVendor();
   const src = dev ? { root: REPO, id: 'dev', cleanup: () => {} } : archiveHead();
   try {
     const all = readSites(src.root);
     const chosen = which === 'all' ? all : all.filter(s => s.site === which);
     if (!chosen.length) throw new Error('unknown site ' + which);
     for (const site of chosen) {
-      const files = buildSite({ root: src.root, site, sites: all, channel, buildId: src.id, outDir });
+      const files = buildSite({ root: src.root, site, sites: all, channel, buildId: src.id, outDir, vendorDir: join(REPO, 'vendor') });
       const bytes = files.reduce((s, f) => s + statSync(join(outDir, site.site, f)).size, 0);
       console.log(`✓ ${site.site}: ${files.length} files, ${(bytes / 1e6).toFixed(1)} MB → ${relative(process.cwd(), join(outDir, site.site)) || '.'} (channel ${channel}, build ${src.id})`);
     }

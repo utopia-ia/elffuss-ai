@@ -87,7 +87,9 @@ way is to let the build lay out one tool's files and put your page next to them.
 ```bash
 git clone https://github.com/utopia-ia/elffuss-ai.git
 cd elffuss-ai
-# writes dist/detect/v/dev/ (SDK, registry) and dist/detect/vendor/ (runtimes)
+# the first build downloads the pinned runtimes into vendor/ (network, every
+# sha256 checked against vendor/manifest.json); then it writes
+# dist/detect/v/dev/ (SDK, registry) and dist/detect/vendor/ (runtimes)
 node scripts/build.mjs detect --dev --out dist
 ```
 
@@ -221,7 +223,7 @@ Face. They are not part of this repository and are not redistributed.
 | `sdk/core/` | The shared core: store client, backend choice, registry, pinned runtimes, Worker host, errors, progress, Trusted Types, ZIP writer |
 | `sdk/<task>/` | One module per task (`sizes.js` is generated from the registry) |
 | `registry/` | `source.mjs` (written by hand) and `tasks.json` (generated from the Hub API) |
-| `vendor/` | The runtimes, byte for byte, pinned in `vendor/manifest.json` |
+| `vendor/` | `manifest.json`, the pins of the runtimes (version, tarball sha512, sha256 of every file); the runtimes themselves are not in git and `scripts/vendor.mjs --fetch` downloads them here |
 | `apps/<site>/` | Each tool site: descriptor, texts, page, script |
 | `catalog/` | The `tools.elffuss.com` catalog |
 | `shared/` | The page template, layout CSS, colour variables, the Elffuss mark and the page shell |
@@ -234,7 +236,13 @@ Face. They are not part of this repository and are not redistributed.
 
 Node 22 or later. No `npm install`: there are no dependencies.
 
+The third-party runtimes (Transformers.js, ONNX Runtime Web, PDF.js) are not
+in this repository, only their pins in `vendor/manifest.json`. Fetch them once
+after cloning; the build and `npm test` do it themselves when they are missing,
+and refuse any byte that differs from the pins.
+
 ```bash
+node scripts/vendor.mjs --fetch                              # once, network: the pinned runtimes into vendor/
 node --test "tests/unit/*.test.mjs"                          # no network, no browser
 node scripts/build.mjs all --channel test --dev --out <dir>  # build every site locally
 node scripts/build-docs.mjs --check                          # generated docs match the code
@@ -269,7 +277,7 @@ Maintenance, with the network:
 
 ```bash
 node scripts/build-registry.mjs [--resolve | --check]   # registry from the Hub API
-node scripts/vendor.mjs --check | --fetch | --pin <name@version>
+node scripts/vendor.mjs --check | --fetch | --ensure | --pin <name@version>
 node deploy/build-nginx.mjs [--check]
 node scripts/sweep.mjs --release --git --dist dist      # publication sweep
 ```
@@ -296,7 +304,8 @@ Contributions are accepted under the Apache License 2.0.
 Apache-2.0, © 2026 UtopiaIA. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 Built on the work of others, each under its own licence (kept next to its files
-and served with the sites):
+and served with the sites; the runtimes' licence files are fetched with them by
+`scripts/vendor.mjs` and checked against `vendor/manifest.json`):
 
 - [runonweb](https://github.com/midudev/runonweb.ai) by Miguel Ángel Durán (MIT):
   parts of `sdk/core/` and of the detect and OCR modules are adapted from it;

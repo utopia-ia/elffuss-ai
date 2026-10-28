@@ -12,7 +12,8 @@
 #   1. the server and the key come from the environment, never from the repo;
 #   2. weekdays from 08:00 to 15:59 are refused unless --ignore-window
 #      (ELFFUSS_HOLIDAY=1 says today is a holiday, which counts as a weekend);
-#   3. build from git archive HEAD, run the unit tests and the publication sweep
+#   3. fetch the pinned runtimes if vendor/ lacks them (vendor.mjs --ensure),
+#      build from git archive HEAD, run the unit tests and the publication sweep
 #      over the build, with their output on screen;
 #   4. upload v/<build>/ (new), vendor/ (only adds), then the pages under
 #      temporary names, each moved into place with mv -f (atomic);
@@ -54,6 +55,9 @@ BUILD=$(/usr/bin/git rev-parse --short=12 HEAD)
 SITE_HOST=$(node --input-type=module -e "import { site } from './deploy/sites.mjs'; console.log(site(process.argv[1]).host)" "$SITE")
 DEST="/var/www/$SITE_HOST/site"
 OUT="$ROOT/dist"
+# The runtimes are not in git: vendor/ must match vendor/manifest.json byte for
+# byte, and a clone without them fetches them here (by exact version, every sha256 checked).
+node scripts/vendor.mjs --ensure
 node scripts/build.mjs "$SITE" --channel "$CHANNEL" --out "$OUT"
 node --test "tests/unit/*.test.mjs"
 # the whole dist/: the sweep keys vendored files by <site>/vendor/…, so a single site's

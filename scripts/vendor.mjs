@@ -13,8 +13,14 @@
 //                                               exact version, require the tarball's sha512 to
 //                                               be the registry's and the manifest's, and every
 //                                               file's sha256 to be the manifest's; then write
+//   node scripts/vendor.mjs --ensure           --check, and when the only problem is that
+//                                               runtimes are missing (a fresh clone), --fetch
 //   node scripts/vendor.mjs --pin <name@ver>   network: (re)pin one package at an exact
 //                                               version and rewrite its manifest entry
+//
+// Only vendor/manifest.json is in git. The runtimes themselves are not: a clone
+// gets them with --fetch (or --ensure, which the build and the tests run first),
+// and the check refuses any byte that differs from the pins.
 //
 // Licences that a package does not ship (onnxruntime-web has no LICENSE in npm)
 // come from the upstream repository at the commit of the release tag, checked
@@ -260,6 +266,38 @@ function writeManifest(manifest) {
   writeFileSync(PINS_FILE, pinsSource(sorted));
 }
 
+/** Download every pinned package, verified, into vendor/. Returns the check's problems. */
+async function fetchAll(log = console.log) {
+  const m = readManifest();
+  for (const [id, e] of Object.entries(m.packages)) {
+    const { bytes } = await materialise(e.name, e.version, e);
+    writePackage(id, bytes);
+    log(`✓ ${id}: tarball sha512 and ${bytes.size} files match the manifest`);
+  }
+  return check(m);
+}
+
+const FETCH_HINT = 'run `node scripts/vendor.mjs --fetch` (network) to download the pinned runtimes';
+
+/**
+ * Make sure vendor/ holds exactly the pinned runtimes. When files are only
+ * missing (a fresh clone: the runtimes are not in git), they are fetched and
+ * checked; any other difference is an error, never overwritten silently.
+ */
+export async function ensure({ log = console.error } = {}) {
+  let problems = check();
+  if (!problems.length) return;
+  const onlyMissing = problems.every(p => p.endsWith(': missing'));
+  if (!onlyMissing) throw new Error(`vendor/ does not match vendor/manifest.json:\n  ${problems.join('\n  ')}\n${FETCH_HINT}`);
+  log(`vendor: ${problems.length} pinned files missing, fetching them`);
+  try {
+    problems = await fetchAll(log);
+  } catch (e) {
+    throw new Error(`vendor/ is missing pinned runtimes and they could not be fetched (${e.message || e}); ${FETCH_HINT}`);
+  }
+  if (problems.length) throw new Error(`vendor/ after --fetch:\n  ${problems.join('\n  ')}`);
+}
+
 async function main(argv) {
   if (argv[0] === '--check') {
     const problems = check();
@@ -270,15 +308,13 @@ async function main(argv) {
     return problems.length ? 1 : 0;
   }
   if (argv[0] === '--fetch') {
-    const m = readManifest();
-    for (const [id, e] of Object.entries(m.packages)) {
-      const { bytes } = await materialise(e.name, e.version, e);
-      writePackage(id, bytes);
-      console.log(`✓ ${id}: tarball sha512 and ${bytes.size} files match the manifest`);
-    }
-    const problems = check(m);
+    const problems = await fetchAll();
     for (const p of problems) console.log('✗ ' + p);
     return problems.length ? 1 : 0;
+  }
+  if (argv[0] === '--ensure') {
+    await ensure();
+    return 0;
   }
   if (argv[0] === '--pin' && argv[1]) {
     const at = argv[1].lastIndexOf('@');
@@ -294,7 +330,7 @@ async function main(argv) {
     console.log(`✓ pinned ${id}: ${Object.keys(entry.files).length} files, ${Object.keys(entry.licenses).length} licence files`);
     return 0;
   }
-  console.error('usage: vendor.mjs --check | --fetch | --pin <name@version>');
+  console.error('usage: vendor.mjs --check | --fetch | --ensure | --pin <name@version>');
   return 2;
 }
 
