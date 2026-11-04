@@ -31,6 +31,12 @@ footer { width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 2rem;
 progress { width: 100%; }
 img, canvas, video { max-width: 100%; }
 
+/* "Install as an app" (shared/install.js): a box at the top of main with the steps or the browser's own dialog. */
+.install { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; }
+.install p { margin: 0; }
+.install .install-how { flex: 1 1 12rem; }
+.install .actions > button:last-child { margin-left: auto; }
+
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 [hidden] { display: none !important; }
 

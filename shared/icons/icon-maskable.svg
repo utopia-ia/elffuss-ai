@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Maskable: full-bleed ground, the leaf inside the central safe circle (radius 40 % of the side). -->
+  <rect width="512" height="512" fill="#303752"/>
+  <g transform="translate(111.6 82.4) scale(8.6)">
+    <path d="M13.5 35C6.5 31.5 3.5 23 6.8 14.6 10 6.6 18.2 3.4 24.2 6.6c5.2 2.7 5 8.4.8 11.4-3.1 2.2-7 2-9 5-1.9 3-.6 7.6 1 12z" fill="#c8a06a"/>
+    <circle cx="20.5" cy="13.2" r="2.1" fill="#303752"/>
+  </g>
+</svg>

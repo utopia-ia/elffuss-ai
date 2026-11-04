@@ -23,6 +23,7 @@ import { probeWebGPU, chooseVariant } from '../sdk/core/device.js';
 import { AiError, isAiError, toAiError } from '../sdk/core/errors.js';
 import { createTaskRunner } from './runner.js';
 import { onInput, runQueued } from './autorun.js';
+import { offerInstall } from './install.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const mb = bytes => (bytes / 1e6 < 10 ? (Math.round(bytes / 1e5) / 10) : Math.round(bytes / 1e6));
@@ -57,6 +58,7 @@ export function testFlags(params, enabled) {
  * @param {{ config?: typeof config, document?: Document }} [opts]
  */
 export async function createShell({ config: cfg = config } = {}) {
+  offerInstall();
   const lang = document.documentElement.lang === 'en' ? 'en' : 'es';
   const strings = await (await fetch(new URL(`../strings.${lang}.json`, import.meta.url), { credentials: 'same-origin' })).json();
   const t = (key, vars) => fill(strings[key] ?? key, vars);

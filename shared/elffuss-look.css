@@ -106,6 +106,15 @@ details.storage { padding: .75rem 1rem; }
 details.storage summary { cursor: pointer; font-weight: 600; }
 figure.stage img, figure.stage video, figure.stage canvas, article.card img, article.card canvas { border-radius: 12px; }
 
+/* "Install as an app": a card like the others, with the steps in bold. */
+aside.install {
+  background: rgba(57, 65, 95, .72); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, .65);
+}
+.install-title { font-family: var(--serif); font-weight: 700; font-size: 1.1rem; }
+.install-why { font-size: .95rem; }
+.install-how { font-weight: 600; }
+
 /* Status and progress. */
 p.status { color: var(--muted); min-height: 1.5em; margin: 0; }
 progress { height: 8px; border-radius: 999px; overflow: hidden; border: 0; background: rgba(255, 255, 255, .1); accent-color: var(--accent); }

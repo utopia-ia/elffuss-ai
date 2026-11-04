@@ -67,5 +67,13 @@
   "licenses.transformersNote": "Su archivo incluye @huggingface/jinja y @huggingface/tokenizers, con sus licencias. Esta web lo sirve con un cambio: sus dos importaciones de ONNX Runtime apuntan a la copia que se sirve aquí, y la primera línea lo dice.",
   "licenses.siteCode": "Código de esta web: Apache-2.0, de UtopiaIA.",
   "licenses.catalogModels": "Cada herramienta lista en su página los modelos que usa y sus licencias.",
-  "notfound.home": "Volver al inicio"
+  "notfound.home": "Volver al inicio",
+  "install.entry": "Instalar «{app}» como app",
+  "install.title": "Instala «{app}» como app",
+  "install.why": "Se abre en su propia ventana, y el navegador guarda el modelo en vez de borrarlo tras unos días sin usarla.",
+  "install.button": "Instalar",
+  "install.ios": "Pulsa Compartir y luego «Añadir a pantalla de inicio».",
+  "install.mac": "En el menú Archivo, elige «Añadir al Dock».",
+  "install.other": "Abre el menú del navegador y elige «Instalar app» o «Añadir a pantalla de inicio».",
+  "install.later": "Ahora no"
 }

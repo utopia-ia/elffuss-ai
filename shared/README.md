@@ -36,9 +36,21 @@ Content Security Policy refuses them, and the tests check the built pages.
 | `.visually-hidden` | hidden but reachable by keyboard and screen readers |
 | `details.storage` | the read-only storage panel: which model files this browser has |
 | `.actions` | a row of buttons |
+| `aside.install` | the "Install … as an app" box `shared/install.js` puts at the top of `main` (`.install-title`, `.install-why`, `.install-how`) |
 
 States are the `hidden` attribute; progress is a `<progress>` element. Data hooks
 (`data-role`, `data-action`, `data-input`, `data-site`) are for scripts, not for styling.
 
 Canvas drawings (the boxes of detect) read their colours from the variables when
 they paint, so JavaScript never has a colour written in it either.
+
+## Installing a site as an app
+
+Every page links a web app manifest of its language (`/v/<build>/manifest.<lang>.json`, built by
+`scripts/lib/pages.mjs`; PRE has its own `manifest.beta.<lang>.json`) and the icons in `shared/icons/`
+(the PNGs are rendered from the two SVGs next to them: the Elffuss leaf on the `--bg` ground; the
+maskable one keeps the leaf inside the central safe circle). The app pages carry a hidden
+`a[data-action="install"]` in the header's nav; `shared/install.js` shows it while the site is not
+running installed, opens the browser's install dialog when there is one or the box with the steps,
+offers the box by itself only on a phone ("Not now" silences it for the tab), and asks for
+persistent storage once installed. Its texts are the `install.*` strings.

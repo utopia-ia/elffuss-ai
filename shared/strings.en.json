@@ -67,5 +67,13 @@
   "licenses.transformersNote": "Its file includes @huggingface/jinja and @huggingface/tokenizers, with their licences. This site serves it with one change: its two ONNX Runtime imports point at the copy served here, and its first line says so.",
   "licenses.siteCode": "Code of this site: Apache-2.0, by UtopiaIA.",
   "licenses.catalogModels": "Each tool lists the models it uses and their licences on its own page.",
-  "notfound.home": "Back to the start"
+  "notfound.home": "Back to the start",
+  "install.entry": "Install “{app}” as an app",
+  "install.title": "Install “{app}” as an app",
+  "install.why": "It opens in its own window, and the browser keeps the model saved instead of clearing it after a few days without use.",
+  "install.button": "Install",
+  "install.ios": "Tap Share and then “Add to Home Screen”.",
+  "install.mac": "In the File menu, choose “Add to Dock”.",
+  "install.other": "Open the browser menu and choose “Install app” or “Add to Home screen”.",
+  "install.later": "Not now"
 }

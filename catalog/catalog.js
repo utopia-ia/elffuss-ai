@@ -8,6 +8,7 @@
 import config from './config.js';
 import { createStoreClient } from './sdk/core/store-client.js';
 import { loadRegistry, getModel, variantFiles } from './sdk/core/registry.js';
+import { offerInstall } from './shared/install.js';
 
 /** True when every file of at least one variant of the model is in the store. */
 export async function hasCompleteVariant(store, model) {
@@ -41,4 +42,5 @@ async function main() {
   document.documentElement.dataset.shell = 'ready';
 }
 
+offerInstall();
 main();

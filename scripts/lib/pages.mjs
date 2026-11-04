@@ -190,7 +190,7 @@ export function licensesMain({ site, models, runtimes, t, base }) {
  * Every page of a site.
  * @returns {Map<string, string>} path in the site's docroot → content
  */
-export function sitePages({ site, sites, registry, manifest, strings, templates, channel, buildId, storeOrigin, apps }) {
+export function sitePages({ site, sites, registry, manifest, strings, templates, channel, buildId, storeOrigin, apps, theme }) {
   const paths = pagePaths(channel);
   const base = `/v/${buildId}/`;
   const tools = sites.find(s => s.catalog);
@@ -199,6 +199,7 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
   const runtimes = siteRuntimes(site, registry, manifest);
   const cspMeta = channel === 'test' ? `<meta http-equiv="Content-Security-Policy" content="${esc(csp(site, { storeOrigin, meta: true }))}">\n` : '';
   const origin = siteUrl(site, channel === 'test' ? 'test' : 'pro');
+  const appHead = lang => appHeadLinks({ base, channel, lang, theme });
   for (const lang of LANGS) {
     const t = strings[lang];
     const other = lang === 'es' ? 'en' : 'es';
@@ -221,11 +222,13 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
       main = render(templates.main, { t, v, html: { modelLine: modelLine(model, t, lang), storage: storagePanel(model, t, lang) } });
       footer = appFooter({ model, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
     }
-    out.set(lang === 'es' ? paths.es : paths.en, render(templates.page, { t, v, html: { cspMeta, script, main, footer } }));
+    const entry = installEntry(t, t.title);
+    out.set(lang === 'es' ? paths.es : paths.en, render(templates.page, { t, v, html: { cspMeta, appHead: appHead(lang), script, main, footer, installEntry: entry } }));
+    out.set(manifestPath(buildId, channel, lang).slice(1), webManifest({ t, lang, paths, theme }));
     const licT = { ...t, title: t['licenses.title'] };
     const licMain = licensesMain({ site, models, runtimes, t, base });
     const lv = { ...v, canonical: origin + (lang === 'es' ? 'licencias/' : 'en/licenses/'), home: v.home, otherLangUrl: other === 'es' ? paths.licUrlEs : paths.licUrlEn };
-    out.set(lang === 'es' ? paths.licEs : paths.licEn, render(templates.page, { t: licT, v: lv, html: { cspMeta, script: '', main: licMain, footer: `  <p><a href="${esc(v.home)}">${esc(t.title)}</a> · <a href="${esc(catalogUrl)}">${esc(t['footer.catalog'])}</a></p>` } }));
+    out.set(lang === 'es' ? paths.licEs : paths.licEn, render(templates.page, { t: licT, v: lv, html: { cspMeta, appHead: appHead(lang), installEntry: '', script: '', main: licMain, footer: `  <p><a href="${esc(v.home)}">${esc(t.title)}</a> · <a href="${esc(catalogUrl)}">${esc(t['footer.catalog'])}</a></p>` } }));
   }
   const es = strings.es, en = strings.en;
   const nfMain = `  <h1>${esc(es['notfound.title'])} · <span lang="en">${esc(en['notfound.title'])}</span></h1>
@@ -234,10 +237,56 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
   out.set(paths.notFound, render(templates.page, {
     t: { ...es, title: es['notfound.title'] },
     v: { lang: 'es', base, css: site.catalog ? 'catalog.css' : 'app.css', canonical: origin, urlEs: origin, urlEn: origin + 'en/', home: paths.urlEs, catalogUrl: siteUrl(tools, channel), otherLang: 'en', otherLangUrl: paths.urlEn },
-    html: { cspMeta, script: '', main: nfMain, footer: '' },
+    html: { cspMeta, appHead: appHead('es'), installEntry: '', script: '', main: nfMain, footer: '' },
   }));
   if (channel !== 'pre') out.set('robots.txt', 'User-agent: *\nDisallow: /beta/\nDisallow: /v/\nDisallow: /vendor/\n');
   return out;
+}
+
+/** URL of a site's web app manifest for a channel and language (under the build's /v/<id>/; PRE has its own). */
+export function manifestPath(buildId, channel, lang) {
+  return `/v/${buildId}/manifest.${channel === 'pre' ? 'beta.' : ''}${lang}.json`;
+}
+
+/** Icons of every site, under the build's shared/icons/ (shared/icons/*.svg are their sources). */
+export const ICONS = [
+  { src: 'shared/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+  { src: 'shared/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+  { src: 'shared/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+];
+
+/** The <head> lines that make a page installable: manifest, icon, theme colour. */
+export function appHeadLinks({ base, channel, lang, theme }) {
+  const buildId = base.split('/')[2];
+  return `<link rel="manifest" href="${esc(manifestPath(buildId, channel, lang))}">
+<link rel="icon" type="image/png" sizes="192x192" href="${esc(base)}${ICONS[0].src}">
+<link rel="apple-touch-icon" href="${esc(base)}${ICONS[0].src}">
+<meta name="theme-color" content="${esc(theme)}">
+`;
+}
+
+/** The nav's "Install <site> as an app" link: hidden; shared/install.js shows it when it can be installed. */
+export function installEntry(t, app) {
+  return `    <a href="#" data-action="install" data-app="${esc(app)}" hidden>${esc(fill(t['install.entry'], { app }))}</a>\n`;
+}
+
+/** The web app manifest of a site in one language: one app (same id) whose start page follows the language. */
+export function webManifest({ t, lang, paths, theme }) {
+  const m = {
+    id: paths.urlEs,
+    name: `${t.title} · Elffuss`,
+    short_name: t.title,
+    description: t.description,
+    lang,
+    dir: 'ltr',
+    start_url: lang === 'es' ? paths.urlEs : paths.urlEn,
+    scope: paths.urlEs,
+    display: 'standalone',
+    background_color: theme,
+    theme_color: theme,
+    icons: ICONS,
+  };
+  return JSON.stringify(m, null, 2) + '\n';
 }
 
 /** The config.js module of a site's build. */

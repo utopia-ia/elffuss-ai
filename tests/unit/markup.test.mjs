@@ -222,3 +222,25 @@ test('licences: what Transformers.js bundles, the modified-file line, and the so
   const notice = readFileSync(join(ROOT, 'NOTICE'), 'utf8');
   for (const piece of ['@huggingface/jinja 0.5.10', 'MIT License', '@huggingface/tokenizers 0.2.0', 'Mozilla Public License 2.0', 'modified']) assert.ok(notice.includes(piece), `NOTICE: ${piece}`);
 });
+
+// Installable as an app: every page links its language's manifest, the manifest has what Chrome asks for and its
+// icons are in the build at their stated sizes; the app pages carry the hidden "Install … as an app" link in the nav.
+test('every site is installable: manifest, icons, and the hidden install entry in the nav', () => {
+  const pngSize = f => { const b = readFileSync(f); return `${b.readUInt32BE(16)}x${b.readUInt32BE(20)}`; };
+  for (const s of pro.sites) {
+    for (const [page, lang] of [['index.html', 'es'], ['en/index.html', 'en']]) {
+      const html = readFileSync(join(pro.out, s.site, page), 'utf8');
+      const href = /<link rel="manifest" href="([^"]+)">/.exec(html)?.[1];
+      assert.equal(href, `/v/test00000000/manifest.${lang}.json`, `${s.site}/${page}: manifest link`);
+      const m = JSON.parse(readFileSync(join(pro.out, s.site, href), 'utf8'));
+      for (const k of ['id', 'name', 'short_name', 'start_url', 'scope', 'display', 'background_color', 'theme_color']) assert.ok(m[k], `${s.site} ${lang}: manifest.${k}`);
+      assert.equal(m.display, 'standalone');
+      assert.equal(m.start_url, lang === 'es' ? '/' : '/en/');
+      assert.equal(m.scope, '/');
+      for (const i of m.icons) assert.equal(pngSize(join(pro.out, s.site, 'v', 'test00000000', i.src)), i.sizes, `${s.site}: ${i.src}`);
+      assert.ok(m.icons.some(i => i.sizes === '512x512' && i.purpose === 'maskable'), `${s.site}: a maskable icon`);
+      assert.ok(m.icons.some(i => i.sizes === '192x192' && i.purpose === 'any'), `${s.site}: a 192 icon`);
+      assert.match(html, /<nav>[\s\S]*<a href="#" data-action="install" data-app="[^"]+" hidden>[^<]+<\/a>\s*<\/nav>/, `${s.site}/${page}: install entry`);
+    }
+  }
+});

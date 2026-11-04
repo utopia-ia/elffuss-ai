@@ -14,6 +14,7 @@ export const STORE_ORIGIN = 'https://models.elffuss.com';
  * - apps: scripts from the site only, plus WebAssembly compilation; Workers from
  *   the site; the store as the only frame; nothing inline; Trusted Types required.
  * - catalog: no WebAssembly and no Workers.
+ * - both: the web app manifest from the site (so it can be installed as an app).
  * Never 'unsafe-eval' and never 'unsafe-inline'.
  * @param {{ catalog?: boolean }} site
  * @param {{ storeOrigin?: string, meta?: boolean }} [opts] `meta` drops the directives a <meta> cannot carry
@@ -24,13 +25,13 @@ export function csp(site, { storeOrigin = STORE_ORIGIN, meta = false } = {}) {
         ["default-src", "'self'"], ['script-src', "'self'"], ['style-src', "'self'"], ['img-src', "'self'"],
         ['font-src', "'none'"], ['media-src', "'none'"], ['connect-src', "'self'"], ['worker-src', "'none'"],
         ['frame-src', storeOrigin], ['object-src', "'none'"], ['base-uri', "'none'"], ['form-action', "'none'"],
-        ['frame-ancestors', "'none'"], ['manifest-src', "'none'"], ['require-trusted-types-for', "'script'"], ['trusted-types', "'none'"],
+        ['frame-ancestors', "'none'"], ['manifest-src', "'self'"], ['require-trusted-types-for', "'script'"], ['trusted-types', "'none'"],
       ]
     : [
         ['default-src', "'self'"], ['script-src', "'self' 'wasm-unsafe-eval'"], ['style-src', "'self'"], ['img-src', "'self' blob:"],
         ['font-src', "'none'"], ['media-src', "'none'"], ['connect-src', "'self'"], ['worker-src', "'self'"],
         ['frame-src', storeOrigin], ['object-src', "'none'"], ['base-uri', "'none'"], ['form-action', "'none'"],
-        ['frame-ancestors', "'none'"], ['manifest-src', "'none'"], ['require-trusted-types-for', "'script'"], ['trusted-types', 'elffuss-ai'],
+        ['frame-ancestors', "'none'"], ['manifest-src', "'self'"], ['require-trusted-types-for', "'script'"], ['trusted-types', 'elffuss-ai'],
       ];
   return d.filter(([k]) => !(meta && k === 'frame-ancestors')).map(([k, v]) => `${k} ${v}`).join('; ');
 }

@@ -16,7 +16,8 @@
 //     (pre: the same under beta/, without robots.txt)
 //   v/<id>/   app.js (or catalog.js), the site's other modules, app.css, config.js,
 //             strings.es.json, strings.en.json, shared/, sdk/core/, sdk/<task>/,
-//             registry/tasks.json, LICENSES/, NOTICE.txt
+//             registry/tasks.json, LICENSES/, NOTICE.txt, shared/icons/*.png and the web app
+//             manifests manifest.es.json and manifest.en.json (pre: manifest.beta.<lang>.json)
 //   vendor/   only the runtimes this site uses, with their licences; Transformers.js
 //             rewritten to import the site's ONNX Runtime variant
 // The runtimes are not in git: they come from the working tree's vendor/, which
@@ -92,13 +93,16 @@ export function buildSite({ root, site, sites, channel, buildId, outDir, vendorD
   const apps = site.catalog ? readJSON(join(root, 'catalog', 'elffuss-apps.json')).apps : [];
   const storeUrl = channel === 'test' ? TEST_STORE_URL : STORE_ORIGIN + '/';
   const storeOrigin = new URL(storeUrl).origin;
-  for (const [p, html] of sitePages({ site, sites, registry, manifest, strings, templates, channel, buildId, storeOrigin, apps })) w(p, html);
+  // The theme colour of the manifest and <meta name="theme-color">: the ground of tokens.css (its only colours).
+  const theme = /--bg:\s*(#[0-9a-fA-F]{3,8})\s*;/.exec(readFileSync(join(root, 'shared', 'tokens.css'), 'utf8'))?.[1];
+  if (!theme) throw new Error('shared/tokens.css: no --bg colour');
+  for (const [p, html] of sitePages({ site, sites, registry, manifest, strings, templates, channel, buildId, storeOrigin, apps, theme })) w(p, html);
 
   // /v/<id>/: the site's own files, the shared shell and styles, the SDK, the registry.
   const v = `v/${buildId}/`;
   const skip = new Set(['app.json', 'main.html', 'strings.es.json', 'strings.en.json', 'elffuss-apps.json']);
   for (const f of listFiles(join(root, site.dir))) if (!skip.has(f)) w(v + f, { from: join(root, site.dir, f) });
-  for (const f of listFiles(join(root, 'shared'))) if (/\.(css|js)$/.test(f)) w(v + 'shared/' + f, { from: join(root, 'shared', f) });
+  for (const f of listFiles(join(root, 'shared'))) if (/\.(css|js)$/.test(f) || /^icons\/[\w-]+\.png$/.test(f)) w(v + 'shared/' + f, { from: join(root, 'shared', f) });
   for (const lang of ['es', 'en']) w(`${v}strings.${lang}.json`, JSON.stringify(strings[lang], null, 2) + '\n');
   for (const f of listFiles(join(root, 'sdk', 'core'))) w(`${v}sdk/core/${f}`, { from: join(root, 'sdk', 'core', f) });
   if (site.task) for (const f of listFiles(join(root, 'sdk', site.task))) w(`${v}sdk/${site.task}/${f}`, { from: join(root, 'sdk', site.task, f) });
