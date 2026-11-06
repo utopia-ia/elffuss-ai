@@ -1,0 +1,185 @@
+{
+ "schema": 1,
+ "tasks": {
+  "text-to-video": {
+   "default": "text-to-video/wan2.1-t2v-1.3b-rcm"
+  }
+ },
+ "models": {
+  "text-to-video/wan2.1-t2v-1.3b-rcm": {
+   "task": "text-to-video",
+   "name": {
+    "es": "Wan 2.1 T2V 1.3B (rCM, 4 pasos)",
+    "en": "Wan 2.1 T2V 1.3B (rCM, 4 steps)"
+   },
+   "license": "Apache-2.0",
+   "author": "UtopiaIA",
+   "base": {
+    "name": "Wan2.1-T2V-1.3B",
+    "author": "Wan-AI",
+    "url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
+    "license": "Apache-2.0"
+   },
+   "flag": null,
+   "redistributes": true,
+   "runtime": "onnxruntime-web",
+   "pipeline": null,
+   "sampler": "rcm",
+   "parts": {
+    "tok": {
+     "repo": "Wan-AI/Wan2.1-T2V-1.3B",
+     "revision": "37ec512624d61f7aa208f7ea8140a131f93afc9a",
+     "license": "Apache-2.0",
+     "author": "Wan-AI",
+     "files": {
+      "google/umt5-xxl/tokenizer.json": {
+       "size": 16837417,
+       "sha256": "6e197b4d3dbd71da14b4eb255f4fa91c9c1f2068b20a2de2472967ca3d22602b"
+      }
+     }
+    },
+    "web": {
+     "repo": "UtopiaIA/Wan2.1-T2V-1.3B-web",
+     "revision": "0000000000000000000000000000000000000000",
+     "license": "Apache-2.0",
+     "author": "UtopiaIA",
+     "files": {
+      "dit/ctx.onnx": {
+       "size": 56891,
+       "sha256": "002b7fb781bb41f1dbdea5107ddeb25c8f4257034ad6517af500638c8b15cba3"
+      },
+      "dit/ctx.onnx_data": {
+       "size": 164573184,
+       "sha256": "3c867d7b5f95b5f84b0a9a6a9b051035383078f34aeebd3bea43ad467493c4b6"
+      },
+      "dit/part0.onnx": {
+       "size": 94755,
+       "sha256": "99d9827c2f08deb2bc582ef796476f25815337aa495ef01bf0f2c7250f9f301d"
+      },
+      "dit/part0.onnx_data": {
+       "size": 525190144,
+       "sha256": "b0abf78c01858378168b09336f4dc2a26fd045d0307ea9f343d665f15674c86e"
+      },
+      "dit/part1.onnx": {
+       "size": 93598,
+       "sha256": "a84f19e4b9c7c8a6373fdc0f7442f06508ca6895d8273fc91675b5342ba4833f"
+      },
+      "dit/part1.onnx_data": {
+       "size": 457108480,
+       "sha256": "cf4714471d4a05438eae920f6ce86fc8122403f528477e664cc1da28d150494c"
+      },
+      "dit/part2.onnx": {
+       "size": 94930,
+       "sha256": "3e3effd177d74a8d0a0365f3702a5f003d136d727a95f4cc0325c1152b238602"
+      },
+      "dit/part2.onnx_data": {
+       "size": 457526272,
+       "sha256": "a3b458b34086202c95d4eb68638b14123de24e771f124d812fcccc122dd41293"
+      },
+      "t5/embed_q4.bin": {
+       "size": 607117312,
+       "sha256": "11dc1a357c6bc93242fb4b4c6180d552542e714320977d38cccbe72714022537"
+      },
+      "t5/encoder_0.onnx": {
+       "size": 31416,
+       "sha256": "74ab11ac81b3145f8dd49c9452abf1f92d1e79129acb7001cd401b51947814ed"
+      },
+      "t5/encoder_0.onnx_data": {
+       "size": 741851136,
+       "sha256": "8990b501a437fe2176bb57a29b0c06fad861a7e838321e2860d91720679add1b"
+      },
+      "t5/encoder_1.onnx": {
+       "size": 31512,
+       "sha256": "2c742d631edd1e63e0ac1a0d3581947f46ba9d722d26c4f015e8da4bda90e554"
+      },
+      "t5/encoder_1.onnx_data": {
+       "size": 741851136,
+       "sha256": "6411820ea1f0f4d524a567ae853c39efbe3735dbf3bd89b9694fa5160d58f556"
+      },
+      "t5/encoder_2.onnx": {
+       "size": 31704,
+       "sha256": "544c588d2f61872d852b90bed2ebddcbbdc3027939595d62da1e3ed0ee150d54"
+      },
+      "t5/encoder_2.onnx_data": {
+       "size": 741851136,
+       "sha256": "d488759c22d69047616e19f578bd982ed144a284ebb416e4a1ba52961b0cb9fb"
+      },
+      "t5/encoder_3.onnx": {
+       "size": 31988,
+       "sha256": "ef64c0a07ad4289994bf8953a019fddb7dbee3d27b45a82a2684675df08ac58b"
+      },
+      "t5/encoder_3.onnx_data": {
+       "size": 741867520,
+       "sha256": "b5a0cb37ff6983778fdca2759b7535ed086b8d64a2af76003f56f29878995c40"
+      },
+      "vae/taew2_1_light.onnx": {
+       "size": 39412019,
+       "sha256": "6122148a9416a34f0e83de44ef1bf17892f1fd64fc9b9b857bd6f1016d2b81d6"
+      }
+     }
+    }
+   },
+   "devices": {
+    "webgpu": [
+     {
+      "when": "shader-f16",
+      "dtype": "q8f16",
+      "files": [
+       "tok:google/umt5-xxl/tokenizer.json",
+       "web:dit/ctx.onnx",
+       "web:dit/ctx.onnx_data",
+       "web:dit/part0.onnx",
+       "web:dit/part0.onnx_data",
+       "web:dit/part1.onnx",
+       "web:dit/part1.onnx_data",
+       "web:dit/part2.onnx",
+       "web:dit/part2.onnx_data",
+       "web:t5/embed_q4.bin",
+       "web:t5/encoder_0.onnx",
+       "web:t5/encoder_0.onnx_data",
+       "web:t5/encoder_1.onnx",
+       "web:t5/encoder_1.onnx_data",
+       "web:t5/encoder_2.onnx",
+       "web:t5/encoder_2.onnx_data",
+       "web:t5/encoder_3.onnx",
+       "web:t5/encoder_3.onnx_data",
+       "web:vae/taew2_1_light.onnx"
+      ],
+      "bytes": 5235652550
+     }
+    ]
+   },
+   "notes": {
+    "es": "El codificador de texto va en 4 bits y el transformador en 8 bits: el v\u00eddeo de una semilla no es el mismo que el del modelo original, pero sigue la descripci\u00f3n igual de bien.",
+    "en": "The text encoder runs in 4 bits and the transformer in 8 bits: the video of a seed is not the one of the original model, but it follows the prompt as well."
+   },
+   "bases": [
+    {
+     "name": "Wan2.1-T2V-1.3B",
+     "author": "Wan-AI",
+     "url": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B",
+     "license": "Apache-2.0",
+     "part": "tok"
+    },
+    {
+     "name": "rCM Wan2.1 T2V 1.3B 480p",
+     "author": "worstcoder (rCM, NVlabs/Tsinghua)",
+     "url": "https://huggingface.co/worstcoder/rcm-Wan/tree/142d77a331f1516fea772607c1bf25a2785a2505",
+     "license": "Apache-2.0",
+     "part": "web"
+    },
+    {
+     "name": "lighttaew2_1 (TAEHV)",
+     "author": "lightx2v / madebyollin",
+     "url": "https://huggingface.co/lightx2v/Autoencoders/tree/043793f3b3a2ea8db7d0ed8b5a0e8134436d529b",
+     "license": "Apache-2.0",
+     "part": "web"
+    }
+   ],
+   "pending": {
+    "es": null,
+    "en": "The \"web\" part is our ONNX conversion, not hosted yet: its repo and revision are placeholders until it is published."
+   }
+  }
+ }
+}

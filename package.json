@@ -15,6 +15,7 @@
     "./detect/sizes": "./sdk/detect/sizes.js",
     "./ocr": "./sdk/ocr/index.js",
     "./ocr/sizes": "./sdk/ocr/sizes.js",
+    "./video-gen": "./sdk/video-gen/index.js",
     "./package.json": "./package.json"
   },
   "sideEffects": false,

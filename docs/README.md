@@ -20,6 +20,8 @@ Generated from the JSDoc of `sdk/`.
 - [`detect`](api/detect.md)
 - [`ocr`](api/ocr.md)
 - [`remove-bg`](api/remove-bg.md)
+- [`video`](api/video.md)
+- [`video-gen`](api/video-gen.md)
 
 ## Also here
 
