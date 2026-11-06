@@ -1,5 +1,7 @@
 /dist/
 /test-results/
+# Local scratch: Python venvs, exports and reference runs (never committed).
+/tmp/
 node_modules/
 *.log
 .DS_Store
