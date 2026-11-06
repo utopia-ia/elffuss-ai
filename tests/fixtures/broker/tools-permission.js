@@ -8,7 +8,7 @@
 // <extract>
 // Las herramientas (repo elffuss-ai): el catálogo y una web por herramienta. Solo
 // su nombre exacto y solo bajo elffuss.com, que es donde viven.
-const HERRAMIENTAS = /^https:\/\/(tools|cutout|ocr|detect|depth)\.elffuss\.com$/;
+const HERRAMIENTAS = /^https:\/\/(audio|cutout|depth|detect|ocr|tools)\.elffuss\.com$/;
 // </extract>
 // <extract>
 // Lo que puede pedir una herramienta: bajar o consultar uno de los ficheros de su
@@ -27,9 +27,23 @@ const FICHEROS_HERRAMIENTAS = new Map([
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.yml", 885],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx", 21159378],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml", 150579],
+  ["https://huggingface.co/nekwo/misaki-en-us-g2p-onnx/resolve/4b3a605d2f605318ab4f762ab9855c44106528b7/misaki-en_us-g2p.json", 5724857],
+  ["https://huggingface.co/nekwo/misaki-en-us-g2p-onnx/resolve/4b3a605d2f605318ab4f762ab9855c44106528b7/misaki-en_us-g2p.onnx", 3438244],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/config.json", 80],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/onnx/model_fp16.onnx", 219121675],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/preprocessor_config.json", 391],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/onnx/model.onnx", 325532232],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/onnx/model_quantized.onnx", 92361116],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/tokenizer.json", 3497],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/af_bella.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/af_heart.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/af_nicole.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/am_fenrir.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/am_michael.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/am_puck.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/ef_dora.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/em_alex.bin", 522240],
+  ["https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/em_santa.bin", 522240],
   ["https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/4472b7362082ad9968fee890ca0f1e5aca36b93d/config.json", 38],
   ["https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/4472b7362082ad9968fee890ca0f1e5aca36b93d/onnx/model.onnx", 99060839],
   ["https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/4472b7362082ad9968fee890ca0f1e5aca36b93d/onnx/model_fp16.onnx", 49642442],
@@ -38,6 +52,11 @@ const FICHEROS_HERRAMIENTAS = new Map([
   ["https://huggingface.co/onnx-community/rfdetr_nano-ONNX/resolve/eae21cee0687a91bcf9fa071605c48d7705d2d91/config.json", 3213],
   ["https://huggingface.co/onnx-community/rfdetr_nano-ONNX/resolve/eae21cee0687a91bcf9fa071605c48d7705d2d91/onnx/model_quantized.onnx", 28826010],
   ["https://huggingface.co/onnx-community/rfdetr_nano-ONNX/resolve/eae21cee0687a91bcf9fa071605c48d7705d2d91/preprocessor_config.json", 444],
+  ["https://huggingface.co/stabilityai/stable-audio-3-optimized/resolve/30cb2644da54bfa63275d1bc7f1fa67fc718680f/onnx/sa3-sm-music/dit_fp16.onnx", 921133617],
+  ["https://huggingface.co/stabilityai/stable-audio-3-optimized/resolve/30cb2644da54bfa63275d1bc7f1fa67fc718680f/onnx/sa3-sm-sfx/dit_fp16.onnx", 921133617],
+  ["https://huggingface.co/stabilityai/stable-audio-3-optimized/resolve/30cb2644da54bfa63275d1bc7f1fa67fc718680f/onnx/same-s/dec_bf16_limiter.onnx", 218683479],
+  ["https://huggingface.co/stabilityai/stable-audio-3-optimized/resolve/30cb2644da54bfa63275d1bc7f1fa67fc718680f/onnx/t5gemma/encoder.onnx", 620393530],
+  ["https://huggingface.co/stabilityai/stable-audio-3-optimized/resolve/30cb2644da54bfa63275d1bc7f1fa67fc718680f/tokenizer.model", 4241003],
 ]);
 function permisoHerramienta(type, url, bytes) {
   const tam = FICHEROS_HERRAMIENTAS.get(String(url ?? ''));

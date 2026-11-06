@@ -1,0 +1,30 @@
+/* Layout of the audio site only (see shared/README.md): the mode switch, the composer, the player and the history. */
+.modes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.modes button[aria-pressed="true"] { color: var(--accent); background: var(--bg3); }
+.composer { display: flex; flex-direction: column; gap: 1rem; max-width: 46rem; }
+.composer .field { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.composer .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem 1.5rem; }
+.composer textarea { width: 100%; min-height: 5.5rem; }
+.composer .inline { display: flex; gap: 0.5rem; align-items: center; }
+.composer .inline input { flex: 1; min-width: 0; }
+.composer input[type="range"] { width: 100%; padding: 0; }
+.composer .ideas { gap: 0.4rem; }
+.composer .ideas button { min-height: 34px; padding: 0.25rem 0.8rem; }
+.composer .advanced { display: flex; flex-direction: column; gap: 0.5rem; }
+.composer .advanced[open] > .field { margin-top: 0.75rem; }
+button[data-icon] { min-width: 42px; padding: 0.4rem; display: inline-flex; align-items: center; justify-content: center; }
+button[data-icon] svg { width: 20px; height: 20px; }
+.player { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 0.25rem 0.75rem; align-items: center; }
+.player > button { grid-row: 1 / span 2; }
+.player canvas { display: block; width: 100%; height: 72px; }
+.player .time { justify-self: end; }
+.history { display: flex; flex-direction: column; gap: 0.75rem; }
+.clips { display: flex; flex-direction: column; gap: 0.5rem; padding: 0; margin: 0; }
+.clips .card { display: grid; grid-template-columns: auto 1fr auto; gap: 0.25rem 0.75rem; align-items: center; padding: 0.6rem 0.75rem; }
+.clips .what { min-width: 0; overflow: hidden; }
+.clips .tools { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; }
+.history .actions > button:last-child { margin-left: auto; }
+@media (max-width: 600px) {
+  .clips .card { grid-template-columns: auto 1fr; }
+  .clips .tools { grid-column: 1 / -1; justify-content: flex-start; }
+}

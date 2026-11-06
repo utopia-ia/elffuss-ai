@@ -1,0 +1,11 @@
+{
+  "site": "audio",
+  "host": "audio.elffuss.com",
+  "testPort": 8795,
+  "task": "audio",
+  "models": ["text-to-speech/kokoro-82m", "text-to-music/stable-audio-3-small-music", "text-to-sfx/stable-audio-3-small-sfx"],
+  "camera": false,
+  "pdfjs": false,
+  "accept": "",
+  "status": "ready"
+}

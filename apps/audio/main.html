@@ -1,0 +1,73 @@
+  <h1>{{t:title}}</h1>
+  <p>{{t:intro}}</p>
+  <div class="modes" role="group" aria-label="{{t:mode.label}}">
+    <button class="ghost" type="button" data-mode="music" aria-pressed="true">{{t:mode.music}}</button>
+    <button class="ghost" type="button" data-mode="sfx" aria-pressed="false">{{t:mode.sfx}}</button>
+    <button class="ghost" type="button" data-mode="speech" aria-pressed="false">{{t:mode.speech}}</button>
+  </div>
+  <form class="composer" data-role="composer" novalidate>
+    <div class="field" data-panel="prompt">
+      <label for="prompt" data-role="prompt-label">{{t:prompt.music}}</label>
+      <textarea id="prompt" data-input="prompt" rows="3" maxlength="2000" lang="en" spellcheck="false" placeholder="{{t:prompt.placeholder.music}}"></textarea>
+      <p class="muted" data-role="prompt-hint">{{t:prompt.hint}}</p>
+      <p class="actions ideas" data-role="ideas" aria-label="{{t:ideas.label}}"></p>
+    </div>
+    <div class="row" data-panel="prompt">
+      <div class="field">
+        <label for="seconds">{{t:seconds.label}} <output data-role="seconds-out" for="seconds"></output></label>
+        <input id="seconds" data-input="seconds" type="range" min="2" max="120" step="1" value="30">
+      </div>
+      <div class="field">
+        <label for="seed">{{t:seed.label}}</label>
+        <span class="inline">
+          <input id="seed" data-input="seed" type="number" inputmode="numeric" min="0" max="2147483647" step="1">
+          <button class="ghost" data-icon type="button" data-action="random-seed" aria-label="{{t:seed.random}}" title="{{t:seed.random}}"></button>
+        </span>
+      </div>
+    </div>
+    <details class="advanced" data-panel="prompt">
+      <summary>{{t:advanced.title}}</summary>
+      <div class="field">
+        <label for="steps">{{t:steps.label}} <output data-role="steps-out" for="steps"></output></label>
+        <input id="steps" data-input="steps" type="range" min="4" max="16" step="1" value="8">
+        <p class="muted">{{t:steps.hint}}</p>
+        <p class="muted">{{t:seed.hint}}</p>
+      </div>
+    </details>
+    <div class="field" data-panel="speech" hidden>
+      <label for="text">{{t:text.label}}</label>
+      <textarea id="text" data-input="text" rows="6" maxlength="20000" placeholder="{{t:text.placeholder}}"></textarea>
+      <p class="muted" data-role="text-count"></p>
+    </div>
+    <div class="row" data-panel="speech" hidden>
+      <div class="field">
+        <label for="voice">{{t:voice.label}}</label>
+        <select id="voice" data-input="voice"></select>
+      </div>
+      <div class="field">
+        <label for="speed">{{t:speed.label}} <output data-role="speed-out" for="speed"></output></label>
+        <input id="speed" data-input="speed" type="range" min="0.5" max="2" step="0.05" value="1">
+      </div>
+    </div>
+  </form>
+{{html:modelLines}}
+  <p class="muted" data-role="credits">{{t:credits.stability}}</p>
+  <p class="actions">
+    <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run.music}}" data-label-download="{{t:action.download.music}}" disabled>{{t:action.run.music}}</button>
+    <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>
+  </p>
+  <progress hidden></progress>
+  <p class="status" role="status" aria-live="polite"></p>
+  <section class="result" hidden>
+    <h2>{{t:result.title}}</h2>
+  </section>
+  <section class="history" data-role="history" aria-labelledby="history-title">
+    <h2 id="history-title">{{t:history.title}}</h2>
+    <p class="muted" data-role="history-empty">{{t:history.empty}}</p>
+    <ul class="clips" data-role="history-list"></ul>
+    <p class="actions" data-role="history-tools" hidden>
+      <span class="muted" data-role="history-note"></span>
+      <button class="ghost" type="button" data-action="clear-history">{{t:history.clear}}</button>
+    </p>
+  </section>
+{{html:storage}}

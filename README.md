@@ -57,6 +57,7 @@ from Wikimedia Commons and on an invoice drawn by `scripts/make-fixtures.mjs`
 | [ocr.elffuss.com](https://ocr.elffuss.com/en/) | Read the text of photos, scans and PDFs, even whole folders; export as Markdown, JSON or ZIP | PP-OCRv6 small by PaddlePaddle (Apache-2.0) | WebGPU or WebAssembly |
 | [detect.elffuss.com](https://detect.elffuss.com/en/) | Find up to 80 kinds of objects, in a photo or with the camera | RF-DETR Nano by Roboflow (Apache-2.0) | WebAssembly |
 | [depth.elffuss.com](https://depth.elffuss.com/en/) | Work out what is near and what is far, with a colour map, a 3D view and 16-bit PNG | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
+| [audio.elffuss.com](https://audio.elffuss.com/en/) | Make music, sound effects and speech from text, with a waveform player, a local history and WAV or OGG downloads | Stable Audio 3 Small Music and SFX by Stability AI (Stability AI Community License); Kokoro 82M by hexgrad (Apache-2.0) | Music and effects: WebGPU with shader-f16. Speech: WebGPU or WebAssembly |
 | [tools.elffuss.com](https://tools.elffuss.com/en/) | The catalog of every Elffuss tool | none | none |
 
 Every site is in Spanish at its root and in English under `/en/`.
@@ -127,11 +128,13 @@ With `tests/fixtures/detect/foto.jpg` it prints `wasm`, `dog 0.90` and
 `cat 0.78`. The first run downloads the model (29 MB) through the model store;
 later runs take it from the browser.
 
-The other tasks work the same way (`node scripts/build.mjs <cutout|ocr|depth> --dev --out dist`):
+The other tasks work the same way (`node scripts/build.mjs <cutout|ocr|depth|audio> --dev --out dist`):
 
 ```js
 // run() gives { png, alpha, width, height, device, … }
 import { RemoveBg } from '/v/dev/sdk/remove-bg/index.js';
+// run({ prompt, seconds, seed }) / run({ text, voice, lang, speed }) give { blob (WAV), seconds, sampleRate, … }
+import { Music, Sfx, Speech, audio } from '/v/dev/sdk/audio/index.js';
 import { Depth } from '/v/dev/sdk/depth/index.js';
 import { Ocr } from '/v/dev/sdk/ocr/index.js';
 ```
@@ -197,6 +200,7 @@ exact size (`node scripts/broker-repos.mjs` prints that list).
 | `@elffuss/ai/depth` | Depth map of a photo | [depth.elffuss.com](https://depth.elffuss.com/) | in use |
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
+| `@elffuss/ai/audio` | Music, sound effects and speech from text | [audio.elffuss.com](https://audio.elffuss.com/) | in use |
 <!-- modules:end -->
 
 Each task module also exports `<task>/sizes`, the download size of each of its
@@ -211,9 +215,16 @@ the files under `sdk/` as shown above.
 | ocr | [PP-OCRv6 small](https://github.com/PaddlePaddle/PaddleOCR) | PaddlePaddle | Apache-2.0 | 31 MB (WebGPU or WebAssembly, fp32) |
 | detect | [RF-DETR Nano](https://github.com/roboflow/rf-detr) | Roboflow | Apache-2.0 | 29 MB (WebAssembly, q8) |
 | depth | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small) | depth-anything | Apache-2.0 | 50 or 99 MB (WebGPU, fp16 or fp32), 27 MB (WebAssembly, q8) |
+| text-to-music | [Stable Audio 3 Small Music](https://huggingface.co/stabilityai/stable-audio-3-small-music) | Stability AI | Stability AI Community License (text encoder: also Gemma Terms of Use) | 1764 MB (WebGPU, fp16) |
+| text-to-sfx | [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx) | Stability AI | Stability AI Community License (text encoder: also Gemma Terms of Use) | 1764 MB (WebGPU, fp16; 921 MB more when music is already there) |
+| text-to-speech | [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M) | hexgrad | Apache-2.0 | 339 MB (WebGPU, fp32), 106 MB (WebAssembly, q8) |
 
-The weights are ONNX exports from `onnx-community` and `PaddlePaddle` on Hugging
-Face. They are not part of this repository and are not redistributed.
+The weights are ONNX exports from `onnx-community`, `PaddlePaddle` and Stability AI
+(`stabilityai/stable-audio-3-optimized`) on Hugging Face; the English phonemiser of
+Kokoro is misaki's word lists and fallback network as packaged in
+`nekwo/misaki-en-us-g2p-onnx`. Stable Audio 3 is used under the Stability AI
+Community License: free for organisations under US $1M in annual revenue, with
+registration at stability.ai for commercial use (see NOTICE); powered by Stability AI. They are not part of this repository and are not redistributed.
 [docs/MODELS.md](docs/MODELS.md) gives every repository, pinned commit and file.
 
 ## Repository
