@@ -13,6 +13,15 @@
 // list, when a repo is private or gated, when a revision is not the commit the
 // Hub returns, when a file is missing, when a repo or licence is on the deny
 // list, or when a model-store key of a pinned URL would be cut (180 characters).
+//
+// A licence outside the allowed list passes only when the model names it in
+// `accept` and it is one of ACCEPTED_LICENSES (the Hub's `license: other` with its
+// `license_name`): a decision taken for that model, never a general exception.
+// A base model's page may be gated when the source says so (`gatedPage`): only
+// its licence is read from it, its files are never downloaded. A part with
+// `only: 'used'` pins only the files its variants use (repos with many large
+// files for other runtimes). A task may say which SDK module it belongs to
+// (`module`); sizes.js is written once per module.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,10 +33,31 @@ const OUT = join(ROOT, 'registry', 'tasks.json');
 const API = `${HUB_ORIGIN}/api/models/`;
 
 export const ALLOWED_LICENSES = ['Apache-2.0', 'MIT', 'BSD-2-Clause', 'BSD-3-Clause'];
+/**
+ * Licences a model may take by naming them in `accept` (the `license_name` of a Hub
+ * card with `license: other`), and the name the registry gives them.
+ */
+export const ACCEPTED_LICENSES = Object.freeze({ 'stable-audio-community': 'Stability AI Community License' });
+/** Task names of the registry. */
+export const TASKS = Object.freeze(['remove-bg', 'depth', 'detect', 'ocr', 'text-to-music', 'text-to-sfx', 'text-to-speech']);
 export const DENY_REPOS = [/Depth-Anything-V2-(Base|Large|Giant)/i, /RMBG/i];
 export const DENY_LICENSES = [/^cc-by-nc/i, /^openrail/i, /^lfm/i, /^gemma/i, /^llama/i, /^other$/i];
 const SPDX = { 'apache-2.0': 'Apache-2.0', mit: 'MIT', 'bsd-2-clause': 'BSD-2-Clause', 'bsd-3-clause': 'BSD-3-Clause' };
 export const normLicense = l => SPDX[String(l || '').toLowerCase()] || String(l || '');
+
+/**
+ * The licence of a Hub card as the registry writes it, and whether it may be used:
+ * an allowed licence, or `other` with a `license_name` the model accepts.
+ * @param {{ license?: string, license_name?: string } | undefined} card
+ * @param {string[]} [accept] licence names the model accepts
+ * @returns {{ license: string, ok: boolean, accepted: boolean }}
+ */
+export function cardLicense(card, accept = []) {
+  const raw = normLicense(card?.license);
+  const name = String(card?.license_name || '');
+  if (raw === 'other' && accept.includes(name) && ACCEPTED_LICENSES[name]) return { license: ACCEPTED_LICENSES[name], ok: true, accepted: true };
+  return { license: raw, ok: ALLOWED_LICENSES.includes(raw), accepted: false };
+}
 const WEIGHT = /\.onnx(_data(_\d+)?)?$/;
 export const MAX_KEY = 180;
 
@@ -53,15 +83,17 @@ function denied(repo, license) {
   return DENY_REPOS.some(re => re.test(repo)) || DENY_LICENSES.some(re => re.test(license));
 }
 
-async function baseLicense(base) {
+async function baseLicense(base, accept) {
   if (base.source.hf) {
     const { json } = await getJSON(`${API}${base.source.hf}`);
-    if (json.private || json.gated) throw new Error(`${base.source.hf}: private or gated`);
-    return { license: normLicense(json.cardData?.license), url: `${HUB_ORIGIN}/${base.source.hf}`, repo: base.source.hf };
+    if (json.private || (json.gated && !base.source.gatedPage)) throw new Error(`${base.source.hf}: private or gated`);
+    const { license, ok, accepted } = cardLicense(json.cardData, accept);
+    return { license, ok, accepted, url: `${HUB_ORIGIN}/${base.source.hf}`, repo: base.source.hf };
   }
   if (base.source.github) {
     const { json } = await getJSON(`https://api.github.com/repos/${base.source.github}/license`);
-    return { license: json.license?.spdx_id || '', url: `https://github.com/${base.source.github}`, repo: base.source.github };
+    const license = json.license?.spdx_id || '';
+    return { license, ok: ALLOWED_LICENSES.includes(license), accepted: false, url: `https://github.com/${base.source.github}`, repo: base.source.github };
   }
   throw new Error('base model needs a source');
 }
@@ -71,7 +103,9 @@ export async function generate(source) {
   const out = { schema: 1, tasks: source.tasks, models: {} };
   const problems = [];
   for (const [id, m] of Object.entries(source.models)) {
-    if (!/^(remove-bg|depth|detect|ocr)\/[a-z0-9.-]+$/.test(id)) problems.push(`${id}: bad model id`);
+    if (!new RegExp(`^(${TASKS.join('|')})/[a-z0-9.-]+$`).test(id)) problems.push(`${id}: bad model id`);
+    const accept = m.accept || [];
+    for (const a of accept) if (!ACCEPTED_LICENSES[a]) problems.push(`${id}: accepts ${a}, which is not in ACCEPTED_LICENSES`);
     if (!id.startsWith(m.task + '/')) problems.push(`${id}: id does not start with its task`);
     const used = new Set();
     for (const variants of Object.values(m.devices)) for (const v of variants) for (const f of v.files) used.add(f);
@@ -83,16 +117,19 @@ export async function generate(source) {
       if (info.sha !== p.revision) problems.push(`${id}/${partName}: the Hub returned ${info.sha} for ${p.revision}`);
       if (info.private) problems.push(`${p.repo}: private`);
       if (info.gated) problems.push(`${p.repo}: gated`);
-      const license = normLicense(info.cardData?.license);
+      const { license, ok, accepted } = cardLicense(info.cardData, accept);
       licenses.add(license);
-      if (!ALLOWED_LICENSES.includes(license)) problems.push(`${p.repo}: licence ${license || '(none)'} is not allowed`);
-      if (denied(p.repo, license)) problems.push(`${p.repo}: on the deny list`);
+      if (!ok) problems.push(`${p.repo}: licence ${license || '(none)'} is not allowed`);
+      if (denied(p.repo, accepted ? '' : license)) problems.push(`${p.repo}: on the deny list`);
       const files = {};
       const usedHere = [...used].filter(u => u.startsWith(partName + ':')).map(u => u.slice(partName.length + 1));
       for (const f of await tree(p.repo, p.revision)) {
         // Weights that no variant uses are left out; every other file of the tree stays,
         // so that a request for something the repo does not have can be answered 404.
-        if (WEIGHT.test(f.path) && !usedHere.includes(f.path) && !usedHere.some(u => f.path.startsWith(u + '_data'))) continue;
+        const usedFile = usedHere.includes(f.path) || usedHere.some(u => f.path.startsWith(u + '_data'));
+        if (WEIGHT.test(f.path) && !usedFile) continue;
+        // A part that pins only what its variants use (`only: 'used'`).
+        if (p.only === 'used' && !usedFile) continue;
         // Repo metadata such as .gitattributes cannot go through the model store (no
         // segment may start with a dot) and nothing loads it: it stays out.
         if (!isSafePath(f.path)) { if (usedHere.includes(f.path)) problems.push(`${p.repo}: unsafe path ${f.path}`); continue; }
@@ -129,9 +166,9 @@ export async function generate(source) {
         return { ...(v.when ? { when: v.when } : {}), dtype: v.dtype, files, bytes };
       });
     }
-    const base = await baseLicense(m.base);
-    if (!ALLOWED_LICENSES.includes(base.license)) problems.push(`${id}: base licence ${base.license || '(none)'} is not allowed`);
-    if (denied(base.repo, base.license)) problems.push(`${id}: base on the deny list`);
+    const base = await baseLicense(m.base, accept);
+    if (!base.ok) problems.push(`${id}: base licence ${base.license || '(none)'} is not allowed`);
+    if (denied(base.repo, base.accepted ? '' : base.license)) problems.push(`${id}: base on the deny list`);
     out.models[id] = {
       task: m.task,
       name: m.name,
@@ -145,6 +182,7 @@ export async function generate(source) {
       parts,
       devices,
       notes: m.notes,
+      ...(m.terms ? { terms: m.terms } : {}),
     };
   }
   for (const [task, t] of Object.entries(source.tasks)) {
@@ -154,20 +192,45 @@ export async function generate(source) {
   return { registry: out, problems };
 }
 
-/** Text of sdk/<task>/sizes.js for one task. */
-export function sizesSource(registry, task) {
-  const models = Object.fromEntries(Object.entries(registry.models).filter(([, m]) => m.task === task).map(([id, m]) => [id,
+/** The SDK module of a task: its own name unless the registry names another (`module`). */
+export function taskModule(registry, task) {
+  return registry.tasks[task]?.module || task;
+}
+
+/** Every SDK module and the tasks it holds, in the registry's order. */
+export function modules(registry) {
+  const out = new Map();
+  for (const task of Object.keys(registry.tasks)) {
+    const mod = taskModule(registry, task);
+    if (!out.has(mod)) out.set(mod, []);
+    out.get(mod).push(task);
+  }
+  return out;
+}
+
+/**
+ * Text of sdk/<module>/sizes.js. A module of one task (the module's own name) gives
+ * DEFAULT_MODEL; a module of several tasks gives DEFAULT_MODELS, by task.
+ */
+export function sizesSource(registry, module) {
+  const tasks = modules(registry).get(module) || [module];
+  const models = Object.fromEntries(Object.entries(registry.models).filter(([, m]) => tasks.includes(m.task)).map(([id, m]) => [id,
     Object.fromEntries(Object.entries(m.devices).map(([dev, vs]) => [dev, vs.map(v => ({ ...(v.when ? { when: v.when } : {}), dtype: v.dtype, bytes: v.bytes }))]))]));
+  const single = tasks.length === 1 && tasks[0] === module;
+  const defaults = single
+    ? `/** Default model of this task. */
+export const DEFAULT_MODEL = ${JSON.stringify(registry.tasks[module].default)};`
+    : `/** Default model of each task of this module. */
+export const DEFAULT_MODELS = Object.freeze(${JSON.stringify(Object.fromEntries(tasks.map(t => [t, registry.tasks[t].default])), null, 2)});`;
   return `// SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 UtopiaIA
 //
 // GENERATED by scripts/build-registry.mjs from registry/tasks.json. Do not edit.
 
-/** Default model of this task. */
-export const DEFAULT_MODEL = ${JSON.stringify(registry.tasks[task].default)};
+${defaults}
 
 /**
- * Download size in bytes of every variant of this task's models, by model id and
+ * Download size in bytes of every variant of this ${single ? 'task' : 'module'}'s models, by model id and
  * backend, in the registry's order of preference.
  */
 export const SIZES = Object.freeze(${JSON.stringify(models, null, 2)});
@@ -207,7 +270,7 @@ async function main(argv) {
   for (const p of problems) console.log('✗ ' + p);
   if (problems.length) return 1;
   const files = new Map([[OUT, serialise(registry)]]);
-  for (const task of Object.keys(registry.tasks)) files.set(join(ROOT, 'sdk', task, 'sizes.js'), sizesSource(registry, task));
+  for (const mod of modules(registry).keys()) files.set(join(ROOT, 'sdk', mod, 'sizes.js'), sizesSource(registry, mod));
   if (argv.includes('--check')) {
     let diff = 0;
     for (const [p, text] of files) {
