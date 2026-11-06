@@ -10,6 +10,7 @@
 | `@elffuss/ai/depth` | Depth map of a photo | [depth.elffuss.com](https://depth.elffuss.com/) | in use |
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
+| `@elffuss/ai/text-to-image` | Pictures from a text description (PNG) | [image.elffuss.com](https://image.elffuss.com/) | in use |
 
 ## API reference
 
@@ -20,6 +21,7 @@ Generated from the JSDoc of `sdk/`.
 - [`detect`](api/detect.md)
 - [`ocr`](api/ocr.md)
 - [`remove-bg`](api/remove-bg.md)
+- [`text-to-image`](api/text-to-image.md)
 
 ## Also here
 

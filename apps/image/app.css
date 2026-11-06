@@ -1,0 +1,32 @@
+/* Layout of the image site only (see shared/README.md): the form beside the picture on a wide screen, one
+   column on a narrow one; the frame takes the chosen shape; the history is a grid of small previews. */
+main { max-width: 76rem; }
+.studio { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (min-width: 60rem) {
+  .studio { grid-template-columns: minmax(19rem, 25rem) minmax(0, 1fr); }
+  .studio > .composer { grid-row: 1 / span 2; position: sticky; top: 5rem; }
+}
+.composer { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.composer > p { margin: 0; }
+.field { display: flex; flex-direction: column; gap: 0.4rem; }
+.field textarea { width: 100%; min-height: 7.5rem; }
+.field input { width: 100%; max-width: 14rem; }
+.choices { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; min-width: 0; }
+.choices legend { width: 100%; padding: 0; margin-bottom: 0.4rem; }
+.choices label { position: relative; display: flex; }
+.choices span { display: flex; align-items: center; min-height: 2.25rem; padding: 0.3rem 0.8rem; }
+.frame { position: relative; margin: 0; width: 100%; max-height: 78vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.frame[data-aspect="1:1"] { aspect-ratio: 1 / 1; max-width: 78vh; }
+.frame[data-aspect="4:3"] { aspect-ratio: 1152 / 896; }
+.frame[data-aspect="3:2"] { aspect-ratio: 1216 / 832; }
+.frame[data-aspect="16:9"] { aspect-ratio: 1344 / 768; }
+.frame[data-aspect="3:4"] { aspect-ratio: 896 / 1152; max-width: 60vh; }
+.frame[data-aspect="2:3"] { aspect-ratio: 832 / 1216; max-width: 53vh; }
+.frame[data-aspect="9:16"] { aspect-ratio: 768 / 1344; max-width: 44vh; }
+.result { min-width: 0; }
+.result .card > img { display: block; width: 100%; height: auto; max-height: 78vh; object-fit: contain; }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr)); gap: 0.6rem; padding: 0; margin: 0; }
+.thumbs button { display: flex; width: 100%; padding: 0; overflow: hidden; aspect-ratio: 1 / 1; }
+.thumbs img { width: 100%; height: 100%; object-fit: cover; }
+.history { display: flex; flex-direction: column; gap: 0.6rem; }
+.history > p { margin: 0; }

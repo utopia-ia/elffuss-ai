@@ -237,3 +237,33 @@ expiry of each; alerts only, no restarts for a static site.
   docroots. The tools then say `store-unavailable`; the other sites are as
   before.
 - **The CORS map (step 2):** its `.bak-<date>`, `nginx -t`, reload.
+
+## 9. A new site: image.elffuss.com (text-to-image)
+
+The image site follows sections 1 to 8 like the others, with three steps of its own
+before PRE, in this order.
+
+1. **The converted weights on the Hub.** No ONNX export of SANA-Sprint 0.6B (and of a
+   4-bit Gemma 2 encoder that gives its hidden states) exists on the Hub, so the
+   registry pins a conversion, the repository sana-sprint-0.6b-1024px-onnx-web of the
+   UtopiaIA account on the Hub (registry/source.mjs), at commit
+   `762399d3a10e6ec06afeffbdf7dd425c83004fb3`. That commit is a local git clone with
+   LFS, prepared with `scripts/text-to-image/` and not pushed. Push that clone as it is
+   (`git push` keeps the commit, so the pin holds); an upload through the Hub's web or
+   API makes another commit, and then `node scripts/build-registry.mjs --resolve` and
+   a new build are needed. Check afterwards: `node scripts/build-registry.mjs --check`.
+   Its README says Apache-2.0 like the original; its NOTICE carries the Gemma Terms of
+   Use that apply to `text_encoder/`. Whether to publish it is the owner's decision.
+2. **The model store rule, version 4.** Version 3 (served today) plus the host `image`
+   and the ten files of the variant. Replace the two blocks of the broker page with
+   those of `tests/fixtures/broker/tools-permission.js`, which are what
+   `node scripts/broker-repos.mjs` prints; the page must then have the sha256 of
+   `tests/fixtures/broker/SOURCE.json`. Same recipe as section 1 (backup, sha256 by
+   `curl`, models, m1 and m2).
+3. **The CORS map.** One line next to the other tools in
+   `/etc/nginx/conf.d/elffuss-pesos-cors.conf`, as in section 2:
+   `"https://image.elffuss.com"  $http_origin;`, then `nginx -t` and reload.
+
+Then sections 3 to 7 for `image.elffuss.com` (`deploy/nginx/sites-available/image.elffuss.com*.conf`,
+`snippets/elffuss-ai-image-headers.conf`, `deploy/deploy-image.sh`). The catalog lists the
+new site by itself: deploy `tools` again after it.
