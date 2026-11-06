@@ -10,11 +10,13 @@
 | `@elffuss/ai/depth` | Depth map of a photo | [depth.elffuss.com](https://depth.elffuss.com/) | in use |
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
+| `@elffuss/ai/audio` | Music, sound effects and speech from text | [audio.elffuss.com](https://audio.elffuss.com/) | in use |
 
 ## API reference
 
 Generated from the JSDoc of `sdk/`.
 
+- [`audio`](api/audio.md)
 - [`core`](api/core.md)
 - [`depth`](api/depth.md)
 - [`detect`](api/detect.md)

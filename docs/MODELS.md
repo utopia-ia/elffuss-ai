@@ -10,6 +10,9 @@ Every model a site downloads, from its original Hugging Face repository, pinned 
 | depth | `depth/depth-anything-v2-small` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything | Apache-2.0 (base: Apache-2.0) | WebGPU fp16 (with shader-f16) · 50 MB<br>WebGPU fp32 · 99 MB<br>WASM q8 · 27 MB |
 | detect | `detect/rfdetr-nano` | [RF-DETR Nano](https://github.com/roboflow/rf-detr), by Roboflow | Apache-2.0 (base: Apache-2.0) | WASM q8 · 29 MB |
 | ocr | `ocr/pp-ocrv6-small` | [PP-OCRv6](https://github.com/PaddlePaddle/PaddleOCR), by PaddlePaddle | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 31 MB<br>WASM fp32 · 31 MB |
+| text-to-music | `text-to-music/stable-audio-3-small-music` | [Stable Audio 3 Small Music](https://huggingface.co/stabilityai/stable-audio-3-small-music), by Stability AI | Stability AI Community License (base: Stability AI Community License) | WebGPU fp16 (with shader-f16) · 1764 MB |
+| text-to-sfx | `text-to-sfx/stable-audio-3-small-sfx` | [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx), by Stability AI | Stability AI Community License (base: Stability AI Community License) | WebGPU fp16 (with shader-f16) · 1764 MB |
+| text-to-speech | `text-to-speech/kokoro-82m` | [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M), by hexgrad | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 339 MB<br>WASM q8 · 106 MB |
 
 ## `remove-bg/ben2`
 
@@ -51,3 +54,34 @@ Every model a site downloads, from its original Hugging Face repository, pinned 
 |---|---|---|---|
 | WebGPU | fp32 | `det:inference.onnx`, `det:inference.yml`, `rec:inference.onnx`, `rec:inference.yml` | 31 MB |
 | WASM | fp32 | `det:inference.onnx`, `det:inference.yml`, `rec:inference.onnx`, `rec:inference.yml` | 31 MB |
+
+## `text-to-music/stable-audio-3-small-music`
+
+- Base model: [Stable Audio 3 Small Music](https://huggingface.co/stabilityai/stable-audio-3-small-music), by Stability AI, Stability AI Community License.
+- Weights: [stabilityai/stable-audio-3-optimized](https://huggingface.co/stabilityai/stable-audio-3-optimized/tree/30cb2644da54bfa63275d1bc7f1fa67fc718680f) at `30cb2644da54bfa63275d1bc7f1fa67fc718680f`, Stability AI Community License.
+- Note: The model understands descriptions in English: genre, instruments, mood and tempo (for example "120 BPM"). It makes instrumental music, without intelligible vocals.
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | fp16 (shader-f16) | `sa3:tokenizer.model`, `sa3:onnx/t5gemma/encoder.onnx`, `sa3:onnx/sa3-sm-music/dit_fp16.onnx`, `sa3:onnx/same-s/dec_bf16_limiter.onnx` | 1764 MB |
+
+## `text-to-sfx/stable-audio-3-small-sfx`
+
+- Base model: [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx), by Stability AI, Stability AI Community License.
+- Weights: [stabilityai/stable-audio-3-optimized](https://huggingface.co/stabilityai/stable-audio-3-optimized/tree/30cb2644da54bfa63275d1bc7f1fa67fc718680f) at `30cb2644da54bfa63275d1bc7f1fa67fc718680f`, Stability AI Community License.
+- Note: The model understands descriptions in English: what makes the sound, how and where (for example "a wooden door slamming shut in a stone hallway").
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | fp16 (shader-f16) | `sa3:tokenizer.model`, `sa3:onnx/t5gemma/encoder.onnx`, `sa3:onnx/sa3-sm-sfx/dit_fp16.onnx`, `sa3:onnx/same-s/dec_bf16_limiter.onnx` | 1764 MB |
+
+## `text-to-speech/kokoro-82m`
+
+- Base model: [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M), by hexgrad, Apache-2.0.
+- Part `main`: [onnx-community/Kokoro-82M-v1.0-ONNX](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/tree/1939ad2a8e416c0acfeecc08a694d14ef25f2231) at `1939ad2a8e416c0acfeecc08a694d14ef25f2231`, Apache-2.0.
+- Part `g2p`: [nekwo/misaki-en-us-g2p-onnx](https://huggingface.co/nekwo/misaki-en-us-g2p-onnx/tree/4b3a605d2f605318ab4f762ab9855c44106528b7) at `4b3a605d2f605318ab4f762ab9855c44106528b7`, Apache-2.0.
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | fp32 | `main:onnx/model.onnx`, `main:tokenizer.json`, `main:voices/ef_dora.bin`, `main:voices/em_alex.bin`, `main:voices/em_santa.bin`, `main:voices/af_heart.bin`, `main:voices/af_bella.bin`, `main:voices/af_nicole.bin`, `main:voices/am_michael.bin`, `main:voices/am_fenrir.bin`, `main:voices/am_puck.bin`, `g2p:misaki-en_us-g2p.json`, `g2p:misaki-en_us-g2p.onnx` | 339 MB |
+| WASM | q8 | `main:onnx/model_quantized.onnx`, `main:tokenizer.json`, `main:voices/ef_dora.bin`, `main:voices/em_alex.bin`, `main:voices/em_santa.bin`, `main:voices/af_heart.bin`, `main:voices/af_bella.bin`, `main:voices/af_nicole.bin`, `main:voices/am_michael.bin`, `main:voices/am_fenrir.bin`, `main:voices/am_puck.bin`, `g2p:misaki-en_us-g2p.json`, `g2p:misaki-en_us-g2p.onnx` | 106 MB |

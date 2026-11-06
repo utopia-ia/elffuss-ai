@@ -566,6 +566,26 @@
         "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
       },
       "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/audio/es-espeak.json",
+      "sha256": "696dcb0f539e0bbd7ae87e2e1b04bdd7962ab7735aaadd507023d0444f7fc82a",
+      "license": "own-work",
+      "source": {
+        "script": "tests/unit/audio.test.mjs",
+        "made": "Sentences and words written for the test; their phonemes as eSpeak NG gives them (language es, run locally, not part of this repository), mapped as misaki maps them for Kokoro."
+      },
+      "purpose": "audio: the Spanish phonemiser of sdk/audio/g2p-es.js against what Kokoro learnt from."
+    },
+    {
+      "path": "tests/fixtures/audio/spm-ids.json",
+      "sha256": "550fcac54be920d33cc16f2f899a67029bae35a485b8fd3ab6c037ee7d2d33ef",
+      "license": "own-work",
+      "source": {
+        "script": "tests/unit/audio.test.mjs",
+        "made": "Prompts written for the test and random strings; their ids as SentencePiece gives them with tokenizer.model of stabilityai/stable-audio-3-optimized at 30cb2644da54bfa63275d1bc7f1fa67fc718680f."
+      },
+      "purpose": "audio: the T5Gemma tokenizer of sdk/audio/spm.js against SentencePiece (with the weight cache)."
     }
   ]
 }
