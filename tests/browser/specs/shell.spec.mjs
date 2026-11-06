@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chooseVariant } from '../../../sdk/core/device.js';
 import { fill } from '../../../scripts/lib/template.mjs';
-import { formatMB } from '../../../scripts/lib/pages.mjs';
+import { formatSize } from '../../../scripts/lib/pages.mjs';
 
 /** Facts of the current page, read in the browser. */
 export function pageFacts(page) {
@@ -23,7 +23,7 @@ export function pageFacts(page) {
       lang: document.documentElement.lang,
       title: document.title,
       brand: q('header a.brand')?.textContent ?? null,
-      nav: all('header nav a').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
+      nav: all('header nav a:not([data-action="install"])').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
       headers: all('header').length, mains: all('main').length, footers: all('footer').length,
       primary: all('button.primary').map(b => ({ text: b.textContent, disabled: b.disabled })),
       buttons: all('button').map(b => b.className),
@@ -65,15 +65,19 @@ export default [
         }
         t.equal(f.primary.length, 1, `${path}: exactly one button.primary`);
         t.ok(f.buttons.every(c => c === 'primary' || c === 'ghost'), `${path}: every other button is .ghost`);
-        t.ok(f.drop, `${path}: label.drop with its file input inside, visually hidden`);
+        if (site.accept) t.ok(f.drop, `${path}: label.drop with its file input inside, visually hidden`);
         const m = t.registry.models[site.models[0]];
         for (const piece of [m.base.name, m.base.author, m.base.license]) t.ok(f.footer.includes(piece), `${path}: footer credits ${piece}`);
         t.ok(f.footer.includes('runonweb.ai'), `${path}: footer credits runonweb.ai`);
         t.ok(f.modelLine?.includes(s['privacy.download']), `${path}: the privacy line is on the page`);
         // The store answered: the storage panel says what is missing and the button includes the download.
-        const choice = chooseVariant(m, 'auto', t.probe);
-        const want = fill(s['action.downloadAndRun'], { size: `${formatMB(choice.variant.bytes, lang)} MB` });
-        t.equal(f.primary[0].text, want, `${path}: primary button label on a fresh profile`);
+        // A model with no variant for this browser (WebGPU only, configuration B) has no download to name.
+        let choice = null;
+        try { choice = chooseVariant(m, 'auto', t.probe); } catch { choice = null; }
+        if (choice) {
+          const want = fill(s['action.downloadAndRun'], { size: formatSize(choice.variant.bytes, lang) });
+          t.equal(f.primary[0].text, want, `${path}: primary button label on a fresh profile`);
+        }
         t.ok(f.storageSummary && f.storageSummary.length > 0, `${path}: storage summary filled`);
         t.ok(f.storageStates.length > 0 && f.storageStates.every(x => x === s['storage.missing']), `${path}: every file shown as not downloaded`);
         t.equal(f.resultHidden, true, `${path}: result hidden until there is one`);
@@ -120,7 +124,7 @@ export default [
       t.equal(early.storage, null, 'the page is ready before the store has answered');
       const m = t.registry.models[site.models[0]];
       const choice = chooseVariant(m, 'auto', t.probe);
-      t.equal(early.label, fill(s['action.downloadAndRun'], { size: `${formatMB(choice.variant.bytes, 'es')} MB` }), 'until then the button says it will download the whole model');
+      t.equal(early.label, fill(s['action.downloadAndRun'], { size: formatSize(choice.variant.bytes, "es") }), 'until then the button says it will download the whole model');
       await page.waitForFunction(() => document.documentElement.dataset.storage === 'unknown', null, { timeout: 90000 });
       t.equal(await page.textContent('main p.status'), s['error.store-unavailable'], 'then the page says the store is unavailable');
       await t.unblockStore(ctx);

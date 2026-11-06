@@ -16,6 +16,12 @@ import { ortVariantFor } from '../../sdk/core/device.js';
 const LANGS = ['es', 'en'];
 const mb = bytes => (bytes / 1e6 < 10 ? Math.round(bytes / 1e5) / 10 : Math.round(bytes / 1e6));
 export const formatMB = (bytes, lang) => (lang === 'es' ? String(mb(bytes)).replace('.', ',') : String(mb(bytes)));
+/** A size with its unit, as the pages show it: "31 MB", or "3,2 GB" / "3.2 GB" from a thousand megabytes up (shared/shell.js formatSize). */
+export const formatSize = (bytes, lang) => {
+  if (bytes < 1e9) return `${formatMB(bytes, lang)} MB`;
+  const n = String(Math.round(bytes / 1e8) / 10);
+  return `${lang === 'es' ? n.replace('.', ',') : n} GB`;
+};
 
 /** Paths of a site's pages for a channel (PRE lives under /beta/). */
 export function pagePaths(channel) {
@@ -38,6 +44,14 @@ export function siteModels(site, registry) {
   return (site.models || []).map(id => ({ id, ...registry.models[id] }));
 }
 
+/**
+ * True when a site ships Transformers.js: its model runs on it, or its task uses
+ * its tokenizers with ONNX Runtime directly (app.json `transformers: true`).
+ */
+export function siteUsesTransformers(site, registry) {
+  return Boolean(site.transformers) || siteModels(site, registry).some(m => m.runtime === 'transformers.js');
+}
+
 /** The ONNX Runtime variant a site ships. */
 export function siteOrtVariant(site, registry) {
   return ortVariantFor(siteModels(site, registry));
@@ -50,7 +64,7 @@ export function siteRuntimes(site, registry, manifest) {
   const variant = siteOrtVariant(site, registry);
   const ortId = VENDOR_DIRS.onnxruntimeWeb, tfId = VENDOR_DIRS.transformers, pdfId = VENDOR_DIRS.pdfjs;
   const out = [];
-  if (models.some(m => m.runtime === 'transformers.js')) {
+  if (siteUsesTransformers(site, registry)) {
     // Its file bundles two libraries of its own authors, each with its licence.
     const bundled = Object.entries(manifest.packages[tfId].licenses).filter(([, l]) => l.bundled)
       .map(([p, l]) => ({ label: `${l.bundled.replace(/@(?=[^@]*$)/, ' ')} (${l.license})`, href: `/vendor/${transformersDir(variant)}/${p}` }));
@@ -84,6 +98,7 @@ function variantSizes(model) {
 export function sizeText(model, t, lang) {
   const sizes = variantSizes(model);
   const min = Math.min(...sizes), max = Math.max(...sizes);
+  if (min >= 1e9 && min === max) return formatSize(min, lang);
   if (formatMB(min, lang) === formatMB(max, lang)) return fill(t['size.mb'], { n: formatMB(min, lang) });
   return fill(t['size.range'], { min: formatMB(min, lang), max: formatMB(max, lang) });
 }
@@ -121,7 +136,9 @@ ${items.join('\n')}
 export function appFooter({ model, runtimes, t, lang, licUrl, catalogUrl }) {
   const lines = [`  <p>${esc(t['footer.local'])}</p>`];
   lines.push(`  <p>${esc(fill(t['footer.model'], { model: model.base.name, author: model.base.author, license: model.base.license }))}</p>`);
-  const authors = [...new Set(Object.values(model.parts).map(p => `${p.author}|${p.license}`))];
+  // Who published the ONNX weights: the parts whose .onnx files a variant downloads.
+  const used = new Set(Object.values(model.devices).flat().flatMap(v => v.files).filter(f => /\.onnx$/.test(f)).map(f => f.slice(0, f.indexOf(':'))));
+  const authors = [...new Set(Object.entries(model.parts).filter(([pn]) => used.has(pn)).map(([, p]) => `${p.author}|${p.license}`))];
   for (const a of authors) {
     const [author, license] = a.split('|');
     if (author !== model.base.author) lines.push(`  <p>${esc(fill(t['footer.conversion'], { author, license }))}</p>`);

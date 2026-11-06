@@ -13,7 +13,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * @typedef {{ site: string, host: string, testPort: number, dir: string, catalog?: boolean, task?: string,
  *   models?: string[], camera?: boolean, pdfjs?: boolean, accept?: string, status?: 'scaffold'|'ready',
- *   adapted?: { key: string, file: string, license: string }[] }} Site
+ *   adapted?: { key: string, file: string, license: string }[], transformers?: boolean }} Site
+ *   `transformers`: the site's task uses the tokenizers of Transformers.js, so the site ships it.
  *   `adapted`: code of other projects the site's modules adapt: the strings key that says what, the
  *   licence file under LICENSES/ and its name, shown on the licence pages and served with the site.
  */
@@ -55,8 +56,16 @@ export function siteHosts(root = ROOT) {
   return sites(root).map(s => s.host);
 }
 
+/**
+ * The local port of a site in the tests: its testPort, moved by
+ * ELFFUSS_AI_PORT_OFFSET when another run on the machine holds those ports.
+ */
+export function testPortOf(s) {
+  return s.testPort + Number(globalThis.process?.env?.ELFFUSS_AI_PORT_OFFSET || 0);
+}
+
 /** Base URL of a site for a channel (`test` serves each on localhost). */
 export function siteUrl(s, channel) {
-  if (channel === 'test') return `http://localhost:${s.testPort}/`;
+  if (channel === 'test') return `http://localhost:${testPortOf(s)}/`;
   return `https://${s.host}/`;
 }
