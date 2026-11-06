@@ -106,7 +106,7 @@ export const MOVES = Object.freeze({
   'dolly-in': { push: 0.14, rise: 0.012 },
   orbit: { angle: 0.065 },
   swing: { radius: 0.042, tilt: 0.55 },
-  'zoom-pan': { travel: 0.05, zoom: 0.1 },
+  'zoom-pan': { travel: 0.035, zoom: 0.08 },
   vertigo: { pull: 0.42 },
 });
 
@@ -117,8 +117,11 @@ export const MOVES = Object.freeze({
  *   relief?: number, strength?: number, borders?: { u: number, v: number, d: number }[][] }} o
  *   `aspect` is the output's (width / height); `borders` are, per layer, points of the photo's edge where
  *   that layer shows, with their disparity in that layer (sdk/video/layers.js, borderSamples).
+ *   `parallax` are limits of the photo: `{ span: [d0, d1], limit }` says that two points of disparities d0
+ *   and d1 must never part by more than `limit` (in heights of the photo) during the move; the move is made
+ *   smaller until they hold (what the painting behind the subject covers, what a surface may stretch).
  */
-export function planCamera({ preset = DEFAULT_PRESET, aspect = ASPECTS[DEFAULT_ASPECT], A, focus, relief = RELIEF, strength = 1, borders = [] }) {
+export function planCamera({ preset = DEFAULT_PRESET, aspect = ASPECTS[DEFAULT_ASPECT], A, focus, relief = RELIEF, strength = 1, borders = [], parallax = [] }) {
   if (!PRESETS.includes(preset)) throw new RangeError('unknown camera move: ' + preset);
   if (!(A > 0) || !(aspect > 0)) throw new RangeError('aspects must be positive');
   const f = { u: clamp(Number(focus?.u ?? 0.5), 0, 1), v: clamp(Number(focus?.v ?? 0.5), 0, 1), d: clamp(Number(focus?.d ?? 0.5), 0, 1) };
@@ -126,6 +129,8 @@ export function planCamera({ preset = DEFAULT_PRESET, aspect = ASPECTS[DEFAULT_A
     preset, aspect, A, relief, focusD: f.d, focus: f, strength: clamp(strength, 0, 2),
     window: baseWindow(A, aspect, f), cover: 1, loop: LOOPS.includes(preset),
   };
+  // A move that would part the photo's layers more than they can take is made smaller.
+  for (let i = 0; i < 16 && parallax.some(c => maxParallax(plan, c.span) > c.limit); i++) plan.strength *= 0.85;
   // The zoom that keeps every layer's edge out of the frame. A move so large that
   // it needs more than MAX_COVER_ZOOM is made smaller instead.
   for (let i = 0; i < 8; i++) {
@@ -225,6 +230,20 @@ export function coverZoom(plan, borders, steps = 120) {
   }
   plan.cover = saved;
   return need;
+}
+
+/**
+ * The most two points of the subject's place, at disparities d0 and d1, part
+ * during a move, in heights of the photo.
+ */
+export function maxParallax(plan, [d0, d1], steps = 48) {
+  let most = 0;
+  for (let i = 0; i <= steps; i++) {
+    const view = cameraAt(plan, i / steps);
+    const a = projectPoint(plan, view, plan.focus.u, plan.focus.v, d0), b = projectPoint(plan, view, plan.focus.u, plan.focus.v, d1);
+    most = Math.max(most, Math.hypot((b.x - a.x) * view.half[0], (b.y - a.y) * view.half[1]));
+  }
+  return most;
 }
 
 /** Number of frames of a video of `seconds` at `fps`. */

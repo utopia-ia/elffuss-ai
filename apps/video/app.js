@@ -146,7 +146,7 @@ function replan() {
   const r = ASPECTS[s.aspect];
   const v = scene.value;
   if (Math.abs(preview.renderer.gl.canvas.width / preview.renderer.gl.canvas.height - r) > 0.02) { startPreview(v); return; }
-  preview.plan = planCamera({ preset: s.preset, aspect: r, A: v.A, focus: v.focus, relief: v.relief, strength: s.strength, borders: v.borders });
+  preview.plan = planCamera({ preset: s.preset, aspect: r, A: v.A, focus: v.focus, relief: v.relief, strength: s.strength, borders: v.borders, parallax: v.parallax || [] });
 }
 
 async function show(job, result, device, fallback) {

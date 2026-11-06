@@ -312,13 +312,13 @@ export function extendOutward(d, mask, w, h, inset = 2) {
  * photo's own edges with a guided filter, then tightened so that it is not
  * wider than it must be.
  */
-export function softAlpha(mask, mw, mh, gray, w, h, { radius = Math.max(2, Math.round(Math.max(w, h) / 400)), eps = 2e-3 } = {}) {
+export function softAlpha(mask, mw, mh, gray, w, h, { radius = Math.max(2, Math.round(Math.max(w, h) / 400)), eps = 2e-3, steep = 1.6 } = {}) {
   const m = new Float32Array(mw * mh);
   for (let i = 0; i < m.length; i++) m[i] = mask[i] ? 1 : 0;
   const up = mw === w && mh === h ? m : resizePlane(m, mw, mh, w, h);
   const g = guidedFilter(gray, up, w, h, radius, eps);
   const out = new Float32Array(w * h);
-  for (let i = 0; i < out.length; i++) out[i] = clamp01((g[i] - 0.5) * 1.6 + 0.5);
+  for (let i = 0; i < out.length; i++) out[i] = clamp01((g[i] - 0.5) * steep + 0.5);
   return out;
 }
 
@@ -376,10 +376,12 @@ export function borderSamples({ alpha = null, aw = 0, ah = 0, depth, dw, dh }, p
  * Elsewhere (where the part is cut from ground that goes on, the same depth on
  * both sides) nothing behind it ever shows: the layer behind keeps the photo as
  * it is there, with no painting and no seam, and the painter may read it.
- * @returns {{ region: Uint8Array, hide: Uint8Array }}
+ * `band` is `hide` before it grows (inside the part only) and `edge` the pixels of
+ * the real jumps themselves.
+ * @returns {{ region: Uint8Array, hide: Uint8Array, band: Uint8Array, edge: Uint8Array }}
  */
 export function revealRegion(mask, d, w, h, { reach = Math.max(2, Math.round(Math.max(w, h) / 120)), jump = 0.08, radius = Math.round(Math.max(w, h) * 0.05), grow = 0 } = {}) {
-  const edge = new Uint8Array(w * h);
+  const edge = new Uint8Array(w * h), fake = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = y * w + x;
     if (!mask[i]) continue;
@@ -387,11 +389,20 @@ export function revealRegion(mask, d, w, h, { reach = Math.max(2, Math.round(Mat
       const X = x + dx, Y = y + dy;
       if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
       const j = Y * w + X;
-      if (!mask[j] && d[i] - d[j] >= jump) { edge[i] = 1; break; }
+      if (mask[j]) continue;
+      if (d[i] - d[j] >= jump) { edge[i] = 1; break; }
+      // The part's edge with ground that goes on: behind it nothing ever shows.
+      if (d[i] - d[j] < jump / 2 && mask[x + Math.sign(dx) + (y + Math.sign(dy)) * w] === 0) fake[i] = 1;
     }
   }
-  const within = r => { const band = morph(edge, w, h, r), out = new Uint8Array(w * h); for (let i = 0; i < out.length; i++) out[i] = band[i] & mask[i]; return grow ? morph(out, w, h, grow) : out; };
-  const hide = within(radius * 2), region = within(radius);
+  for (let i = 0; i < fake.length; i++) if (edge[i]) fake[i] = 0;
+  // Pixels nearer to a false edge than `radius` are never painted: the layer
+  // behind keeps the photo there, which shows through the soft edge unchanged.
+  const nearFake = morph(fake, w, h, radius);
+  const within = (r, g) => { const band = morph(edge, w, h, r), out = new Uint8Array(w * h); for (let i = 0; i < out.length; i++) out[i] = band[i] & mask[i] & (nearFake[i] ? 0 : 1); return g ? morph(out, w, h, g) : out; };
+  const band = within(radius * 2, 0);
+  const hide = grow ? morph(band, w, h, grow) : band;
+  const region = within(radius, grow);
   for (let i = 0; i < region.length; i++) region[i] &= hide[i];
-  return { region, hide };
+  return { region, hide, band, edge };
 }

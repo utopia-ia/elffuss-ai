@@ -137,14 +137,14 @@ x from −A/2 to A/2, y from −1/2 to 1/2 (up).
 The amplitudes of each move at strength 1, in units of the subject's distance
 (translations), radians (turns) and factors (zooms).
 
-### `planCamera({ preset = DEFAULT_PRESET, aspect = ASPECTS[DEFAULT_ASPECT], A, focus, relief = RELIEF, strength = 1, borders = [] })`
+### `planCamera({ preset = DEFAULT_PRESET, aspect = ASPECTS[DEFAULT_ASPECT], A, focus, relief = RELIEF, strength = 1, borders = [], parallax = [] })`
 
 Plan a move for a photo: its geometry, the window, and the zoom that keeps
 the edges of every layer out of the frame for the whole move.
 
 | Parameter | Type | |
 |---|---|---|
-| `o` | `{ preset?: string, aspect?: number, A: number, focus: { u: number, v: number, d: number }, relief?: number, strength?: number, borders?: { u: number, v: number, d: number }[][] }` | `aspect` is the output's (width / height); `borders` are, per layer, points of the photo's edge where that layer shows, with their disparity in that layer (sdk/video/layers.js, borderSamples). |
+| `o` | `{ preset?: string, aspect?: number, A: number, focus: { u: number, v: number, d: number }, relief?: number, strength?: number, borders?: { u: number, v: number, d: number }[][] }` | `aspect` is the output's (width / height); `borders` are, per layer, points of the photo's edge where that layer shows, with their disparity in that layer (sdk/video/layers.js, borderSamples). `parallax` are limits of the photo: `{ span: [d0, d1], limit }` says that two points of disparities d0 and d1 must never part by more than `limit` (in heights of the photo) during the move; the move is made smaller until they hold (what the painting behind the subject covers, what a surface may stretch). |
 
 ### `cameraAt(plan, t)`
 
@@ -166,6 +166,11 @@ inside the frame, at any time of the move.
 | `plan` | `ReturnType<typeof planCamera>` |  |
 | `borders` | `{ u: number, v: number, d: number }[][]` |  |
 | `[steps]` | `number` |  |
+
+### `maxParallax(plan, [d0, d1], steps = 48)`
+
+The most two points of the subject's place, at disparities d0 and d1, part
+during a move, in heights of the photo.
 
 ### `frameCount(seconds, fps)`
 
@@ -238,6 +243,14 @@ The image-to-video task where the models run (a Worker, or the page with worker:
 ### `PHOTO_SIDE`
 
 Longest side of the photo kept for each quality (the frames are cut from it).
+
+### `STRETCH_LIMIT`
+
+The most a surface may stretch across the photo's depth during a move, in heights of the photo.
+
+### `REVEAL_SHARE`
+
+The share of the painted band behind the subject a move may uncover.
 
 ### `PLAN_SIDE`
 
@@ -420,7 +433,7 @@ Disparity of a near layer: its own inside `mask` (eroded by `inset`, where
 the depth model's edge is soft), carried outward beyond its edge so that the
 edge moves with the layer.
 
-### `softAlpha(mask, mw, mh, gray, w, h, { radius = Math.max(2, Math.round(Math.max(w, h) / 400)), eps = 2e-3 } = {})`
+### `softAlpha(mask, mw, mh, gray, w, h, { radius = Math.max(2, Math.round(Math.max(w, h) / 400)), eps = 2e-3, steep = 1.6 } = {})`
 
 The soft edge (alpha 0-1) of a mask at the photo's size, snapped to the
 photo's own edges with a guided filter, then tightened so that it is not
@@ -453,8 +466,10 @@ part next to where it paints and nothing of it leaks into the painting.
 Elsewhere (where the part is cut from ground that goes on, the same depth on
 both sides) nothing behind it ever shows: the layer behind keeps the photo as
 it is there, with no painting and no seam, and the painter may read it.
+`band` is `hide` before it grows (inside the part only) and `edge` the pixels of
+the real jumps themselves.
 
-Returns `{ region: Uint8Array, hide: Uint8Array }`.
+Returns `{ region: Uint8Array, hide: Uint8Array, band: Uint8Array, edge: Uint8Array }`.
 
 ## `sdk/video/mp4.js`
 
