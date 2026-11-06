@@ -40,6 +40,9 @@ export function sites(root = ROOT) {
     if (!(s.testPort >= 1024 && s.testPort < 65536)) throw new Error(`${s.site}: bad testPort`);
   }
   if (new Set(out.map(s => s.testPort)).size !== out.length) throw new Error('two sites share a test port');
+  // ELFFUSS_AI_PORT_OFFSET moves every test port (another run on this machine holds them).
+  const offset = Number(process.env.ELFFUSS_AI_PORT_OFFSET) || 0;
+  if (offset) for (const s of out) s.testPort += offset;
   return out;
 }
 

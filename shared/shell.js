@@ -76,20 +76,26 @@ export async function createShell({ config: cfg = config } = {}) {
     result: $('main section.result'),
     drop: $('main label.drop'),
     storage: $('[data-role="storage"]'),
-    modelSize: $('[data-role="model-size"]'),
+    modelSize: $('[data-role="model"]:not([hidden]) [data-role="model-size"]') || $('[data-role="model-size"]'),
   };
 
   const registry = await loadRegistry();
-  const modelId = cfg.model;
-  const model = modelId ? getModel(registry, modelId) : null;
+  // The active model: the site's first, or the one useModel() chose (sites with several models).
+  let modelId = cfg.model;
+  let model = modelId ? getModel(registry, modelId) : null;
   const store = createStoreClient({ url: cfg.storeUrl });
   const probe = await probeWebGPU();
   let choice = null;
   let choiceError = null;
-  if (model) {
-    try { choice = chooseVariant(model, requested, probe); } catch (err) { choiceError = toAiError(err); }
-  }
-  const files = choice ? variantFiles(model, choice.variant) : [];
+  let files = [];
+  const choose = () => {
+    choice = null; choiceError = null;
+    if (model) {
+      try { choice = chooseVariant(model, requested, probe); } catch (err) { choiceError = toAiError(err); }
+    }
+    files = choice ? variantFiles(model, choice.variant) : [];
+  };
+  choose();
   let primaryLabels = null; // { run, download }
   let busy = null;
   let storageKnown = false; // the store answered the last time it was asked
@@ -108,7 +114,31 @@ export async function createShell({ config: cfg = config } = {}) {
   };
 
   const shell = {
-    t, lang, config: cfg, registry, model, modelId, store, probe, requested, diagnostics, els,
+    t, lang, config: cfg, registry, store, probe, requested, diagnostics, els,
+    /** The active model's registry entry and id. */
+    get model() { return model; },
+    get modelId() { return modelId; },
+    /** Why no variant of the active model fits this browser (an AiError), or null. */
+    get choiceError() { return choiceError; },
+    /**
+     * Make another of the site's models the active one (a site with several models,
+     * one per mode): its variant, its files, its model line, the primary button's
+     * labels, and the store asked again. Shows why it cannot run here, if so.
+     * @param {string} id a model of config.models
+     * @param {{ run?: string, download?: string }} [labels] the primary button's labels for it
+     */
+    useModel(id, labels) {
+      if (!(cfg.models || [cfg.model]).includes(id)) throw new AiError('not-in-registry', `${id} is not a model of this site`);
+      modelId = id;
+      model = getModel(registry, id);
+      choose();
+      if (labels) primaryLabels = { run: labels.run, download: labels.download || labels.run };
+      for (const p of document.querySelectorAll('[data-role="model"][data-model]')) p.hidden = p.dataset.model !== id;
+      els.modelSize = $(`[data-role="model"][data-model="${CSS.escape(id)}"] [data-role="model-size"]`) || $('[data-role="model-size"]');
+      if (primaryLabels && els.primary && files.length) els.primary.textContent = fill(primaryLabels.download, { size: `${formatMB(files.reduce((x, f) => x + f.size, 0), lang)} MB` });
+      if (!busy) { setStatus(''); if (choiceError) shell.showError(choiceError); }
+      return shell.refreshStorage();
+    },
     /** The variant this browser will use, or null when none fits. */
     get choice() { return choice; },
     /** Files of that variant, resolved. */

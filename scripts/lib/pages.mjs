@@ -95,15 +95,17 @@ export function modelLine(model, t, lang) {
   return line.replace(esc(MARK), `<span data-role="model-size">${esc(sizeText(model, t, lang))}</span>`) + ' ' + esc(t['privacy.download']);
 }
 
-/** The read-only storage panel: every file of every variant, with its size. */
-export function storagePanel(model, t, lang) {
+/** The read-only storage panel: every file of every variant (of every model given), with its size. */
+export function storagePanel(model, t, lang, more = []) {
   const seen = new Map();
-  for (const v of Object.values(model.devices).flat()) {
+  const multi = more.length > 0;
+  for (const m of [model, ...more]) for (const v of Object.values(m.devices).flat()) {
     for (const ref of v.files) {
       const i = ref.indexOf(':');
-      const part = model.parts[ref.slice(0, i)], path = ref.slice(i + 1);
+      const part = m.parts[ref.slice(0, i)], path = ref.slice(i + 1);
       const url = pinnedUrl(part.repo, part.revision, path);
-      if (!seen.has(url)) seen.set(url, { url, path: Object.keys(model.parts).length > 1 ? `${ref.slice(0, i)}/${path}` : path, size: part.files[path].size });
+      const name = multi ? `${part.repo.split('/')[1]}/${path}` : Object.keys(m.parts).length > 1 ? `${ref.slice(0, i)}/${path}` : path;
+      if (!seen.has(url)) seen.set(url, { url, path: name, size: part.files[path].size });
     }
   }
   const items = [...seen.values()].map(f => `      <li data-url="${esc(f.url)}" data-size="${f.size}"><span>${esc(f.path)}</span> · <span>${esc(fill(t['size.mb'], { n: formatMB(f.size, lang) }))}</span> · <span data-role="storage-state">—</span></li>`);
@@ -117,14 +119,23 @@ ${items.join('\n')}
   </details>`;
 }
 
-/** The footer of an app page. */
-export function appFooter({ model, runtimes, t, lang, licUrl, catalogUrl }) {
+/** The footer of an app page: every model of the site, who converted it, its extra terms. */
+export function appFooter({ model, models = [model], runtimes, t, lang, licUrl, catalogUrl }) {
   const lines = [`  <p>${esc(t['footer.local'])}</p>`];
-  lines.push(`  <p>${esc(fill(t['footer.model'], { model: model.base.name, author: model.base.author, license: model.base.license }))}</p>`);
-  const authors = [...new Set(Object.values(model.parts).map(p => `${p.author}|${p.license}`))];
-  for (const a of authors) {
-    const [author, license] = a.split('|');
-    if (author !== model.base.author) lines.push(`  <p>${esc(fill(t['footer.conversion'], { author, license }))}</p>`);
+  const said = new Set();
+  for (const m of models) {
+    const line = fill(t['footer.model'], { model: m.base.name, author: m.base.author, license: m.base.license });
+    if (!said.has(line)) { lines.push(`  <p>${esc(line)}</p>`); said.add(line); }
+    const authors = [...new Set(Object.values(m.parts).map(p => `${p.author}|${p.license}`))];
+    for (const a of authors) {
+      const [author, license] = a.split('|');
+      const conv = fill(t['footer.conversion'], { author, license });
+      if (author !== m.base.author && !said.has(conv)) { lines.push(`  <p>${esc(conv)}</p>`); said.add(conv); }
+    }
+    for (const term of m.terms || []) {
+      const key = `footer.terms.${term.name}`;
+      if (t[key] && !said.has(key)) { lines.push(`  <p>${esc(t[key])}</p>`); said.add(key); }
+    }
   }
   lines.push(`  <p>${esc(fill(t['footer.runtimes'], { runtimes: runtimeList(runtimes, lang) }))}</p>`);
   lines.push(`  <p><a href="${esc(licUrl)}">${esc(t['footer.licenses'])}</a> · <a href="${esc(catalogUrl)}">${esc(t['footer.catalog'])}</a></p>`);
@@ -136,7 +147,9 @@ export function catalogCards({ sites, registry, t, lang, channel }) {
   const tools = sites.filter(s => !s.catalog).map(s => {
     const m = registry.models[s.models[0]];
     const url = siteUrl(s, channel) + (lang === 'en' ? 'en/' : '');
-    const line = fill(t['card.model'], { model: m.base.name, author: m.base.author, license: m.base.license, size: sizeText(m, t, lang) });
+    const ms = s.models.map(id => registry.models[id]);
+    const line = ms.length === 1 ? fill(t['card.model'], { model: m.base.name, author: m.base.author, license: m.base.license, size: sizeText(m, t, lang) })
+      : ms.map(x => fill(t['card.modelShort'], { model: x.base.name, author: x.base.author, license: x.base.license })).join(' · ');
     return `      <li><article class="card" data-site="${esc(s.site)}" data-model="${esc(s.models[0])}">
         <h3><a href="${esc(url)}">${esc(s.strings[lang]['catalog.name'])}</a></h3>
         <p>${esc(s.strings[lang]['catalog.line'])}</p>
@@ -154,6 +167,11 @@ export function appCards({ apps, lang }) {
       </article></li>`).join('\n');
 }
 
+/** Where the build serves the text of extra terms: under LICENSES/, as plain text. */
+export function termFile(term) {
+  return term.file.replace(/\.md$/, '.txt');
+}
+
 /** Licence page of a site. */
 export function licensesMain({ site, models, runtimes, t, base }) {
   const out = [`  <h1>${esc(t['licenses.title'])}</h1>`, `  <p>${esc(t['licenses.intro'])}</p>`];
@@ -165,7 +183,15 @@ export function licensesMain({ site, models, runtimes, t, base }) {
         out.push(`    <li>${esc(text)} <a href="${esc(repoPage(p.repo, p.revision))}">${esc(p.repo)}</a> · <a href="${esc(m.base.url)}">${esc(m.base.name)}</a></li>`);
       }
     }
-    out.push('  </ul>', `  <p>${esc(t['licenses.noWeights'])}</p>`);
+    out.push('  </ul>');
+    const terms = new Map();
+    for (const m of models) for (const term of m.terms || []) if (!terms.has(term.name)) terms.set(term.name, term);
+    if (terms.size) {
+      out.push(`  <h2>${esc(t['licenses.terms'])}</h2>`, '  <ul>');
+      for (const term of terms.values()) out.push(`    <li>${esc(term.name)}${term.scope ? ` (${esc(fill(t['licenses.termsScope'], { scope: term.scope }))})` : ''}: <a href="${esc(base)}${esc(termFile(term))}">${esc(t['licenses.licence'])}</a> · <a href="${esc(term.url)}">${esc(term.url.replace(/^https:\/\//, ''))}</a></li>`);
+      out.push('  </ul>');
+    }
+    out.push(`  <p>${esc(t['licenses.noWeights'])}</p>`);
   } else {
     out.push(`  <p>${esc(t['licenses.catalogModels'])}</p>`);
   }
@@ -219,8 +245,9 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
       footer = `  <p><a href="${esc(lang === 'es' ? paths.licUrlEs : paths.licUrlEn)}">${esc(t['footer.licenses'])}</a> · <a href="https://elffuss.com/">elffuss.com</a></p>`;
     } else {
       const model = models[0];
-      main = render(templates.main, { t, v, html: { modelLine: modelLine(model, t, lang), storage: storagePanel(model, t, lang) } });
-      footer = appFooter({ model, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
+      const modelLines = models.map((m, i) => `  <p data-role="model" data-model="${esc(m.id)}"${i ? ' hidden' : ''}>${modelLine(m, t, lang)}</p>`).join('\n');
+      main = render(templates.main, { t, v, html: { modelLine: modelLine(model, t, lang), modelLines, storage: storagePanel(model, t, lang, models.slice(1)) } });
+      footer = appFooter({ model, models, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
     }
     const entry = installEntry(t, t.title);
     out.set(lang === 'es' ? paths.es : paths.en, render(templates.page, { t, v, html: { cspMeta, appHead: appHead(lang), script, main, footer, installEntry: entry } }));
@@ -297,6 +324,7 @@ export function configSource({ site, registry, channel, buildId, storeUrl, sites
     channel,
     site: site.site,
     model: site.models?.[0] || null,
+    models: site.models || [],
     storeUrl,
     testHooks: channel === 'test',
     runtime: variant ? runtimeUrls({ variant, pdfjs: Boolean(site.pdfjs) }) : null,

@@ -8,5 +8,6 @@
   "card.stored": "Already in this browser",
   "card.open": "Open",
   "apps.source": "The Elffuss apps, as elffuss.com describes them.",
-  "install.why": "It opens in its own window, and the browser keeps the tools’ models saved instead of clearing them after a few days without use."
+  "install.why": "It opens in its own window, and the browser keeps the tools’ models saved instead of clearing them after a few days without use.",
+  "card.modelShort": "{model}, by {author} ({license})"
 }

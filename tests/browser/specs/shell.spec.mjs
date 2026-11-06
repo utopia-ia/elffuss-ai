@@ -23,16 +23,19 @@ export function pageFacts(page) {
       lang: document.documentElement.lang,
       title: document.title,
       brand: q('header a.brand')?.textContent ?? null,
-      nav: all('header nav a').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
+      // The "Install as an app" entry is hidden until the browser can install: not a link of the nav yet.
+      nav: all('header nav a:not([hidden])').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
       headers: all('header').length, mains: all('main').length, footers: all('footer').length,
-      primary: all('button.primary').map(b => ({ text: b.textContent, disabled: b.disabled })),
+      primary: all('button.primary').map(b => ({ text: b.textContent, disabled: b.disabled, labelDownload: b.dataset.labelDownload ?? null })),
       buttons: all('button').map(b => b.className),
       styleAttrs: all('[style]').length,
       styleElements: all('style').length,
       inlineScripts: all('script:not([src])').length,
       scripts: all('script[src]').map(s => s.getAttribute('src')),
       footer: q('footer')?.textContent.replace(/\s+/g, ' ').trim() ?? '',
-      modelLine: q('[data-role="model"]')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+      // A site with several models shows the line of the active one (data-model).
+      modelLine: q('[data-role="model"]:not([hidden])')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+      activeModel: q('[data-role="model"]:not([hidden])')?.dataset.model ?? null,
       status: q('main p.status')?.textContent ?? null,
       storageSummary: q('[data-role="storage-summary"]')?.textContent ?? null,
       storageStates: all('[data-role="storage-state"]').map(s => s.textContent),
@@ -65,14 +68,15 @@ export default [
         }
         t.equal(f.primary.length, 1, `${path}: exactly one button.primary`);
         t.ok(f.buttons.every(c => c === 'primary' || c === 'ghost'), `${path}: every other button is .ghost`);
-        t.ok(f.drop, `${path}: label.drop with its file input inside, visually hidden`);
-        const m = t.registry.models[site.models[0]];
+        // A site that takes files has the drop zone; one that makes audio from text has none.
+        if (site.accept) t.ok(f.drop, `${path}: label.drop with its file input inside, visually hidden`);
+        const m = t.registry.models[f.activeModel || site.models[0]];
         for (const piece of [m.base.name, m.base.author, m.base.license]) t.ok(f.footer.includes(piece), `${path}: footer credits ${piece}`);
         t.ok(f.footer.includes('runonweb.ai'), `${path}: footer credits runonweb.ai`);
         t.ok(f.modelLine?.includes(s['privacy.download']), `${path}: the privacy line is on the page`);
         // The store answered: the storage panel says what is missing and the button includes the download.
         const choice = chooseVariant(m, 'auto', t.probe);
-        const want = fill(s['action.downloadAndRun'], { size: `${formatMB(choice.variant.bytes, lang)} MB` });
+        const want = fill(f.primary[0].labelDownload || s['action.downloadAndRun'], { size: `${formatMB(choice.variant.bytes, lang)} MB` });
         t.equal(f.primary[0].text, want, `${path}: primary button label on a fresh profile`);
         t.ok(f.storageSummary && f.storageSummary.length > 0, `${path}: storage summary filled`);
         t.ok(f.storageStates.length > 0 && f.storageStates.every(x => x === s['storage.missing']), `${path}: every file shown as not downloaded`);

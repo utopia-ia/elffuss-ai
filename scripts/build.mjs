@@ -32,7 +32,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { sites as readSites } from '../deploy/sites.mjs';
 import { STORE_ORIGIN, csp } from '../deploy/headers.mjs';
-import { sitePages, configSource, siteOrtVariant, siteModels } from './lib/pages.mjs';
+import { sitePages, configSource, siteOrtVariant, siteModels, termFile } from './lib/pages.mjs';
 import { rewriteTransformers } from './lib/rewrite-transformers.mjs';
 import { ORT_VARIANTS, transformersDir, ortSpecifierFromTransformers } from '../sdk/core/runtimes.js';
 import { VENDOR_DIRS } from '../sdk/core/runtime-pins.js';
@@ -40,7 +40,8 @@ import { ensure as ensureVendor } from './vendor.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const GIT = '/usr/bin/git';
-export const TEST_STORE_URL = 'http://localhost:8789/';
+/** The store of test builds; ELFFUSS_AI_STORE_PORT moves it, as it moves the harness's (two runs side by side). */
+export const TEST_STORE_URL = `http://localhost:${Number(process.env.ELFFUSS_AI_STORE_PORT) || 8789}/`;
 /** Strings that must never reach a built site: the tools never empty, fill or list the store. */
 export const FORBIDDEN_IN_BUILD = ['elffuss-model-clear', 'elffuss-model-put', 'elffuss-broker-diag'];
 
@@ -112,6 +113,9 @@ export function buildSite({ root, site, sites, channel, buildId, outDir, vendorD
   w(`${v}LICENSES/MIT-runonweb.txt`, { from: join(root, 'LICENSES', 'MIT-runonweb.txt') });
   // The licences of code a site's own modules adapt (app.json `adapted`).
   for (const a of site.adapted || []) w(`${v}${a.file}`, { from: join(root, ...a.file.split('/')) });
+  // The extra terms of its models (registry `terms`), as plain text.
+  const termFiles = new Set(siteModels(site, registry).flatMap(m => (m.terms || []).map(t => t.file)));
+  for (const f of termFiles) w(`${v}${termFile({ file: f })}`, { from: join(root, ...f.split('/')) });
   w(`${v}NOTICE.txt`, { from: join(root, 'NOTICE') });
 
   // /vendor/: only what this site runs.

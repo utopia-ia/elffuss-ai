@@ -75,5 +75,7 @@
   "install.ios": "Pulsa Compartir y luego «Añadir a pantalla de inicio».",
   "install.mac": "En el menú Archivo, elige «Añadir al Dock».",
   "install.other": "Abre el menú del navegador y elige «Instalar app» o «Añadir a pantalla de inicio».",
-  "install.later": "Ahora no"
+  "install.later": "Ahora no",
+  "licenses.terms": "Condiciones de los modelos",
+  "licenses.termsScope": "se aplica a {scope}"
 }

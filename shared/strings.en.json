@@ -75,5 +75,7 @@
   "install.ios": "Tap Share and then “Add to Home Screen”.",
   "install.mac": "In the File menu, choose “Add to Dock”.",
   "install.other": "Open the browser menu and choose “Install app” or “Add to Home screen”.",
-  "install.later": "Not now"
+  "install.later": "Not now",
+  "licenses.terms": "Terms of the models",
+  "licenses.termsScope": "applies to {scope}"
 }

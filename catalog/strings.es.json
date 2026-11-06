@@ -8,5 +8,6 @@
   "card.stored": "Ya está en este navegador",
   "card.open": "Abrir",
   "apps.source": "Las apps de Elffuss, como se describen en elffuss.com.",
-  "install.why": "Se abre en su propia ventana, y el navegador guarda los modelos de las herramientas en vez de borrarlos tras unos días sin usarlas."
+  "install.why": "Se abre en su propia ventana, y el navegador guarda los modelos de las herramientas en vez de borrarlos tras unos días sin usarlas.",
+  "card.modelShort": "{model}, de {author} ({license})"
 }
