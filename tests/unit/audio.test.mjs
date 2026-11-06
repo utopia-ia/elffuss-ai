@@ -24,6 +24,7 @@ import { VOICES, DEFAULT_VOICE, readVocab, phonemeIds, styleFor, voiceInfo } fro
 import { normalizeInput, DURATION } from '../../sdk/audio/stable-audio.js';
 import { normalizeSpeech } from '../../sdk/audio/speech.impl.js';
 import * as api from '../../sdk/audio/index.js';
+import { doubleScalarsToInt64 } from '../../sdk/audio/graph-patch.js';
 import { hashFile } from '../../scripts/fetch-weights.mjs';
 
 const fixture = name => JSON.parse(readFileSync(new URL(`../fixtures/audio/${name}`, import.meta.url), 'utf8'));
@@ -290,4 +291,20 @@ test('the public API: three task classes on core Task, their tool calls and esti
   assert.equal(s.fits, true);
   assert.equal(s.device, 'wasm');
   assert.ok(s.missingBytes < s.downloadBytes && s.downloadBytes === reg.models['text-to-speech/kokoro-82m'].devices.wasm[0].bytes);
+});
+
+test('decoder patch: integral double scalars become int64 in place, nothing else moves', () => {
+  const tensor = v => { const b = new Uint8Array(12); b.set([0x10, 11, 0x4a, 0x08]); new DataView(b.buffer).setFloat64(4, v, true); return b; };
+  const parts = [Uint8Array.from([9, 9, 9]), tensor(-1), tensor(32767), tensor(0.5), tensor(1e300), Uint8Array.from([0x10, 11, 0x4a, 0x04, 1, 2, 3, 4])];
+  const bytes = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
+  let o = 0;
+  for (const p of parts) { bytes.set(p, o); o += p.length; }
+  const before = bytes.slice();
+  assert.equal(doubleScalarsToInt64(bytes, { values: [-1, 1, -32767, 32767] }), 2);
+  const v = new DataView(bytes.buffer);
+  assert.equal(bytes[4], 7);
+  assert.equal(v.getBigInt64(3 + 4, true), -1n);
+  assert.equal(v.getBigInt64(15 + 4, true), 32767n);
+  assert.deepEqual(bytes.subarray(27), before.subarray(27), '0.5, a huge value and other fields stay as they were');
+  assert.equal(bytes.length, before.length);
 });

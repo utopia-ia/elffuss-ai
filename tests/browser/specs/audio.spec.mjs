@@ -98,7 +98,7 @@ async function generate(t, page) {
   await page.click('main button.primary');
   await page.waitForFunction(([n, e]) => globalThis.__elffuss.audio.runs > n || globalThis.__elffuss.errors.length > e, before, { timeout: T, polling: 1000 });
   const errors = await page.evaluate(e => globalThis.__elffuss.errors.slice(e), before[1]);
-  if (errors.length) throw new Error(`the page showed errors: ${errors.join(', ')} · ${await page.textContent('main p.status')}`);
+  if (errors.length) throw new Error(`the page showed errors: ${errors.join(', ')} · ${await page.textContent('main p.status')} · ${await page.evaluate(() => globalThis.__elffuss.audio.error)}`);
   const [download] = await Promise.all([page.waitForEvent('download'), page.click('section.result [data-action="download-wav"]')]);
   const buf = readFileSync(await download.path());
   const last = await page.evaluate(() => globalThis.__elffuss.audio.last);
@@ -113,12 +113,27 @@ function checkSound(t, label, wav, { rate, channels, seconds, band }) {
   t.ok(m.clipped === 0, `${label}: ${m.clipped} of the samples at full scale`);
   t.ok(m.peakDb < -0.1, `${label}: peak ${m.peakDb.toFixed(2)} dBFS`);
   t.ok(m.rmsDb > MIN_RMS_DB, `${label}: RMS ${m.rmsDb.toFixed(1)} dBFS`);
-  t.ok(m.silent < MAX_SILENT, `${label}: ${(m.silent * 100).toFixed(0)} % silent`);
+  // A one-shot of a couple of seconds is mostly its own decay: silence is measured on longer clips.
+  if (m.seconds >= 4) t.ok(m.silent < MAX_SILENT, `${label}: ${(m.silent * 100).toFixed(0)} % silent`);
   const share = bandShare(wav.channels, wav.sampleRate, band[0], band[1]);
   t.ok(share > 0.8, `${label}: ${(share * 100).toFixed(1)} % of the energy in ${band[0]}–${band[1]} Hz`);
   t.note(`${label}: ${m.seconds.toFixed(2)} s, peak ${m.peakDb.toFixed(1)} dBFS, RMS ${m.rmsDb.toFixed(1)} dBFS, silent ${(m.silent * 100).toFixed(0)} %, in band ${(share * 100).toFixed(0)} %`);
   return m;
 }
+
+/** Prompts of the opt-in quality set (ELFFUSS_AI_AUDIO_QUALITY=1): [mode, name, prompt, seconds, steps]. */
+export const QUALITY_SET = [
+  ['music', 'lofi', 'Lo-fi hip hop beat with mellow Rhodes chords, soft vinyl crackle, brushed drums and a warm upright bass, 80 BPM', 30, 8],
+  ['music', 'lofi-12', 'Lo-fi hip hop beat with mellow Rhodes chords, soft vinyl crackle, brushed drums and a warm upright bass, 80 BPM', 30, 12],
+  ['music', 'orchestral', 'Epic cinematic orchestral piece with soaring strings, bold French horns, choir and thunderous taiko drums, 110 BPM', 30, 8],
+  ['music', 'house', 'Deep house groove with a four-to-the-floor kick, warm sub bass, airy pads and soulful chord stabs, 122 BPM', 30, 8],
+  ['music', 'guitar', 'TrackType: Instrument, a gentle solo acoustic guitar with delicate finger picking and a warm room reverb', 20, 8],
+  ['music', 'es-prompt', 'Música flamenca con guitarra española, palmas y cajón, alegre, 120 BPM', 20, 8],
+  ['sfx', 'rain', 'TrackType: SFX, heavy rain falling on a tin roof with distant rolling thunder', 10, 8],
+  ['sfx', 'steps', 'TrackType: SFX, slow footsteps crunching on fresh snow, close microphone', 6, 8],
+  ['sfx', 'laser', 'TrackType: SFX, a sci-fi laser blast with a bright attack and a short metallic tail', 2, 8],
+  ['sfx', 'laser-12', 'TrackType: SFX, a sci-fi laser blast with a bright attack and a short metallic tail', 2, 12],
+];
 
 export default [
   {
@@ -223,6 +238,31 @@ export default [
       t.equal(t.hubFull().filter(u => /stable-audio/.test(u)).length, 0, 'no Stable Audio file was asked for');
       t.noPageErrors();
       await t.noCsp(page);
+    },
+  },
+  {
+    name: 'quality set (ELFFUSS_AI_AUDIO_QUALITY=1): clips of several prompts and step counts, measured and kept',
+    sites: ['audio'],
+    configs: ['A'],
+    async run(t, site) {
+      if (process.env.ELFFUSS_AI_AUDIO_QUALITY !== '1') { t.note('not run: set ELFFUSS_AI_AUDIO_QUALITY=1'); return; }
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/en/');
+      for (const [mode, name, prompt, seconds, steps] of QUALITY_SET) {
+        await setMode(page, mode);
+        await page.fill('[data-input="prompt"]', prompt);
+        await page.fill('[data-input="seconds"]', String(seconds));
+        await page.dispatchEvent('[data-input="seconds"]', 'input');
+        await page.fill('[data-input="seed"]', '42');
+        if (!(await page.getAttribute('details.advanced', 'open') !== null)) await page.click('details.advanced > summary');
+        await page.fill('[data-input="steps"]', String(steps));
+        await page.dispatchEvent('[data-input="steps"]', 'input');
+        await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: T });
+        const c = await generate(t, page);
+        save(`q-${mode}-${name}-s42.wav`, c.buf);
+        checkSound(t, `${mode} ${name}`, c.wav, { rate: 44100, channels: 2, seconds, band: [30, 16000] });
+      }
+      t.noPageErrors();
     },
   },
 ];

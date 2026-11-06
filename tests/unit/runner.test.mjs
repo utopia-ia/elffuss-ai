@@ -145,3 +145,14 @@ test('a failure on WASM is not retried', async () => {
   await assert.rejects(r.run('img'), { code: 'run-failed' });
   assert.equal(made.length, 1);
 });
+
+test('a model without WebAssembly variant: the WebGPU error stands, no retry', async () => {
+  const tasks = [];
+  const runner = createTaskRunner({
+    requested: 'auto', attempted: () => 'webgpu', hasWasm: () => false,
+    options: device => ({ device }),
+    factory: o => { const t = { device: null, opts: o, async load() { return { device: 'webgpu' }; }, async run() { throw Object.assign(new Error('session failed'), { name: 'Error' }); }, async dispose() {} }; tasks.push(t); return t; },
+  });
+  await assert.rejects(runner.run('x'), err => err.code === 'run-failed' && /session failed/.test(err.message));
+  assert.equal(tasks.length, 1, 'no second task on WebAssembly');
+});

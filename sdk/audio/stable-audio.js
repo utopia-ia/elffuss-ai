@@ -16,6 +16,7 @@ import { createRng, isSeed, randomSeed } from './rng.js';
 import { SAMPLE_RATE, LATENT_CHANNELS, DEFAULT_STEPS, latentLength, decoderLength, schedule, pingpongStep, pcmToChannels } from './sampler.js';
 import { encodeWav } from './wav.js';
 import { fadeOut, measure } from './signal.js';
+import { doubleScalarsToInt64 } from './graph-patch.js';
 
 /** Tokens of the prompt the text encoder reads. */
 export const PROMPT_TOKENS = 256;
@@ -54,6 +55,22 @@ const refOf = (ctx, re) => {
   return f.ref;
 };
 
+/**
+ * The decoder's session. Its limiter casts four double constants to float, and the
+ * WebGPU build of ONNX Runtime Web has no Cast from double: they become int64 of
+ * the same value first (graph-patch.js). The few nodes WebGPU lacks run on
+ * WebAssembly inside the session.
+ */
+async function decoderSession(ctx, ort) {
+  const bytes = new Uint8Array(await ctx.bytes(refOf(ctx, /same-s\/dec[^/]*\.onnx$/)));
+  const n = doubleScalarsToInt64(bytes, { values: [-1, 1, -32767, 32767] });
+  if (n !== 4) throw new AiError('model-mismatch', `the decoder has ${n} of its 4 double constants where they were expected`);
+  const providers = ctx.device === 'webgpu' ? ['webgpu', 'wasm'] : ['wasm'];
+  const s = await ort.InferenceSession.create(bytes, { executionProviders: providers, graphOptimizationLevel: 'all' });
+  s.elffussProvider = providers[0];
+  return s;
+}
+
 /** Implementation of one of the two tasks. */
 export function stableAudioImpl(task) {
   return {
@@ -62,10 +79,13 @@ export function stableAudioImpl(task) {
       const ort = await ctx.ort();
       const tok = createTokenizer(parseModel(await ctx.bytes(refOf(ctx, /tokenizer\.model$/))));
       const state = { ort, tok, enc: null, dit: null, dec: null };
+      // The few nodes WebGPU does not take (casts of double constants, the decoder's
+      // noise) run on WebAssembly inside the same session.
+      const providers = ctx.device === 'webgpu' ? ['webgpu', 'wasm'] : undefined;
       try {
-        state.enc = await ctx.session(refOf(ctx, /t5gemma\/encoder\.onnx$/));
-        state.dit = await ctx.session(refOf(ctx, /\/dit[^/]*\.onnx$/));
-        state.dec = await ctx.session(refOf(ctx, /same-s\/dec[^/]*\.onnx$/));
+        state.enc = await ctx.session(refOf(ctx, /t5gemma\/encoder\.onnx$/), { providers });
+        state.dit = await ctx.session(refOf(ctx, /\/dit[^/]*\.onnx$/), { providers });
+        state.dec = await decoderSession(ctx, ort);
         if (ctx.test?.failLoad) throw new AiError('run-failed', 'test hook: the load fails after the sessions exist');
       } catch (err) {
         await this.dispose(state);
@@ -130,7 +150,7 @@ export function stableAudioImpl(task) {
       return {
         value: {
           blob, mime: 'audio/wav', seconds: channels[0].length / SAMPLE_RATE, sampleRate: SAMPLE_RATE, channels: 2, seed: o.seed,
-          model: ctx.modelId, device: ctx.device, dtype: ctx.dtype, steps: o.steps, prompt: o.prompt, truncated, stats,
+          model: ctx.modelId, device: ctx.device, dtype: ctx.dtype, decoder: state.dec.elffussProvider || ctx.device, steps: o.steps, prompt: o.prompt, truncated, stats,
         },
         transfer: [],
       };

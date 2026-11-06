@@ -195,6 +195,7 @@ export async function createShell({ config: cfg = config } = {}) {
         factory,
         options: device => shell.taskOptions({ device }),
         attempted: () => choice?.device ?? null,
+        hasWasm: () => Boolean(model?.devices?.wasm?.length),
         onDevice: (device, fallback) => { diagnostics.device = device; diagnostics.fallback = fallback; },
       });
     },

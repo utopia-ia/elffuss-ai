@@ -130,12 +130,14 @@ async function setMode(next) {
   const labels = { run: t(`action.run.${next}`), download: t(`action.download.${next}`) };
   shell.els.primary.dataset.labelRun = labels.run;
   shell.els.primary.dataset.labelDownload = labels.download;
-  await shell.useModel(MODES[next].model, labels);
-  const why = blockedText();
-  if (why) shell.setStatus(why);
-  readiness();
+  // The variant is chosen at once; the store's answer (the download size) comes later.
+  const asked = shell.useModel(MODES[next].model, labels);
+  const say = () => { const why = blockedText(); if (why) shell.setStatus(why); readiness(); };
+  say();
+  await asked.then(say, () => {});
 }
 for (const b of els.modes) b.addEventListener('click', () => { if (!shell.busy) setMode(b.dataset.mode).catch(err => shell.showError(err)); });
+const setModeNow = m => { setMode(m).catch(err => shell.showError(err)); };
 
 // ── progress by stage ───────────────────────────────────────────────────────
 const baseProgress = shell.onProgress.bind(shell);
@@ -244,7 +246,10 @@ shell.onPrimary(async ({ signal }) => {
     shell.setStatus(t('status.done'));
     try { await history.add(clip); } catch { /* no room in this browser: the clip stays on screen */ }
     await renderHistory();
-    if (probe) Object.assign(probe, { runs: probe.runs + 1, last: { mode: m, device, seconds: result.seconds, sampleRate: result.sampleRate, channels: result.channels, seed: result.seed, stats: result.stats, bytes: result.blob.size } });
+    if (probe) Object.assign(probe, { runs: probe.runs + 1, last: { mode: m, device, decoder: result.decoder, seconds: result.seconds, sampleRate: result.sampleRate, channels: result.channels, seed: result.seed, stats: result.stats, bytes: result.blob.size } });
+  } catch (err) {
+    if (probe) probe.error = `${err?.code}: ${err?.message}${err?.cause ? ' | ' + (err.cause.message || err.cause) : ''}`;
+    throw err;
   } finally {
     els.cancel.hidden = true;
     for (const b of els.modes) b.disabled = false;
@@ -252,7 +257,7 @@ shell.onPrimary(async ({ signal }) => {
 }, { after: () => readiness() });
 
 // Music first where it can run here; otherwise the voice, which runs everywhere.
-await shell.useModel(MODES.music.model);
-await setMode(shell.choiceError ? 'speech' : 'music');
-await renderHistory().catch(() => {});
+shell.useModel(MODES.music.model).catch(() => {});
+setModeNow(shell.choiceError ? 'speech' : 'music');
+renderHistory().catch(() => {});
 outputs();

@@ -28,10 +28,11 @@ export function retryOptions(opts) {
 
 /**
  * @param {{ requested: 'auto'|'webgpu'|'wasm', factory: (opts: object) => any, options: (device: string) => object,
- *   onDevice?: (device: string, fallback: object|null) => void, attempted?: () => (string|null|undefined) }} o
- *   `attempted` says which backend a first attempt uses in this browser (the page's choice of variant).
+ *   onDevice?: (device: string, fallback: object|null) => void, attempted?: () => (string|null|undefined), hasWasm?: () => boolean }} o
+ *   `attempted` says which backend a first attempt uses in this browser (the page's choice of variant);
+ *   `hasWasm` whether the model has a WebAssembly variant at all (without one, the first error stands).
  */
-export function createTaskRunner({ requested, factory, options, onDevice, attempted }) {
+export function createTaskRunner({ requested, factory, options, onDevice, attempted, hasWasm = () => true }) {
   let task = null;
   let device = requested;
   const make = opts => (task ||= factory(opts || options(device)));
@@ -49,7 +50,7 @@ export function createTaskRunner({ requested, factory, options, onDevice, attemp
         return { result, device: ran, fallback: null };
       } catch (err) {
         const e = toAiError(err);
-        if (requested !== 'auto' || device !== 'auto' || used !== 'webgpu' || FINAL.has(e.code) || e.code.startsWith('store-')) throw e;
+        if (requested !== 'auto' || device !== 'auto' || used !== 'webgpu' || FINAL.has(e.code) || e.code.startsWith('store-') || !hasWasm()) throw e;
         await tk.dispose();
         task = null;
         device = 'wasm';

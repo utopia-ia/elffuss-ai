@@ -62,6 +62,21 @@ Spanish text to Kokoro phonemes.
 
 Returns `string`.
 
+## `sdk/audio/graph-patch.js`
+
+The SAME-S decoder of Stable Audio 3 (with its limiter) holds four scalar constants in double precision, -1, 1, -32767 and 32767, each cast to float by the next node. ONNX Runtime Web's WebGPU build has no Cast from double, so the session cannot be created. Here they become int64 constants of the same value, in place: the tensor's type field (11 → 7) and its eight bytes, so no length in the protobuf changes and Cast(int64 → float) gives exactly the same floats. Only constants laid out as `data_type: DOUBLE, raw_data: <8 bytes>` with an integral value are touched. Pure.
+
+### `doubleScalarsToInt64(bytes, { values } = {})`
+
+Rewrite integral double scalars of an ONNX model as int64, in place.
+
+| Parameter | Type | |
+|---|---|---|
+| `bytes` | `Uint8Array` | the model |
+| `[opts]` | `{ values?: number[] }` | the values allowed (all integral ones when left out) |
+
+Returns `number`: how many were rewritten
+
 ## `sdk/audio/index.js`
 
 Audio from text in the browser: music and sound effects with Stable Audio 3 Small (Stability AI, Stability AI Community License; its text encoder T5Gemma is also under the Gemma Terms of Use) on WebGPU, and speech in Spanish and English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The models come from their Hugging Face repositories at pinned revisions, through the Elffuss model store. Each task class runs its model in a module Worker of this module (its URL is relative to this file, so the module can be served from any origin together with the core and the runtimes).
