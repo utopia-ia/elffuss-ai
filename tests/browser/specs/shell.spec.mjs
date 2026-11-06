@@ -23,7 +23,7 @@ export function pageFacts(page) {
       lang: document.documentElement.lang,
       title: document.title,
       brand: q('header a.brand')?.textContent ?? null,
-      nav: all('header nav a').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
+      nav: all('header nav a:not([data-action="install"])').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
       headers: all('header').length, mains: all('main').length, footers: all('footer').length,
       primary: all('button.primary').map(b => ({ text: b.textContent, disabled: b.disabled })),
       buttons: all('button').map(b => b.className),
