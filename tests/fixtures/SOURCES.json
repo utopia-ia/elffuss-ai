@@ -566,6 +566,41 @@
         "note": "pixel patterns of tests/unit/ocr-tiff-patterns.mjs encoded by the libtiff tools"
       },
       "purpose": "a TIFF file made by the libtiff tools for the TIFF decoder test"
+    },
+    {
+      "path": "tests/fixtures/text-to-image/reference.json",
+      "sha256": "570151c692edf7c2d0ae051cec40b2c8086214399515a16b54c1a3b12fb372d4",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/text-to-image/unit_fixture.py",
+        "how": "Numbers from PyTorch 2.14.1 and diffusers 0.41.0: torch.randn with seeded CPU generators, SCMScheduler times, one TrigFlow step, the trained-size rule and the bilinear resize with centre crop of the SANA pipeline."
+      },
+      "purpose": "text-to-image: the unit tests' reference for the noise, the sampler, the sizes and the resize (tests/unit/text-to-image.test.mjs)."
+    },
+    {
+      "path": "tests/fixtures/text-to-image/tokens.json",
+      "sha256": "118238f7b7e47bd88ac7919175e32a9cc3b0af633f0f0a2cd34ecbeff8790415",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/text-to-image/tok_fixture.py",
+        "how": "Token ids that transformers' GemmaTokenizerFast gives for the pipeline's instruction and five prompts (Spanish, accents, a cut prompt), with the tokenizer files of Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers at aa76e7f4f4928f378716b6716a2130fba3caf5b1, padded on the right as the pipeline does."
+      },
+      "purpose": "text-to-image: the caption window the transformer is given, in the unit tests, and the browser tokenizer's ids, in the browser test."
+    },
+    {
+      "path": "tests/fixtures/text-to-image/golden-astronaut-256.png",
+      "sha256": "d951ddd094a7cb4907ca5f026649de9bb617969e1928c3ef622f186212ba21f5",
+      "license": "own-work",
+      "source": {
+        "script": "tests/browser/specs/image.spec.mjs",
+        "how": "Run with ELFFUSS_AI_IMAGE_GOLDEN=write in configuration A: the picture the image page made for 'a tiny astronaut hatching from an egg on the moon', seed 42, two steps, 1024 × 1024, reduced to 256 × 256 by 4 × 4 averages."
+      },
+      "model": "text-to-image/sana-sprint-0.6b",
+      "revision": "762399d3a10e6ec06afeffbdf7dd425c83004fb3",
+      "device": "webgpu",
+      "dtype": "q4f16",
+      "checked": "The same reduction of the diffusers reference (SanaSprintPipeline, float32 weights on the CPU, the same prompt and seed) gives 25.3 dB against it: same composition, subject and light; the 4-bit text model moves small details. Another prompt gives 10.6 dB.",
+      "purpose": "image: the reference picture. The page's picture, reduced the same way, must reach a PSNR of 30 dB against it."
     }
   ]
 }

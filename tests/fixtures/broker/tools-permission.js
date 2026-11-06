@@ -8,7 +8,7 @@
 // <extract>
 // Las herramientas (repo elffuss-ai): el catálogo y una web por herramienta. Solo
 // su nombre exacto y solo bajo elffuss.com, que es donde viven.
-const HERRAMIENTAS = /^https:\/\/(tools|cutout|ocr|detect|depth)\.elffuss\.com$/;
+const HERRAMIENTAS = /^https:\/\/(cutout|depth|detect|image|ocr|tools)\.elffuss\.com$/;
 // </extract>
 // <extract>
 // Lo que puede pedir una herramienta: bajar o consultar uno de los ficheros de su
@@ -23,10 +23,20 @@ const HERRAMIENTAS = /^https:\/\/(tools|cutout|ocr|detect|depth)\.elffuss\.com$/
 // El bloque lo imprime scripts/broker-repos.mjs de ese repo, y un test de allí
 // comprueba que esta copia es exactamente la de su registro.
 const FICHEROS_HERRAMIENTAS = new Map([
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/scheduler/scheduler_config.json", 160],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/tokenizer/tokenizer.json", 34362873],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/tokenizer/tokenizer_config.json", 46996],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/transformer/config.json", 648],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/vae/config.json", 1280],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.onnx", 9880512],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.yml", 885],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx", 21159378],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml", 150579],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/text_encoder/embed_tokens_q4.bin", 294912000],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/text_encoder/embed_tokens_q4_scales.bin", 36864000],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/text_encoder/model_q4.onnx", 1298421504],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/transformer/model_fp16.onnx", 1189024647],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/vae_decoder/model_fp16.onnx", 318818869],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/config.json", 80],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/onnx/model_fp16.onnx", 219121675],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/preprocessor_config.json", 391],

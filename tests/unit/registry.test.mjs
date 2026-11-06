@@ -19,7 +19,7 @@ test('stable serialisation: the committed file is what the generator writes', ()
 });
 
 test('each task has a default model of that task', () => {
-  assert.deepEqual(Object.keys(reg.tasks).sort(), ['depth', 'detect', 'ocr', 'remove-bg']);
+  assert.deepEqual(Object.keys(reg.tasks).sort(), ['depth', 'detect', 'ocr', 'remove-bg', 'text-to-image']);
   for (const task of Object.keys(reg.tasks)) {
     const id = defaultModelId(reg, task);
     assert.equal(getModel(reg, id).task, task);
@@ -64,8 +64,16 @@ test('licences are allowed, nothing is on the deny list, nothing is redistribute
       assert.ok(!DENY_REPOS.some(re => re.test(p.repo)), p.repo);
       assert.ok(!DENY_LICENSES.some(re => re.test(p.license)), p.license);
     }
-    assert.equal(m.redistributes, false, id);
-    assert.equal(m.flag, null, id);
+    // One model is a conversion published for these sites (redistributed) whose text
+    // encoder is Gemma 2, under the Gemma Terms of Use: it says so with its flag.
+    if (id === 'text-to-image/sana-sprint-0.6b') {
+      assert.equal(m.redistributes, true, id);
+      assert.equal(m.flag, 'gemma-terms', id);
+      assert.ok(Object.keys(m.parts.onnx.files).includes('NOTICE') && Object.keys(m.parts.onnx.files).includes('LICENSE'), 'a redistributed conversion carries its licence and notice');
+    } else {
+      assert.equal(m.redistributes, false, id);
+      assert.equal(m.flag, null, id);
+    }
     assert.ok(m.base.name && m.base.author && /^https:\/\//.test(m.base.url), id);
     assert.ok('es' in m.notes && 'en' in m.notes, id);
     assert.ok(m.name.es && m.name.en, id);
@@ -108,6 +116,6 @@ test('sizes.js of each task is generated from tasks.json', () => {
   }
 });
 
-test('the registry pins five repos', () => {
-  assert.equal(registryRepos(reg).length, 5);
+test('the registry pins seven repos', () => {
+  assert.equal(registryRepos(reg).length, 7);
 });

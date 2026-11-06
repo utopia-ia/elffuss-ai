@@ -21,6 +21,7 @@ export default {
     depth: { default: 'depth/depth-anything-v2-small' },
     detect: { default: 'detect/rfdetr-nano' },
     ocr: { default: 'ocr/pp-ocrv6-small' },
+    'text-to-image': { default: 'text-to-image/sana-sprint-0.6b' },
   },
   models: {
     'remove-bg/ben2': {
@@ -108,6 +109,45 @@ export default {
       },
       flag: null,
       redistributes: false,
+    },
+    'text-to-image/sana-sprint-0.6b': {
+      task: 'text-to-image',
+      name: { es: 'SANA-Sprint 0.6B', en: 'SANA-Sprint 0.6B' },
+      base: { name: 'SANA-Sprint 0.6B', author: 'NVlabs', source: { hf: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px' } },
+      runtime: 'onnxruntime-web',
+      pipeline: null,
+      // `main`, the original repository: the tokenizer and the configuration files.
+      // `onnx`, the conversion of its weights for the browser (UtopiaIA): no ONNX
+      // export of this model or of a 4-bit Gemma 2 encoder that gives its hidden
+      // states exists on the Hub. Prepared, not pushed yet: see deploy/DEPLOY.md.
+      parts: {
+        main: { repo: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers', revision: 'aa76e7f4f4928f378716b6716a2130fba3caf5b1' },
+        onnx: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '762399d3a10e6ec06afeffbdf7dd425c83004fb3' },
+      },
+      // WebGPU only, with float16 shaders: the transformer and the decoder are float16,
+      // and the 4-bit text model needs WebGPU's speed for its prompt.
+      devices: {
+        webgpu: [
+          {
+            when: 'shader-f16',
+            dtype: 'q4f16',
+            files: [
+              'main:tokenizer/tokenizer.json', 'main:tokenizer/tokenizer_config.json', 'main:transformer/config.json',
+              'main:vae/config.json', 'main:scheduler/scheduler_config.json',
+              'onnx:text_encoder/model_q4.onnx', 'onnx:text_encoder/embed_tokens_q4.bin', 'onnx:text_encoder/embed_tokens_q4_scales.bin',
+              'onnx:transformer/model_fp16.onnx', 'onnx:vae_decoder/model_fp16.onnx',
+            ],
+          },
+        ],
+      },
+      notes: {
+        es: 'Entiende mejor las descripciones en inglés.',
+        en: 'It understands descriptions in English best.',
+      },
+      // The text encoder is Gemma 2 2B IT, under the Gemma Terms of Use, inside an
+      // Apache-2.0 model, as in the original repository.
+      flag: 'gemma-terms',
+      redistributes: true,
     },
   },
 };

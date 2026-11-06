@@ -9,11 +9,17 @@
 //   node scripts/build-registry.mjs --check    regenerate in memory and compare (exit 1 on any difference)
 //   node scripts/build-registry.mjs --resolve  rewrite the revisions of source.mjs to today's `main`
 //
+// A repository prepared for the Hub but not pushed yet can be read from its local
+// git clone instead: ELFFUSS_AI_STAGED=<owner/name>=<clone dir>[,…]. Its commit is
+// the one the Hub will have once that clone is pushed as it is (git push keeps the
+// commit), so the registry pins it already; --check against the Hub fails until then.
+//
 // It fails when a licence (of the model or of its base) is not in the allowed
 // list, when a repo is private or gated, when a revision is not the commit the
 // Hub returns, when a file is missing, when a repo or licence is on the deny
 // list, or when a model-store key of a pinned URL would be cut (180 characters).
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { pinnedUrl, isCommit, isSafePath, PINNED_URL_RE, HUB_ORIGIN } from '../sdk/core/hub-url.js';
@@ -37,7 +43,31 @@ async function getJSON(url, headers = {}) {
   return { json: await r.json(), link: r.headers.get('link') };
 }
 
+/** Repositories read from a local clone (ELFFUSS_AI_STAGED). */
+export function stagedRepos(env = process.env.ELFFUSS_AI_STAGED || '') {
+  return new Map(env.split(',').filter(Boolean).map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)]; }));
+}
+
+/** What the Hub API would say of a local clone: its commit, licence and files (LFS files by their pointer). */
+export function stagedRepo(dir) {
+  const git = (...a) => execFileSync('/usr/bin/git', ['-C', dir, ...a], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  const sha = git('rev-parse', 'HEAD').trim();
+  const readme = git('show', 'HEAD:README.md');
+  const license = /^license:\s*(\S+)/m.exec(readme)?.[1] || '';
+  const files = [];
+  for (const line of git('ls-tree', '-r', '-l', 'HEAD').trim().split('\n')) {
+    const m = /^\d+ blob ([0-9a-f]{40})\s+(\d+)\t(.+)$/.exec(line);
+    if (!m) continue;
+    const text = Number(m[2]) < 1024 ? git('cat-file', '-p', m[1]) : '';
+    const lfs = /^version https:\/\/git-lfs\.github\.com\/spec\/v1\noid sha256:([0-9a-f]{64})\nsize (\d+)/.exec(text);
+    files.push({ type: 'file', path: m[3], size: Number(m[2]), oid: m[1], ...(lfs ? { lfs: { oid: lfs[1], size: Number(lfs[2]) } } : {}) });
+  }
+  return { info: { sha, private: false, gated: false, cardData: { license }, author: null }, files };
+}
+
 async function tree(repo, revision) {
+  const staged = stagedRepos().get(repo);
+  if (staged) return stagedRepo(staged).files;
   const files = [];
   let url = `${API}${repo}/tree/${revision}?recursive=true`;
   while (url) {
@@ -71,7 +101,7 @@ export async function generate(source) {
   const out = { schema: 1, tasks: source.tasks, models: {} };
   const problems = [];
   for (const [id, m] of Object.entries(source.models)) {
-    if (!/^(remove-bg|depth|detect|ocr)\/[a-z0-9.-]+$/.test(id)) problems.push(`${id}: bad model id`);
+    if (!/^(remove-bg|depth|detect|ocr|text-to-image)\/[a-z0-9.-]+$/.test(id)) problems.push(`${id}: bad model id`);
     if (!id.startsWith(m.task + '/')) problems.push(`${id}: id does not start with its task`);
     const used = new Set();
     for (const variants of Object.values(m.devices)) for (const v of variants) for (const f of v.files) used.add(f);
@@ -79,7 +109,8 @@ export async function generate(source) {
     const licenses = new Set();
     for (const [partName, p] of Object.entries(m.parts)) {
       if (!isCommit(p.revision)) { problems.push(`${id}/${partName}: revision is not a 40-hex commit`); continue; }
-      const { json: info } = await getJSON(`${API}${p.repo}/revision/${p.revision}`);
+      const staged = stagedRepos().get(p.repo);
+      const info = staged ? { ...stagedRepo(staged).info, author: p.repo.split('/')[0] } : (await getJSON(`${API}${p.repo}/revision/${p.revision}`)).json;
       if (info.sha !== p.revision) problems.push(`${id}/${partName}: the Hub returned ${info.sha} for ${p.revision}`);
       if (info.private) problems.push(`${p.repo}: private`);
       if (info.gated) problems.push(`${p.repo}: gated`);
