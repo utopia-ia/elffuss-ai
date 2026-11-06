@@ -43,7 +43,7 @@ export function largestBuffer({ tokens, width, height }) {
  *   width: number, height: number, frames: number, seconds: number, tokens: number }>}
  */
 export async function estimate(opts = {}, env = {}) {
-  const o = normalizeOptions({ prompt: 'x', ...opts });
+  const o = normalizeOptions({ ...opts, prompt: 'x' }); // the prompt does not change the estimate
   const registry = env.registry || await loadRegistry(env.registryUrl);
   const model = getModel(registry, env.model || defaultModelId(registry, 'text-to-video'));
   const variant = (model.devices.webgpu || [])[0];

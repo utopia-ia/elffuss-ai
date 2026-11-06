@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vídeo desde texto (avanzado)</title>
+<link rel="stylesheet" href="../../../shared/tokens.css">
+<link rel="stylesheet" href="../../../shared/layout.css">
+<link rel="stylesheet" href="../../../shared/elffuss-look.css">
+<link rel="stylesheet" href="../../../shared/elffuss-mark.css">
+<link rel="stylesheet" href="./video-gen.css">
+<header>
+  <div class="brand-row"><span class="brand" data-t="title">Vídeo desde texto (avanzado)</span></div>
+  <nav><a href="?lang=es" data-lang="es">Español</a> <a href="?lang=en" data-lang="en">English</a></nav>
+</header>
+<main>
+  <h1 data-t="title">Vídeo desde texto (avanzado)</h1>
+  <p data-t="intro"></p>
+  <p data-role="gate" class="status" role="status" aria-live="polite"></p>
+  <form data-role="form">
+    <label class="field"><span data-t="prompt"></span>
+      <textarea name="prompt" rows="4" maxlength="2000" required></textarea></label>
+    <div class="fields">
+      <label class="field"><span data-t="size"></span><select name="size"></select></label>
+      <label class="field"><span data-t="seconds"></span><select name="seconds"></select></label>
+      <label class="field"><span data-t="steps"></span><select name="steps"></select></label>
+      <label class="field"><span data-t="seed"></span><input name="seed" inputmode="numeric" pattern="\d*" autocomplete="off"></label>
+    </div>
+    <label class="field"><span data-t="sound"></span><input name="sound" type="file" accept="audio/*"></label>
+    <p data-role="model" class="muted"></p>
+    <p class="actions">
+      <button class="primary" type="submit" data-action="start" disabled></button>
+      <button class="ghost" type="button" data-action="cancel" hidden data-t="cancel"></button>
+    </p>
+  </form>
+  <progress hidden max="1" value="0"></progress>
+  <p class="status" data-role="status" role="status" aria-live="polite"></p>
+  <section class="result" hidden>
+    <article class="card">
+      <p class="actions"><button class="ghost" type="button" data-action="download" data-t="download"></button></p>
+      <video controls loop playsinline></video>
+      <p class="muted" data-role="meta"></p>
+    </article>
+  </section>
+</main>
+<script type="module" src="./video-gen.js"></script>
+</html>

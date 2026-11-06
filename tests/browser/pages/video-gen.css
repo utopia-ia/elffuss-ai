@@ -1,0 +1,7 @@
+/* Layout only for the text-to-video test page; the look comes from shared/elffuss-look.css. */
+form { display: grid; gap: 1rem; max-width: 46rem; }
+.field { display: grid; gap: 0.35rem; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1rem; }
+textarea, select, input { font: inherit; width: 100%; box-sizing: border-box; }
+section.result video { display: block; width: 100%; max-width: 52rem; aspect-ratio: auto; }
+[data-role="gate"]:empty, [data-role="status"]:empty { display: none; }
