@@ -23,8 +23,8 @@ export function pageFacts(page) {
       lang: document.documentElement.lang,
       title: document.title,
       brand: q('header a.brand')?.textContent ?? null,
-      // The "Install as an app" entry is hidden until the browser can install: not a link of the nav yet.
-      nav: all('header nav a:not([hidden])').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
+      // The "Install as an app" entry (shown only where the browser can install) is not a link of the nav.
+      nav: all('header nav a:not([data-action="install"])').map(a => ({ href: a.getAttribute('href'), text: a.textContent })),
       headers: all('header').length, mains: all('main').length, footers: all('footer').length,
       primary: all('button.primary').map(b => ({ text: b.textContent, disabled: b.disabled, labelDownload: b.dataset.labelDownload ?? null })),
       buttons: all('button').map(b => b.className),

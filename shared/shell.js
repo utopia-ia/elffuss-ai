@@ -136,7 +136,8 @@ export async function createShell({ config: cfg = config } = {}) {
       for (const p of document.querySelectorAll('[data-role="model"][data-model]')) p.hidden = p.dataset.model !== id;
       els.modelSize = $(`[data-role="model"][data-model="${CSS.escape(id)}"] [data-role="model-size"]`) || $('[data-role="model-size"]');
       if (primaryLabels && els.primary && files.length) els.primary.textContent = fill(primaryLabels.download, { size: `${formatMB(files.reduce((x, f) => x + f.size, 0), lang)} MB` });
-      if (!busy) { setStatus(''); if (choiceError) shell.showError(choiceError); }
+      // A store that did not answer keeps its message; the previous model's reason goes.
+      if (!busy) { if (storageKnown) setStatus(''); if (choiceError) shell.showError(choiceError); }
       return shell.refreshStorage();
     },
     /** The variant this browser will use, or null when none fits. */

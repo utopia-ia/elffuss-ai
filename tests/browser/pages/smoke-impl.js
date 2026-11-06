@@ -31,6 +31,20 @@ export async function load(ctx) {
 
 const dimsOf = t => (t && Array.isArray(t.dims) ? t.dims : null);
 
+/** Feeds for a session that takes several inputs (speech, text to audio): zeros of each input's type and shape, 4 for a free axis. */
+function feedsFromMetadata(ort, s) {
+  const meta = s.inputMetadata;
+  if (!Array.isArray(meta) || meta.length !== s.inputNames.length) return null;
+  const feeds = {};
+  for (const m of meta) {
+    const dims = (m.shape || []).map(d => (typeof d === 'number' && d > 0 ? d : 4));
+    const n = dims.reduce((a, b) => a * b, 1);
+    const data = m.type === 'int64' ? new BigInt64Array(n) : m.type === 'int32' ? new Int32Array(n) : m.type === 'bool' ? new Uint8Array(n).fill(1) : new Float32Array(n).fill(m.type === 'float32' ? 1 : 0);
+    feeds[m.name] = new ort.Tensor(m.type === 'bool' ? 'bool' : m.type, data, dims);
+  }
+  return feeds;
+}
+
 export async function run(state, input, opts, ctx) {
   if (opts.test?.failRun) {
     if (state.kind === 'tf') await state.pipe.model({ pixel_values: new state.tf.Tensor('float32', new Float32Array(3), [1, 3, 1, 1]) });
@@ -55,7 +69,7 @@ export async function run(state, input, opts, ctx) {
   const outputs = {};
   for (const [ref, s] of Object.entries(state.sessions)) {
     const dims = ref.startsWith('rec:') ? [1, 3, 48, 160] : [1, 3, 64, 64];
-    const feeds = { [s.inputNames[0]]: new state.ort.Tensor('float32', new Float32Array(dims.reduce((a, b) => a * b, 1)), dims) };
+    const feeds = (s.inputNames.length > 1 && feedsFromMetadata(state.ort, s)) || { [s.inputNames[0]]: new state.ort.Tensor('float32', new Float32Array(dims.reduce((a, b) => a * b, 1)), dims) };
     const r = await s.run(feeds);
     outputs[ref] = Object.fromEntries(Object.entries(r).map(([k, t]) => [k, dimsOf(t)]));
   }
