@@ -57,6 +57,7 @@ from Wikimedia Commons and on an invoice drawn by `scripts/make-fixtures.mjs`
 | [ocr.elffuss.com](https://ocr.elffuss.com/en/) | Read the text of photos, scans and PDFs, even whole folders; export as Markdown, JSON or ZIP | PP-OCRv6 small by PaddlePaddle (Apache-2.0) | WebGPU or WebAssembly |
 | [detect.elffuss.com](https://detect.elffuss.com/en/) | Find up to 80 kinds of objects, in a photo or with the camera | RF-DETR Nano by Roboflow (Apache-2.0) | WebAssembly |
 | [depth.elffuss.com](https://depth.elffuss.com/en/) | Work out what is near and what is far, with a colour map, a 3D view and 16-bit PNG | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
+| [video.elffuss.com](https://video.elffuss.com/en/) | Turn a photo into a video: a 3D camera move through its layers, a live preview, MP4 with an optional soundtrack | Depth Anything V2 Small by depth-anything (Apache-2.0) and MI-GAN by Picsart AI Research (MIT) | WebGPU or WebAssembly (models), WebGL2 and WebCodecs (video) |
 | [tools.elffuss.com](https://tools.elffuss.com/en/) | The catalog of every Elffuss tool | none | none |
 
 Every site is in Spanish at its root and in English under `/en/`.
@@ -212,9 +213,10 @@ the files under `sdk/` as shown above.
 | ocr | [PP-OCRv6 small](https://github.com/PaddlePaddle/PaddleOCR) | PaddlePaddle | Apache-2.0 | 31 MB (WebGPU or WebAssembly, fp32) |
 | detect | [RF-DETR Nano](https://github.com/roboflow/rf-detr) | Roboflow | Apache-2.0 | 29 MB (WebAssembly, q8) |
 | depth | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small) | depth-anything | Apache-2.0 | 50 or 99 MB (WebGPU, fp16 or fp32), 27 MB (WebAssembly, q8) |
+| image-to-video | Depth Anything V2 Small (the same files) and [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN) | depth-anything, Picsart AI Research | Apache-2.0, MIT | 79 or 129 MB (WebGPU), 57 MB (WebAssembly); 30 MB when the depth model is already in the browser |
 
-The weights are ONNX exports from `onnx-community` and `PaddlePaddle` on Hugging
-Face. They are not part of this repository and are not redistributed.
+The weights are ONNX exports from `onnx-community`, `PaddlePaddle` and
+`andraniksargsyan` (an author of MI-GAN) on Hugging Face. They are not part of this repository and are not redistributed.
 [docs/MODELS.md](docs/MODELS.md) gives every repository, pinned commit and file.
 
 ## Repository
@@ -318,7 +320,7 @@ and served with the sites; the runtimes' licence files are fetched with them by
   mask is resized following its bilinear resampling.
 - [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) (Apache-2.0): the OCR
   follows its DB post-processing, rotated crop and CTC decoding; no code is copied.
-- The model authors: PramaLLC, PaddlePaddle, Roboflow and depth-anything.
+- The model authors: PramaLLC, PaddlePaddle, Roboflow, depth-anything and Picsart AI Research.
 
 Elffuss AI is part of [Elffuss](https://elffuss.com/).
 

@@ -346,7 +346,7 @@ Returns `Uint8ClampedArray`: RGBA
 
 ## `sdk/video/layers.js`
 
-From one photo and its depth to layers a camera can move through. Where the depth jumps (a person in front of a wall), the photo is cut in two: what is near becomes a layer of its own, with a soft edge that follows the photo, and what is behind it is filled in (MI-GAN paints the colours, sdk/video/inpaint.js; the depth is filled here from around it). The far layer is then cut again where it jumps once more, so a scene gets up to three layers. Each layer keeps its depth beyond its own edge, so its edge moves with it and never stretches. Pure functions over typed arrays, no canvas: Node tests them.
+From one photo and its depth to layers a camera can move through. Where the depth jumps (a person in front of a wall), the photo is cut in two: what is near becomes a layer of its own, with a soft edge that follows the photo, and what is behind it is filled in (MI-GAN paints the colours, sdk/video/inpaint.js; the depth is filled here from around it), only where a real jump of depth can uncover it. planLayers can cut more than once; the task cuts once, which proved the cleanest. Each layer keeps its depth beyond its own edge, so its edge moves with it and never stretches. Pure functions over typed arrays, no canvas: Node tests them.
 
 ### `normalizeDisparity(raw, { lo = 0.005, hi = 0.995 } = {})`
 
@@ -403,10 +403,10 @@ near covers between `minArea` and `maxArea` of the photo.
 
 Returns `{ threshold: number, jump: number, area: number } \| null`.
 
-### `planLayers(d, w, h, { maxCuts = 2 } = {})`
+### `planLayers(d, w, h, { maxCuts = 1 } = {})`
 
 Plan the layers of a photo from its disparity (analysis size): the masks of
-what is near (one or two cuts), each cleaned, far to near.
+what is near (`maxCuts` of them, one by default), each cleaned, far to near.
 
 Returns `{ cuts: { threshold: number, jump: number, area: number, mask: Uint8Array }[] }`.
 
@@ -426,7 +426,7 @@ The soft edge (alpha 0-1) of a mask at the photo's size, snapped to the
 photo's own edges with a guided filter, then tightened so that it is not
 wider than it must be.
 
-### `decontaminate(rgba, alpha, w, h, solid = 0.92)`
+### `decontaminate(rgba, alpha, w, h, solid = 0.92, where = null)`
 
 Colours of a near layer where its edge is soft: those pixels mix the layer
 with what was behind it, so their colour is taken from the solid inside of the
@@ -442,6 +442,19 @@ disparity there: what the framing must keep out of the picture
 | Parameter | Type | |
 |---|---|---|
 | `layer` | `{ alpha?: ArrayLike<number>\|null, aw?: number, ah?: number, depth: ArrayLike<number>, dw: number, dh: number }` |  |
+
+### `revealRegion(mask, d, w, h, { reach = Math.max(2, Math.round(Math.max(w, h) / 120)), jump = 0.08, radius = Math.round(Math.max(w, h) * 0.05), grow = 0 } = {})`
+
+Where a near part can uncover what is behind it, and what of it the painter
+must not see. `region`: its pixels within `radius` of a real jump of depth (a
+neighbour `reach` pixels away and at least `jump` farther), grown by `grow`.
+`hide`: the same within twice that radius, so the painter never sees the near
+part next to where it paints and nothing of it leaks into the painting.
+Elsewhere (where the part is cut from ground that goes on, the same depth on
+both sides) nothing behind it ever shows: the layer behind keeps the photo as
+it is there, with no painting and no seam, and the painter may read it.
+
+Returns `{ region: Uint8Array, hide: Uint8Array }`.
 
 ## `sdk/video/mp4.js`
 

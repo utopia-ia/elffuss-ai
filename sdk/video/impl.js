@@ -15,7 +15,7 @@ import { decodeImage } from '../core/image-input.js';
 import { releaseSession } from '../core/ort-env.js';
 import { planCamera, cameraAt, frameCount, frameTime, RELIEF } from './camera.js';
 import { normalizeOptions, outputSize } from './options.js';
-import { normalizeDisparity, resizePlane, guidedFilter, toGray, planLayers, morph, fillBehind, extendOutward, softAlpha, decontaminate, borderSamples, boxMean } from './layers.js';
+import { normalizeDisparity, resizePlane, guidedFilter, toGray, planLayers, morph, fillBehind, extendOutward, softAlpha, decontaminate, borderSamples, boxMean, revealRegion } from './layers.js';
 import { cropFor, modelInputs, composite } from './inpaint.js';
 import { depthInputSize, depthSpec, toDepthInput } from './depth.js';
 import { createRenderer } from './render.js';
@@ -86,8 +86,11 @@ function scaleMask(m, w, h, W, H) {
   return out;
 }
 
-/** The photo with `hole` (photo size) painted over by MI-GAN. */
-async function paint(state, rgba, W, H, hole) {
+/**
+ * The photo with `region` (photo size) painted by MI-GAN, which sees the photo
+ * without `hole` (all of what is near, so that none of it leaks into the painting).
+ */
+async function paint(state, rgba, W, H, hole, region = hole) {
   const crop = cropFor(hole, W, H);
   if (!crop) return rgba;
   const { image, mask } = modelInputs(rgba, hole, W, crop);
@@ -101,11 +104,27 @@ async function paint(state, rgba, W, H, hole) {
   const painted = t.data;
   // A soft seam: the hole fully, fading out over a few pixels around it.
   const f = new Float32Array(W * H);
-  for (let i = 0; i < f.length; i++) f[i] = hole[i];
+  for (let i = 0; i < f.length; i++) f[i] = region[i];
   const r = Math.max(2, Math.round(Math.max(W, H) / 600));
   const soft = boxMean(f, W, H, r);
-  for (let i = 0; i < soft.length; i++) soft[i] = hole[i] ? 1 : Math.min(1, soft[i] * 2);
+  for (let i = 0; i < soft.length; i++) soft[i] = region[i] ? 1 : hole[i] ? Math.min(1, soft[i] * 2) : 0;
   return composite(rgba, W, H, crop, painted, soft);
+}
+
+/** The subject when no near part stands out: the middle of the photo, at its median depth there. */
+function centreFocus(d, w, h) {
+  const ds = [];
+  for (let y = Math.floor(h * 0.3); y < Math.ceil(h * 0.7); y++) for (let x = Math.floor(w * 0.3); x < Math.ceil(w * 0.7); x++) ds.push(d[y * w + x]);
+  ds.sort((a, b) => a - b);
+  return { u: 0.5, v: 0.5, d: ds[Math.floor(ds.length / 2)] ?? 0.5 };
+}
+
+/** Depth behind what is near: filled from around `hole`, but only where `region` says it can show. */
+function behind(d, hole, region, w, h) {
+  const filled = fillBehind(d, hole, w, h);
+  const out = Float32Array.from(d);
+  for (let i = 0; i < out.length; i++) if (region[i]) out[i] = filled[i];
+  return out;
 }
 
 /**
@@ -130,7 +149,7 @@ async function buildScene(state, input, side, ctx) {
   const d = Float32Array.from(guidedFilter(gray, raw, aw, ah, 3, 4e-3), v => Math.min(1, Math.max(0, v)));
   for (const t of Object.values(out)) t?.dispose?.();
 
-  // Layers: cut where the depth jumps (up to two cuts), far to near.
+  // Layers: cut where the depth jumps (one cut by default), far to near.
   const { cuts } = planLayers(d, aw, ah);
   const grow = Math.max(3, Math.round(PLAN_SIDE / 70));
   const texGray = toGray(rgba, W, H);
@@ -140,15 +159,14 @@ async function buildScene(state, input, side, ctx) {
   if (!cuts.length) {
     layers.push({ rgba: Uint8ClampedArray.from(rgba), width: W, height: H, depth: { data: d, width: aw, height: ah }, opaque: true });
     borders.push(borderSamples({ depth: d, dw: aw, dh: ah }));
-    const sorted = Float32Array.from(d).sort();
-    focus = { u: 0.5, v: 0.5, d: sorted[Math.floor(sorted.length * 0.6)] };
+    focus = centreFocus(d, aw, ah);
   } else {
     ctx.report('running', { stage: 'inpaint' });
     const union = new Uint8Array(aw * ah);
     for (const c of cuts) for (let i = 0; i < union.length; i++) union[i] |= c.mask[i];
-    const holeAll = morph(union, aw, ah, grow);
-    const farRgba = await paint(state, rgba, W, H, scaleMask(holeAll, aw, ah, W, H));
-    const farDepth = fillBehind(d, holeAll, aw, ah);
+    const all = revealRegion(union, d, aw, ah, { grow });
+    const farRgba = await paint(state, rgba, W, H, scaleMask(all.hide, aw, ah, W, H));
+    const farDepth = behind(d, all.hide, all.hide, aw, ah);
     layers.push({ rgba: farRgba, width: W, height: H, depth: { data: farDepth, width: aw, height: ah }, opaque: true });
     borders.push(borderSamples({ depth: farDepth, dw: aw, dh: ah }));
     for (let k = 0; k < cuts.length; k++) {
@@ -157,11 +175,12 @@ async function buildScene(state, input, side, ctx) {
       const nearer = new Uint8Array(aw * ah);
       for (let j = k + 1; j < cuts.length; j++) for (let i = 0; i < nearer.length; i++) nearer[i] |= cuts[j].mask[i];
       const hasNearer = nearer.some(Boolean);
-      const holeNear = hasNearer ? morph(nearer, aw, ah, grow) : null;
-      const base = hasNearer ? await paint(state, rgba, W, H, scaleMask(holeNear, aw, ah, W, H)) : rgba;
-      const dl = hasNearer ? fillBehind(d, holeNear, aw, ah) : d;
+      const near = hasNearer ? revealRegion(nearer, d, aw, ah, { grow }) : null;
+      const base = hasNearer ? await paint(state, rgba, W, H, scaleMask(near.hide, aw, ah, W, H)) : rgba;
+      const dl = hasNearer ? behind(d, near.hide, near.hide, aw, ah) : d;
       const alpha = softAlpha(c.mask, aw, ah, texGray, W, H);
-      const px = premultiply(decontaminate(base, alpha, W, H));
+      const real = revealRegion(c.mask, d, aw, ah, { grow: grow * 2 }).hide;
+      const px = premultiply(decontaminate(base, alpha, W, H, 0.92, scaleMask(real, aw, ah, W, H)));
       const depth = extendOutward(dl, c.mask, aw, ah, Math.max(2, Math.round(grow / 2)));
       layers.push({ rgba: px, width: W, height: H, depth: { data: depth, width: aw, height: ah }, opaque: false });
       borders.push(borderSamples({ alpha: c.mask, aw, ah, depth, dw: aw, dh: ah }));
@@ -173,6 +192,9 @@ async function buildScene(state, input, side, ctx) {
     for (let y = 0; y < ah; y++) for (let x = 0; x < aw; x++) if (m[y * aw + x]) { sx += x; sy += y; n++; ds.push(d[y * aw + x]); }
     ds.sort((a, b) => a - b);
     focus = { u: (sx / n + 0.5) / aw, v: (sy / n + 0.5) / ah, d: ds[Math.floor(ds.length / 2)] };
+    // What is near but off to a side (a shoulder at the edge of the frame) is not the
+    // subject: then the camera holds what is in the middle of the photo.
+    if (Math.hypot(focus.u - 0.5, focus.v - 0.5) > 0.3) focus = centreFocus(d, aw, ah);
   }
   return { A: W / H, width: W, height: H, relief: RELIEF, focusD: focus.d, focus, layers, borders, cuts: cuts.length };
 }

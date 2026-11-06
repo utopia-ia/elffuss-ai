@@ -5,9 +5,10 @@
 // depth jumps (a person in front of a wall), the photo is cut in two: what is
 // near becomes a layer of its own, with a soft edge that follows the photo, and
 // what is behind it is filled in (MI-GAN paints the colours, sdk/video/inpaint.js;
-// the depth is filled here from around it). The far layer is then cut again
-// where it jumps once more, so a scene gets up to three layers. Each layer keeps
-// its depth beyond its own edge, so its edge moves with it and never stretches.
+// the depth is filled here from around it), only where a real jump of depth can
+// uncover it. planLayers can cut more than once; the task cuts once, which
+// proved the cleanest. Each layer keeps its depth beyond its own edge, so its
+// edge moves with it and never stretches.
 // Pure functions over typed arrays, no canvas: Node tests them.
 
 const clamp01 = x => (x < 0 ? 0 : x > 1 ? 1 : x);
@@ -260,10 +261,10 @@ export function chooseSplit(d, w, h, { known = null, reach = Math.max(2, Math.ro
 
 /**
  * Plan the layers of a photo from its disparity (analysis size): the masks of
- * what is near (one or two cuts), each cleaned, far to near.
+ * what is near (`maxCuts` of them, one by default), each cleaned, far to near.
  * @returns {{ cuts: { threshold: number, jump: number, area: number, mask: Uint8Array }[] }}
  */
-export function planLayers(d, w, h, { maxCuts = 2 } = {}) {
+export function planLayers(d, w, h, { maxCuts = 1 } = {}) {
   const minArea = Math.max(16, Math.round(w * h * 0.002));
   const cuts = [];
   let depth = d, known = null;
@@ -327,7 +328,7 @@ export function softAlpha(mask, mw, mh, gray, w, h, { radius = Math.max(2, Math.
  * layer (carried outward), and only their alpha says how much shows. No fringe
  * of the old background then travels with the layer.
  */
-export function decontaminate(rgba, alpha, w, h, solid = 0.92) {
+export function decontaminate(rgba, alpha, w, h, solid = 0.92, where = null) {
   const n = w * h;
   const vals = new Float32Array(n * 3), keep = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -338,7 +339,10 @@ export function decontaminate(rgba, alpha, w, h, solid = 0.92) {
   const f = pushPull(vals, keep, w, h, 3);
   const out = new Uint8ClampedArray(n * 4);
   for (let i = 0; i < n; i++) {
-    out[i * 4] = f[i * 3]; out[i * 4 + 1] = f[i * 3 + 1]; out[i * 4 + 2] = f[i * 3 + 2];
+    // Only where the edge is a real one (`where`): elsewhere what is behind is the
+    // photo itself, and the photo's own colours join it with no seam.
+    const own = where && !where[i];
+    out[i * 4] = own ? rgba[i * 4] : f[i * 3]; out[i * 4 + 1] = own ? rgba[i * 4 + 1] : f[i * 3 + 1]; out[i * 4 + 2] = own ? rgba[i * 4 + 2] : f[i * 3 + 2];
     out[i * 4 + 3] = Math.round(alpha[i] * 255);
   }
   return out;
@@ -361,4 +365,33 @@ export function borderSamples({ alpha = null, aw = 0, ah = 0, depth, dw, dh }, p
     }
   }
   return out;
+}
+
+/**
+ * Where a near part can uncover what is behind it, and what of it the painter
+ * must not see. `region`: its pixels within `radius` of a real jump of depth (a
+ * neighbour `reach` pixels away and at least `jump` farther), grown by `grow`.
+ * `hide`: the same within twice that radius, so the painter never sees the near
+ * part next to where it paints and nothing of it leaks into the painting.
+ * Elsewhere (where the part is cut from ground that goes on, the same depth on
+ * both sides) nothing behind it ever shows: the layer behind keeps the photo as
+ * it is there, with no painting and no seam, and the painter may read it.
+ * @returns {{ region: Uint8Array, hide: Uint8Array }}
+ */
+export function revealRegion(mask, d, w, h, { reach = Math.max(2, Math.round(Math.max(w, h) / 120)), jump = 0.08, radius = Math.round(Math.max(w, h) * 0.05), grow = 0 } = {}) {
+  const edge = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    if (!mask[i]) continue;
+    for (const [dx, dy] of [[reach, 0], [-reach, 0], [0, reach], [0, -reach]]) {
+      const X = x + dx, Y = y + dy;
+      if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
+      const j = Y * w + X;
+      if (!mask[j] && d[i] - d[j] >= jump) { edge[i] = 1; break; }
+    }
+  }
+  const within = r => { const band = morph(edge, w, h, r), out = new Uint8Array(w * h); for (let i = 0; i < out.length; i++) out[i] = band[i] & mask[i]; return grow ? morph(out, w, h, grow) : out; };
+  const hide = within(radius * 2), region = within(radius);
+  for (let i = 0; i < region.length; i++) region[i] &= hide[i];
+  return { region, hide };
 }

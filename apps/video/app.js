@@ -119,7 +119,7 @@ function startPreview(value) {
   canvas.width = Math.max(64, Math.round(r >= 1 ? side : side * r) & ~1);
   canvas.height = Math.max(64, Math.round(r >= 1 ? side / r : side) & ~1);
   let renderer;
-  try { renderer = createRenderer(canvas, { msaa: 4, grid: 320 }); }
+  try { renderer = createRenderer(canvas, { msaa: 4, grid: 320, preserve: true }); }
   catch { shell.setStatus(t('unsupported')); return; }
   renderer.setScene(value);
   preview = { renderer, plan: null, raf: 0, t0: performance.now(), playing: !reduced, at: 0 };
@@ -183,7 +183,7 @@ shell.onPrimary(async ({ signal }) => {
       const { result } = await runner.run(job.file, { signal, output: 'scene', quality, previewSide: 1280 });
       if (current?.file !== job.file) return;
       scene = { forFile: job.file, value: result };
-      if (probe) probe.scenes++;
+      if (probe) { probe.scenes++; probe.layers = result.layers.length; Object.defineProperty(probe, 'scene', { value: result, configurable: true, enumerable: false }); }
       startPreview(result);
     }
     const audio = job.sound?.blob || job.sound?.pcm || null;

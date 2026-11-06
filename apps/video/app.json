@@ -1,7 +1,7 @@
 {
   "site": "video",
   "host": "video.elffuss.com",
-  "testPort": 8795,
+  "testPort": 8798,
   "task": "image-to-video",
   "models": [
     "image-to-video/depth-parallax"

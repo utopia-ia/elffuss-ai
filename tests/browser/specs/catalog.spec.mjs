@@ -33,7 +33,7 @@ export default [
       t.ok(!(await t.smoke(p)).error, 'depth stores its model');
       const page = await t.open(ctx, site, '/');
       const marks = await page.evaluate(() => globalThis.__elffuss?.marks);
-      t.equal(marks, { cutout: false, depth: true, detect: false, ocr: false }, 'marks');
+      t.equal(marks, { cutout: false, depth: true, detect: false, ocr: false, video: false }, 'marks (the video site shares the depth files but also needs MI-GAN)');
       const shown = await page.evaluate(() => [...document.querySelectorAll('article.card[data-site]')].filter(c => !c.querySelector('[data-role="stored"]').hidden).map(c => c.dataset.site));
       t.equal(shown, ['depth'], 'only the depth card says it is already here');
       await t.noCsp(page);
