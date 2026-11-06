@@ -6,8 +6,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { sizesSource, serialise, ALLOWED_LICENSES, DENY_REPOS, DENY_LICENSES, MAX_KEY } from '../../scripts/build-registry.mjs';
-import { getModel, defaultModelId, resolveRef, variantFiles, findFile, registryRepos, registryUrls } from '../../sdk/core/registry.js';
+import { moduleSizesSource, modules, serialise, ALLOWED_LICENSES, DENY_REPOS, DENY_LICENSES, MAX_KEY } from '../../scripts/build-registry.mjs';
+import { getModel, defaultModelId, taskModule, modelBases, resolveRef, variantFiles, findFile, registryRepos, registryUrls, toolFiles } from '../../sdk/core/registry.js';
 import { PINNED_URL_RE, storeKey } from '../../sdk/core/hub-url.js';
 
 const root = new URL('../../', import.meta.url);
@@ -19,7 +19,7 @@ test('stable serialisation: the committed file is what the generator writes', ()
 });
 
 test('each task has a default model of that task', () => {
-  assert.deepEqual(Object.keys(reg.tasks).sort(), ['depth', 'detect', 'ocr', 'remove-bg']);
+  assert.deepEqual(Object.keys(reg.tasks).sort(), ['depth', 'detect', 'image-to-video', 'ocr', 'remove-bg']);
   for (const task of Object.keys(reg.tasks)) {
     const id = defaultModelId(reg, task);
     assert.equal(getModel(reg, id).task, task);
@@ -59,14 +59,14 @@ test('every variant file exists in its part and the variant bytes add up', () =>
 test('licences are allowed, nothing is on the deny list, nothing is redistributed', () => {
   for (const [id, m] of Object.entries(reg.models)) {
     for (const l of m.license.split(' AND ')) assert.ok(ALLOWED_LICENSES.includes(l), `${id}: ${l}`);
-    assert.ok(ALLOWED_LICENSES.includes(m.base.license), `${id}: base ${m.base.license}`);
+    for (const b of modelBases(m)) assert.ok(ALLOWED_LICENSES.includes(b.license), `${id}: base ${b.name} ${b.license}`);
     for (const p of Object.values(m.parts)) {
       assert.ok(!DENY_REPOS.some(re => re.test(p.repo)), p.repo);
       assert.ok(!DENY_LICENSES.some(re => re.test(p.license)), p.license);
     }
     assert.equal(m.redistributes, false, id);
     assert.equal(m.flag, null, id);
-    assert.ok(m.base.name && m.base.author && /^https:\/\//.test(m.base.url), id);
+    for (const b of modelBases(m)) assert.ok(b.name && b.author && /^https:\/\//.test(b.url), id);
     assert.ok('es' in m.notes && 'en' in m.notes, id);
     assert.ok(m.name.es && m.name.en, id);
   }
@@ -101,13 +101,36 @@ test('findFile and resolveRef agree; files outside the pinned commit are not fou
   assert.throws(() => resolveRef(getModel(reg, 'depth/depth-anything-v2-small'), 'main:onnx/model_q4.onnx'), { code: 'not-in-registry' });
 });
 
-test('sizes.js of each task is generated from tasks.json', () => {
-  for (const task of Object.keys(reg.tasks)) {
-    const committed = readFileSync(new URL(`sdk/${task}/sizes.js`, root), 'utf8');
-    assert.equal(committed, sizesSource(reg, task), `sdk/${task}/sizes.js`);
+test('sizes.js of each module is generated from tasks.json', () => {
+  for (const module of modules(reg).keys()) {
+    const committed = readFileSync(new URL(`sdk/${module}/sizes.js`, root), 'utf8');
+    assert.equal(committed, moduleSizesSource(reg, module), `sdk/${module}/sizes.js`);
   }
+  assert.equal(taskModule(reg, 'image-to-video'), 'video');
+  assert.equal(taskModule(reg, 'depth'), 'depth', 'a task without a module lives under its own name');
 });
 
-test('the registry pins five repos', () => {
-  assert.equal(registryRepos(reg).length, 5);
+test('the registry pins six repos', () => {
+  assert.equal(registryRepos(reg).length, 6);
+});
+
+test('a model that joins several works credits each, and each names a part it has', () => {
+  for (const [id, m] of Object.entries(reg.models)) {
+    if (!m.bases) continue;
+    assert.ok(m.bases.length > 1, `${id}: bases only when there are several`);
+    assert.deepEqual(m.base, (({ part, ...b }) => b)(m.bases[0]), `${id}: base is the first of bases`);
+    for (const b of m.bases) assert.ok(m.parts[b.part], `${id}: ${b.name} names part ${b.part}`);
+  }
+  const v = getModel(reg, 'image-to-video/depth-parallax');
+  assert.deepEqual(v.bases.map(b => [b.name, b.license]), [['Depth Anything V2 Small', 'Apache-2.0'], ['MI-GAN', 'MIT']]);
+});
+
+test('a part two models share is one file of the store: same URLs, listed once', () => {
+  const urls = registryUrls(reg).map(u => u.url);
+  assert.equal(new Set(urls).size, urls.length, 'registryUrls lists each URL once');
+  const tool = toolFiles(reg).map(f => f.url);
+  assert.equal(new Set(tool).size, tool.length, 'toolFiles lists each URL once');
+  const depth = variantFiles(getModel(reg, 'depth/depth-anything-v2-small'), getModel(reg, 'depth/depth-anything-v2-small').devices.wasm[0]).map(f => f.url);
+  const video = variantFiles(getModel(reg, 'image-to-video/depth-parallax'), getModel(reg, 'image-to-video/depth-parallax').devices.wasm[0]).map(f => f.url);
+  for (const u of depth.filter(u => /\.onnx$|preprocessor/.test(u))) assert.ok(video.includes(u), `the video model reuses ${u}`);
 });

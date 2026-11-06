@@ -13,9 +13,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * @typedef {{ site: string, host: string, testPort: number, dir: string, catalog?: boolean, task?: string,
  *   models?: string[], camera?: boolean, pdfjs?: boolean, accept?: string, status?: 'scaffold'|'ready',
- *   adapted?: { key: string, file: string, license: string }[] }} Site
+ *   adapted?: { key: string, file: string, license: string }[], media?: boolean, modules?: string[] }} Site
  *   `adapted`: code of other projects the site's modules adapt: the strings key that says what, the
  *   licence file under LICENSES/ and its name, shown on the licence pages and served with the site.
+ *   `media`: the site plays media it makes itself (blob: URLs in <video> and <audio>).
+ *   `modules`: SDK modules the site ships besides its task's own (integrations it offers).
  */
 
 /** Every site: the catalog first, then the apps in alphabetical order. @returns {Site[]} */
@@ -37,6 +39,7 @@ export function sites(root = ROOT) {
       if (!/^LICENSES\/[\w.+-]+\.txt$/.test(a.file || '') || !existsSync(join(root, a.file)) || !a.key || !a.license) throw new Error(`${s.site}: bad adapted entry ${JSON.stringify(a)}`);
     }
     if (s.host !== `${s.site}.elffuss.com`) throw new Error(`${s.site}: host must be ${s.site}.elffuss.com`);
+    if (s.modules != null && !(Array.isArray(s.modules) && s.modules.every(m => /^[a-z][a-z0-9-]*$/.test(m)))) throw new Error(`${s.site}: bad modules`);
     if (!(s.testPort >= 1024 && s.testPort < 65536)) throw new Error(`${s.site}: bad testPort`);
   }
   if (new Set(out.map(s => s.testPort)).size !== out.length) throw new Error('two sites share a test port');

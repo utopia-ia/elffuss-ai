@@ -197,6 +197,7 @@ exact size (`node scripts/broker-repos.mjs` prints that list).
 | `@elffuss/ai/depth` | Depth map of a photo | [depth.elffuss.com](https://depth.elffuss.com/) | in use |
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
+| `@elffuss/ai/video` | A video from a photo: a 3D camera move over its depth, as MP4 | [video.elffuss.com](https://video.elffuss.com/) | in use |
 <!-- modules:end -->
 
 Each task module also exports `<task>/sizes`, the download size of each of its

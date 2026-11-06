@@ -12,6 +12,10 @@
     },
     "ocr": {
       "default": "ocr/pp-ocrv6-small"
+    },
+    "image-to-video": {
+      "default": "image-to-video/depth-parallax",
+      "module": "video"
     }
   },
   "models": {
@@ -331,6 +335,137 @@
       "notes": {
         "es": "El diccionario del modelo no tiene el signo «¡»: el resto de letras y signos del español sí están.",
         "en": "The model dictionary has no «¡» (inverted exclamation mark); every other Spanish letter and sign is in it."
+      }
+    },
+    "image-to-video/depth-parallax": {
+      "task": "image-to-video",
+      "name": {
+        "es": "Depth Anything V2 Small y MI-GAN",
+        "en": "Depth Anything V2 Small and MI-GAN"
+      },
+      "license": "Apache-2.0 AND MIT",
+      "author": "onnx-community",
+      "base": {
+        "name": "Depth Anything V2 Small",
+        "author": "depth-anything",
+        "url": "https://huggingface.co/depth-anything/Depth-Anything-V2-Small",
+        "license": "Apache-2.0"
+      },
+      "bases": [
+        {
+          "name": "Depth Anything V2 Small",
+          "author": "depth-anything",
+          "url": "https://huggingface.co/depth-anything/Depth-Anything-V2-Small",
+          "license": "Apache-2.0",
+          "part": "depth"
+        },
+        {
+          "name": "MI-GAN",
+          "author": "Picsart AI Research",
+          "url": "https://github.com/Picsart-AI-Research/MI-GAN",
+          "license": "MIT",
+          "part": "inpaint"
+        }
+      ],
+      "flag": null,
+      "redistributes": false,
+      "runtime": "onnxruntime-web",
+      "pipeline": null,
+      "parts": {
+        "depth": {
+          "repo": "onnx-community/depth-anything-v2-small",
+          "revision": "4472b7362082ad9968fee890ca0f1e5aca36b93d",
+          "license": "Apache-2.0",
+          "author": "onnx-community",
+          "files": {
+            "config.json": {
+              "size": 38,
+              "gitOid": "e6abe62678884ee132d00225851fd4b79c943edb"
+            },
+            "onnx/model_fp16.onnx": {
+              "size": 49642442,
+              "sha256": "2df6223f206b5164e21f664ace61dabeb9bb6a49b8b5a3e00510b4807d0f5b04"
+            },
+            "onnx/model_quantized.onnx": {
+              "size": 27258801,
+              "sha256": "fcf51f1b230362b28690bb9d1809bf0431f29cad20534e3f589bd7285547f20d"
+            },
+            "onnx/model.onnx": {
+              "size": 99060839,
+              "sha256": "afb6a5c28f3b6bf1618c6e43f02073ef9dfdc70e937502d51603e57b0a1df10c"
+            },
+            "preprocessor_config.json": {
+              "size": 461,
+              "gitOid": "a75aa1ee872be3855a1d40c3050dbea9063e411f"
+            },
+            "quantize_config.json": {
+              "size": 3154,
+              "gitOid": "ec1fa8352001a3be24b2a83cd113adbc569db710"
+            },
+            "README.md": {
+              "size": 1578,
+              "gitOid": "6268a6fa5337256427b73c53d0415b89c6e34ce5"
+            }
+          }
+        },
+        "inpaint": {
+          "repo": "andraniksargsyan/migan",
+          "revision": "406830d0fa60666da0071c342ad2fbc8f30c5c64",
+          "license": "MIT",
+          "author": "andraniksargsyan",
+          "files": {
+            "LICENSE": {
+              "size": 1082,
+              "gitOid": "7101e087ea1871e65b02f294149a6bfb3e372b91"
+            },
+            "migan.onnx": {
+              "size": 29546882,
+              "sha256": "593eba0b7e04730f1b61c0a3cbca68d97d8d6a7ff5c6a44a7b9d7fcd880fc5ae"
+            },
+            "README.md": {
+              "size": 62,
+              "gitOid": "74701e5f4cc61f2699cbf5736607247919d89f5d"
+            }
+          }
+        }
+      },
+      "devices": {
+        "webgpu": [
+          {
+            "when": "shader-f16",
+            "dtype": "fp16",
+            "files": [
+              "depth:preprocessor_config.json",
+              "depth:onnx/model_fp16.onnx",
+              "inpaint:migan.onnx"
+            ],
+            "bytes": 79189785
+          },
+          {
+            "dtype": "fp32",
+            "files": [
+              "depth:preprocessor_config.json",
+              "depth:onnx/model.onnx",
+              "inpaint:migan.onnx"
+            ],
+            "bytes": 128608182
+          }
+        ],
+        "wasm": [
+          {
+            "dtype": "q8",
+            "files": [
+              "depth:preprocessor_config.json",
+              "depth:onnx/model_quantized.onnx",
+              "inpaint:migan.onnx"
+            ],
+            "bytes": 56806144
+          }
+        ]
+      },
+      "notes": {
+        "es": "Dos modelos: la profundidad de la foto y el fondo que queda detrás de lo que está cerca. La cámara y el vídeo los hace el código.",
+        "en": "Two models: the depth of the photo, and the background hidden behind what is near. The camera and the video are made by code."
       }
     }
   }

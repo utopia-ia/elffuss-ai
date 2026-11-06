@@ -13,10 +13,12 @@ export const STORE_ORIGIN = 'https://models.elffuss.com';
  * Content Security Policy of a site.
  * - apps: scripts from the site only, plus WebAssembly compilation; Workers from
  *   the site; the store as the only frame; nothing inline; Trusted Types required.
+ *   A site that plays what it makes (`media: true`, the video site) may play blob:
+ *   URLs of its own page, and nothing else.
  * - catalog: no WebAssembly and no Workers.
  * - both: the web app manifest from the site (so it can be installed as an app).
  * Never 'unsafe-eval' and never 'unsafe-inline'.
- * @param {{ catalog?: boolean }} site
+ * @param {{ catalog?: boolean, media?: boolean }} site
  * @param {{ storeOrigin?: string, meta?: boolean }} [opts] `meta` drops the directives a <meta> cannot carry
  */
 export function csp(site, { storeOrigin = STORE_ORIGIN, meta = false } = {}) {
@@ -29,7 +31,7 @@ export function csp(site, { storeOrigin = STORE_ORIGIN, meta = false } = {}) {
       ]
     : [
         ['default-src', "'self'"], ['script-src', "'self' 'wasm-unsafe-eval'"], ['style-src', "'self'"], ['img-src', "'self' blob:"],
-        ['font-src', "'none'"], ['media-src', "'none'"], ['connect-src', "'self'"], ['worker-src', "'self'"],
+        ['font-src', "'none'"], ['media-src', site.media ? 'blob:' : "'none'"], ['connect-src', "'self'"], ['worker-src', "'self'"],
         ['frame-src', storeOrigin], ['object-src', "'none'"], ['base-uri', "'none'"], ['form-action', "'none'"],
         ['frame-ancestors', "'none'"], ['manifest-src', "'self'"], ['require-trusted-types-for', "'script'"], ['trusted-types', 'elffuss-ai'],
       ];

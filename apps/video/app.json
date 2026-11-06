@@ -1,0 +1,14 @@
+{
+  "site": "video",
+  "host": "video.elffuss.com",
+  "testPort": 8795,
+  "task": "image-to-video",
+  "models": [
+    "image-to-video/depth-parallax"
+  ],
+  "camera": false,
+  "pdfjs": false,
+  "media": true,
+  "accept": "image/*",
+  "status": "ready"
+}
