@@ -301,6 +301,20 @@ Text tokens a chunk is read in at most (the official runtime's budget).
 
 Frames a chunk may take at most (30 s at 12.5 frames a second).
 
+### `MIN_FRAMES_PER_CHAR`
+
+Fewest frames a chunk of text should give, per character: Spanish read at its
+pace gives about 0.7 to 1 frame a character. Now and then the model ends a chunk
+after its first sentence; under this it is read again (see MAX_READS).
+
+### `MAX_READS`
+
+Readings of a chunk at most, when one ends too early: the longest is kept.
+
+### `endedEarly(text, frames)`
+
+True when a chunk's frames are too few for its text (an early end).
+
 ### `MOSS_VOICES`
 
 The voices of MOSS-TTS-Nano: a voice prompt each, shipped as codes.
