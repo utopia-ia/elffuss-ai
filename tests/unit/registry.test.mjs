@@ -6,8 +6,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { sizesSource, serialise, modules, cardLicense, ALLOWED_LICENSES, ACCEPTED_LICENSES, DENY_REPOS, DENY_LICENSES, MAX_KEY, TASKS } from '../../scripts/build-registry.mjs';
-import { getModel, defaultModelId, resolveRef, variantFiles, findFile, registryRepos, registryUrls } from '../../sdk/core/registry.js';
+import { moduleSizesSource, modules, serialise, cardLicense, ALLOWED_LICENSES, ACCEPTED_LICENSES, DENY_REPOS, DENY_LICENSES, MAX_KEY, TASKS } from '../../scripts/build-registry.mjs';
+import { getModel, defaultModelId, taskModule, modelBases, resolveRef, variantFiles, findFile, registryRepos, registryUrls, toolFiles } from '../../sdk/core/registry.js';
 import { PINNED_URL_RE, storeKey } from '../../sdk/core/hub-url.js';
 
 const root = new URL('../../', import.meta.url);
@@ -60,7 +60,7 @@ test('licences are allowed, nothing is on the deny list, nothing is redistribute
   const accepted = Object.values(ACCEPTED_LICENSES);
   for (const [id, m] of Object.entries(reg.models)) {
     for (const l of m.license.split(' AND ')) assert.ok(ALLOWED_LICENSES.includes(l) || accepted.includes(l), `${id}: ${l}`);
-    assert.ok(ALLOWED_LICENSES.includes(m.base.license) || accepted.includes(m.base.license), `${id}: base ${m.base.license}`);
+    for (const b of modelBases(m)) assert.ok(ALLOWED_LICENSES.includes(b.license) || accepted.includes(b.license), `${id}: base ${b.name} ${b.license}`);
     // A licence taken by name for one model comes with its full text in LICENSES/ and a link.
     if ([m.license, m.base.license].some(l => accepted.includes(l))) {
       assert.ok(m.terms?.some(t => accepted.includes(t.name)), `${id}: the accepted licence is listed in its terms`);
@@ -73,9 +73,20 @@ test('licences are allowed, nothing is on the deny list, nothing is redistribute
       assert.ok(!DENY_REPOS.some(re => re.test(p.repo)), p.repo);
       assert.ok(accepted.includes(p.license) || !DENY_LICENSES.some(re => re.test(p.license)), p.license);
     }
-    assert.equal(m.redistributes, false, id);
-    assert.equal(m.flag, null, id);
-    assert.ok(m.base.name && m.base.author && /^https:\/\//.test(m.base.url), id);
+    // Two models are conversions published for these sites (redistributed), each in
+    // a part that carries its licence and notice. SANA-Sprint's text encoder is
+    // Gemma 2, under the Gemma Terms of Use: it says so with its flag.
+    const converted = { 'text-to-image/sana-sprint-0.6b': ['onnx', 'gemma-terms'], 'text-to-video/wan2.1-t2v-1.3b-rcm': ['web', null] }[id];
+    if (converted) {
+      assert.equal(m.redistributes, true, id);
+      assert.equal(m.flag, converted[1], id);
+      assert.equal(m.parts[converted[0]].author, 'UtopiaIA', id);
+      assert.ok(Object.keys(m.parts[converted[0]].files).includes('NOTICE') && Object.keys(m.parts[converted[0]].files).includes('LICENSE'), 'a redistributed conversion carries its licence and notice');
+    } else {
+      assert.equal(m.redistributes, false, id);
+      assert.equal(m.flag, null, id);
+    }
+    for (const b of modelBases(m)) assert.ok(b.name && b.author && /^https:\/\//.test(b.url), id);
     assert.ok('es' in m.notes && 'en' in m.notes, id);
     assert.ok(m.name.es && m.name.en, id);
   }
@@ -117,8 +128,10 @@ test('sizes.js of each module is generated from tasks.json', () => {
   assert.deepEqual(mods.get('audio'), ['text-to-music', 'text-to-sfx', 'text-to-speech']);
   for (const mod of mods.keys()) {
     const committed = readFileSync(new URL(`sdk/${mod}/sizes.js`, root), 'utf8');
-    assert.equal(committed, sizesSource(reg, mod), `sdk/${mod}/sizes.js`);
+    assert.equal(committed, moduleSizesSource(reg, mod), `sdk/${mod}/sizes.js`);
   }
+  assert.equal(taskModule(reg, 'image-to-video'), 'video');
+  assert.equal(taskModule(reg, 'depth'), 'depth', 'a task without a module lives under its own name');
 });
 
 test('a licence outside the allowed list passes only for a model that names it', () => {
@@ -130,6 +143,27 @@ test('a licence outside the allowed list passes only for a model that names it',
   assert.deepEqual(cardLicense({ license: 'mit' }), { license: 'MIT', ok: true, accepted: false });
 });
 
-test('the registry pins eight repos', () => {
-  assert.equal(registryRepos(reg).length, 8);
+test('the registry pins thirteen repos', () => {
+  assert.equal(registryRepos(reg).length, 13);
+});
+
+test('a model that joins several works credits each, and each names a part it has', () => {
+  for (const [id, m] of Object.entries(reg.models)) {
+    if (!m.bases) continue;
+    assert.ok(m.bases.length > 1, `${id}: bases only when there are several`);
+    assert.deepEqual(m.base, (({ part, ...b }) => b)(m.bases[0]), `${id}: base is the first of bases`);
+    for (const b of m.bases) assert.ok(m.parts[b.part], `${id}: ${b.name} names part ${b.part}`);
+  }
+  const v = getModel(reg, 'image-to-video/depth-parallax');
+  assert.deepEqual(v.bases.map(b => [b.name, b.license]), [['Depth Anything V2 Small', 'Apache-2.0'], ['MI-GAN', 'MIT']]);
+});
+
+test('a part two models share is one file of the store: same URLs, listed once', () => {
+  const urls = registryUrls(reg).map(u => u.url);
+  assert.equal(new Set(urls).size, urls.length, 'registryUrls lists each URL once');
+  const tool = toolFiles(reg).map(f => f.url);
+  assert.equal(new Set(tool).size, tool.length, 'toolFiles lists each URL once');
+  const depth = variantFiles(getModel(reg, 'depth/depth-anything-v2-small'), getModel(reg, 'depth/depth-anything-v2-small').devices.wasm[0]).map(f => f.url);
+  const video = variantFiles(getModel(reg, 'image-to-video/depth-parallax'), getModel(reg, 'image-to-video/depth-parallax').devices.wasm[0]).map(f => f.url);
+  for (const u of depth.filter(u => /\.onnx$|preprocessor/.test(u))) assert.ok(video.includes(u), `the video model reuses ${u}`);
 });

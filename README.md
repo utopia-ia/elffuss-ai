@@ -57,6 +57,8 @@ from Wikimedia Commons and on an invoice drawn by `scripts/make-fixtures.mjs`
 | [ocr.elffuss.com](https://ocr.elffuss.com/en/) | Read the text of photos, scans and PDFs, even whole folders; export as Markdown, JSON or ZIP | PP-OCRv6 small by PaddlePaddle (Apache-2.0) | WebGPU or WebAssembly |
 | [detect.elffuss.com](https://detect.elffuss.com/en/) | Find up to 80 kinds of objects, in a photo or with the camera | RF-DETR Nano by Roboflow (Apache-2.0) | WebAssembly |
 | [depth.elffuss.com](https://depth.elffuss.com/en/) | Work out what is near and what is far, with a colour map, a 3D view and 16-bit PNG | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
+| [image.elffuss.com](https://image.elffuss.com/en/) | Create a picture from a description, with shapes, a seed to repeat it and PNG download | SANA-Sprint 0.6B by NVlabs (Apache-2.0), its text encoder Gemma 2 2B IT (Gemma Terms of Use) | WebGPU |
+| [video.elffuss.com](https://video.elffuss.com/en/) | Turn a photo into a video (a 3D camera move through its layers, a live preview, MP4 with an optional soundtrack), or make one from a text | Depth Anything V2 Small by depth-anything (Apache-2.0) and MI-GAN by Picsart AI Research (MIT); from a text, Wan 2.1 T2V 1.3B by Wan-AI with the rCM student and the TAEHV decoder (Apache-2.0) | WebGPU or WebAssembly (photo), WebGPU with float16 shaders (text); WebGL2 and WebCodecs (video) |
 | [audio.elffuss.com](https://audio.elffuss.com/en/) | Make music, sound effects and speech from text, with a waveform player, a local history and WAV or OGG downloads | Stable Audio 3 Small Music and SFX by Stability AI (Stability AI Community License); Kokoro 82M by hexgrad (Apache-2.0) | Music and effects: WebGPU with shader-f16. Speech: WebGPU or WebAssembly |
 | [tools.elffuss.com](https://tools.elffuss.com/en/) | The catalog of every Elffuss tool | none | none |
 
@@ -128,13 +130,15 @@ With `tests/fixtures/detect/foto.jpg` it prints `wasm`, `dog 0.90` and
 `cat 0.78`. The first run downloads the model (29 MB) through the model store;
 later runs take it from the browser.
 
-The other tasks work the same way (`node scripts/build.mjs <cutout|ocr|depth|audio> --dev --out dist`):
+The other tasks work the same way (`node scripts/build.mjs <cutout|ocr|depth|image|audio> --dev --out dist`):
 
 ```js
 // run() gives { png, alpha, width, height, device, … }
 import { RemoveBg } from '/v/dev/sdk/remove-bg/index.js';
 // run({ prompt, seconds, seed }) / run({ text, voice, lang, speed }) give { blob (WAV), seconds, sampleRate, … }
 import { Music, Sfx, Speech, audio } from '/v/dev/sdk/audio/index.js';
+// generate({ prompt, aspect, seed, steps }) gives { blob, width, height, seed, … }
+import { TextToImage } from '/v/dev/sdk/text-to-image/index.js';
 import { Depth } from '/v/dev/sdk/depth/index.js';
 import { Ocr } from '/v/dev/sdk/ocr/index.js';
 ```
@@ -201,6 +205,9 @@ exact size (`node scripts/broker-repos.mjs` prints that list).
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
 | `@elffuss/ai/audio` | Music, sound effects and speech from text | [audio.elffuss.com](https://audio.elffuss.com/) | in use |
+| `@elffuss/ai/text-to-image` | Pictures from a text description (PNG) | [image.elffuss.com](https://image.elffuss.com/) | in use |
+| `@elffuss/ai/video` | A video from a photo: a 3D camera move over its depth, as MP4 | [video.elffuss.com](https://video.elffuss.com/) | in use |
+| `@elffuss/ai/video-gen` | A video from a text description, as MP4 (WebGPU) |  | in use |
 <!-- modules:end -->
 
 Each task module also exports `<task>/sizes`, the download size of each of its
@@ -218,13 +225,19 @@ the files under `sdk/` as shown above.
 | text-to-music | [Stable Audio 3 Small Music](https://huggingface.co/stabilityai/stable-audio-3-small-music) | Stability AI | Stability AI Community License (text encoder: also Gemma Terms of Use) | 1764 MB (WebGPU, fp16) |
 | text-to-sfx | [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx) | Stability AI | Stability AI Community License (text encoder: also Gemma Terms of Use) | 1764 MB (WebGPU, fp16; 921 MB more when music is already there) |
 | text-to-speech | [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M) | hexgrad | Apache-2.0 | 339 MB (WebGPU, fp32), 106 MB (WebAssembly, q8) |
+| text-to-image | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px) | NVlabs | Apache-2.0 (text encoder: Gemma Terms of Use) | 3.2 GB (WebGPU with float16 shaders: 4-bit text encoder, float16 transformer and decoder) |
+| image-to-video | Depth Anything V2 Small (the same files) and [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN) | depth-anything, Picsart AI Research | Apache-2.0, MIT | 79 or 129 MB (WebGPU), 57 MB (WebAssembly); 30 MB when the depth model is already in the browser |
+| text-to-video | [Wan 2.1 T2V 1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), the [rCM](https://huggingface.co/worstcoder/rcm-Wan) student and the [TAEHV](https://huggingface.co/lightx2v/Autoencoders) decoder | Wan-AI, worstcoder, lightx2v / madebyollin | Apache-2.0 | 5.2 GB (WebGPU with float16 shaders: 4-bit text encoder, 8-bit transformer) |
 
-The weights are ONNX exports from `onnx-community`, `PaddlePaddle` and Stability AI
-(`stabilityai/stable-audio-3-optimized`) on Hugging Face; the English phonemiser of
-Kokoro is misaki's word lists and fallback network as packaged in
-`nekwo/misaki-en-us-g2p-onnx`. Stable Audio 3 is used under the Stability AI
-Community License: free for organisations under US $1M in annual revenue, with
-registration at stability.ai for commercial use (see NOTICE); powered by Stability AI. They are not part of this repository and are not redistributed.
+The weights are ONNX exports from `onnx-community`, `PaddlePaddle`,
+`andraniksargsyan` (an author of MI-GAN) and Stability AI
+(`stabilityai/stable-audio-3-optimized`) on Hugging Face and, for SANA-Sprint and Wan 2.1, conversions published by UtopiaIA (made with
+`scripts/text-to-image/` and `scripts/wan/`), with the tokenizer and configuration
+read from the original repository. The English phonemiser of Kokoro is misaki's word
+lists and fallback network as packaged in `nekwo/misaki-en-us-g2p-onnx`. Stable Audio 3
+is used under the Stability AI Community License: free for organisations under US $1M
+in annual revenue, with registration at stability.ai for commercial use (see NOTICE);
+powered by Stability AI. None of them is part of this repository.
 [docs/MODELS.md](docs/MODELS.md) gives every repository, pinned commit and file.
 
 ## Repository
@@ -328,7 +341,7 @@ and served with the sites; the runtimes' licence files are fetched with them by
   mask is resized following its bilinear resampling.
 - [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) (Apache-2.0): the OCR
   follows its DB post-processing, rotated crop and CTC decoding; no code is copied.
-- The model authors: PramaLLC, PaddlePaddle, Roboflow and depth-anything.
+- The model authors: PramaLLC, PaddlePaddle, Roboflow, depth-anything and Picsart AI Research.
 
 Elffuss AI is part of [Elffuss](https://elffuss.com/).
 

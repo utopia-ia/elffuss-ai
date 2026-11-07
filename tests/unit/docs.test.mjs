@@ -28,7 +28,7 @@ test('the JSDoc reader handles nested types and default values', () => {
 
 test('the docs speak of every task and site', () => {
   const llms = readFileSync(join(ROOT, 'docs', 'llms.txt'), 'utf8');
-  for (const h of ['cutout', 'ocr', 'detect', 'depth', 'tools']) assert.match(llms, new RegExp(`https://${h}\\.elffuss\\.com/`));
+  for (const h of ['cutout', 'ocr', 'detect', 'depth', 'image', 'tools']) assert.match(llms, new RegExp(`https://${h}\\.elffuss\\.com/`));
   const models = readFileSync(join(ROOT, 'docs', 'MODELS.md'), 'utf8');
-  for (const id of ['remove-bg/ben2', 'depth/depth-anything-v2-small', 'detect/rfdetr-nano', 'ocr/pp-ocrv6-small']) assert.ok(models.includes(id), id);
+  for (const id of ['remove-bg/ben2', 'depth/depth-anything-v2-small', 'detect/rfdetr-nano', 'ocr/pp-ocrv6-small', 'text-to-image/sana-sprint-0.6b']) assert.ok(models.includes(id), id);
 });

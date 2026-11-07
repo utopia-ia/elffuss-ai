@@ -70,8 +70,9 @@ test('one button.primary per app page, every other button .ghost, none in the ca
       assert.equal(buttons.filter(c => c.split(/\s+/).includes('primary')).length, 1, `${s.site}/${page}: one button.primary`);
       for (const c of buttons) assert.ok(['primary', 'ghost'].includes(c), `${s.site}/${page}: button class "${c}"`);
       assert.match(html, /<header>[\s\S]*class="brand"[\s\S]*<nav>[\s\S]*<\/header>[\s\S]*<main>[\s\S]*<\/main>[\s\S]*<footer>/, `${s.site}/${page}: header, main, footer`);
+      // A site that takes files has its drop zone; one that takes only text (image, audio) has none.
       if (s.accept) assert.match(html, /<label class="drop">[\s\S]*?<input class="visually-hidden" type="file"/, `${s.site}/${page}: drop zone`);
-      else assert.doesNotMatch(html, /type="file"/, `${s.site}/${page}: no file input on a site that takes none`);
+      else assert.doesNotMatch(html, /type="file"/, `${s.site}/${page}: no file input without accept`);
       assert.match(html, /<section class="result" hidden>/, `${s.site}/${page}: result section hidden`);
     }
   }

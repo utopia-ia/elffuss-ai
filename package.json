@@ -2,7 +2,7 @@
   "name": "@elffuss/ai",
   "version": "0.0.0",
   "private": true,
-  "description": "Task modules for the browser: background removal, OCR, object detection, depth, and music, sound effects and speech from text, on WebGPU or WebAssembly.",
+  "description": "Task modules for the browser: background removal, OCR, object detection, depth, text-to-image, video from a photo and video from a text, and music, sound effects and speech from text, on WebGPU or WebAssembly.",
   "type": "module",
   "license": "Apache-2.0",
   "exports": {
@@ -17,6 +17,14 @@
     "./ocr/sizes": "./sdk/ocr/sizes.js",
     "./audio": "./sdk/audio/index.js",
     "./audio/sizes": "./sdk/audio/sizes.js",
+    "./text-to-image": "./sdk/text-to-image/index.js",
+    "./text-to-image/sizes": "./sdk/text-to-image/sizes.js",
+    "./video": "./sdk/video/index.js",
+    "./video/sizes": "./sdk/video/sizes.js",
+    "./video/encode": "./sdk/video/encode.js",
+    "./video/render": "./sdk/video/render.js",
+    "./video-gen": "./sdk/video-gen/index.js",
+    "./video-gen/sizes": "./sdk/video-gen/sizes.js",
     "./package.json": "./package.json"
   },
   "sideEffects": false,

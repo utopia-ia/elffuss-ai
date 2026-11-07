@@ -66,7 +66,7 @@ test('every text exists in both languages, with the same placeholders', () => {
       assert.ok(m.es[k] && m.en[k], `${s.site} ${k} is empty`);
     }
     const own = JSON.parse(readFileSync(join(ROOT, s.dir, 'strings.es.json'), 'utf8'));
-    // A site that takes files names its drop zone; one that makes audio from text has none.
+    // A site that takes files names its drop zone; one that takes only text (image, audio) has none.
     const need = s.catalog ? ['title', 'description', 'intro', 'section.tools', 'section.apps', 'card.model', 'card.stored'] : ['title', 'description', 'intro', ...(s.accept ? ['drop'] : []), 'action.run', 'action.downloadAndRun', 'catalog.name', 'catalog.line'];
     for (const k of need) assert.ok(k in own, `${s.site}: needs ${k}`);
     if (!s.catalog) assert.deepEqual(placeholders(own['action.downloadAndRun']), ['size'], `${s.site}: the download label takes {size}`);

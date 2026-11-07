@@ -2,12 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 UtopiaIA
 //
-// Generates registry/tasks.json and sdk/<task>/sizes.js from registry/source.mjs
-// and the Hugging Face API. Needs the network; the unit tests never run it.
+// Generates registry/tasks.json and sdk/<module>/sizes.js (the module of a task is
+// its `module`, else its name) from registry/source.mjs and the Hugging Face API.
+// Needs the network; the unit tests never run it.
 //
 //   node scripts/build-registry.mjs            check every pin live and write the files
 //   node scripts/build-registry.mjs --check    regenerate in memory and compare (exit 1 on any difference)
 //   node scripts/build-registry.mjs --resolve  rewrite the revisions of source.mjs to today's `main`
+//
+// A repository prepared for the Hub but not pushed yet can be read from its local
+// git clone instead: ELFFUSS_AI_STAGED=<owner/name>=<clone dir>[,…]. Its commit is
+// the one the Hub will have once that clone is pushed as it is (git push keeps the
+// commit), so the registry pins it already; --check against the Hub fails until then.
 //
 // It fails when a licence (of the model or of its base) is not in the allowed
 // list, when a repo is private or gated, when a revision is not the commit the
@@ -23,6 +29,7 @@
 // files for other runtimes). A task may say which SDK module it belongs to
 // (`module`); sizes.js is written once per module.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { pinnedUrl, isCommit, isSafePath, PINNED_URL_RE, HUB_ORIGIN } from '../sdk/core/hub-url.js';
@@ -39,7 +46,7 @@ export const ALLOWED_LICENSES = ['Apache-2.0', 'MIT', 'BSD-2-Clause', 'BSD-3-Cla
  */
 export const ACCEPTED_LICENSES = Object.freeze({ 'stable-audio-community': 'Stability AI Community License' });
 /** Task names of the registry. */
-export const TASKS = Object.freeze(['remove-bg', 'depth', 'detect', 'ocr', 'text-to-music', 'text-to-sfx', 'text-to-speech']);
+export const TASKS = Object.freeze(['remove-bg', 'depth', 'detect', 'ocr', 'text-to-image', 'image-to-video', 'text-to-video', 'text-to-music', 'text-to-sfx', 'text-to-speech']);
 export const DENY_REPOS = [/Depth-Anything-V2-(Base|Large|Giant)/i, /RMBG/i];
 export const DENY_LICENSES = [/^cc-by-nc/i, /^openrail/i, /^lfm/i, /^gemma/i, /^llama/i, /^other$/i];
 const SPDX = { 'apache-2.0': 'Apache-2.0', mit: 'MIT', 'bsd-2-clause': 'BSD-2-Clause', 'bsd-3-clause': 'BSD-3-Clause' };
@@ -58,7 +65,11 @@ export function cardLicense(card, accept = []) {
   if (raw === 'other' && accept.includes(name) && ACCEPTED_LICENSES[name]) return { license: ACCEPTED_LICENSES[name], ok: true, accepted: true };
   return { license: raw, ok: ALLOWED_LICENSES.includes(raw), accepted: false };
 }
-const WEIGHT = /\.onnx(_data(_\d+)?)?$/;
+// Weights: ONNX graphs and their external data, and the original checkpoints a
+// repository may also hold (PyTorch, safetensors). Those no variant uses stay out
+// of the registry: nothing downloads them, and a source repository of several
+// gigabytes (SANA-Sprint, Wan 2.1) would otherwise be pinned whole.
+const WEIGHT = /\.(onnx(_data(_\d+)?)?|safetensors|pth|pt|ckpt)$/;
 export const MAX_KEY = 180;
 
 async function getJSON(url, headers = {}) {
@@ -67,7 +78,31 @@ async function getJSON(url, headers = {}) {
   return { json: await r.json(), link: r.headers.get('link') };
 }
 
+/** Repositories read from a local clone (ELFFUSS_AI_STAGED). */
+export function stagedRepos(env = process.env.ELFFUSS_AI_STAGED || '') {
+  return new Map(env.split(',').filter(Boolean).map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)]; }));
+}
+
+/** What the Hub API would say of a local clone: its commit, licence and files (LFS files by their pointer). */
+export function stagedRepo(dir) {
+  const git = (...a) => execFileSync('/usr/bin/git', ['-C', dir, ...a], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  const sha = git('rev-parse', 'HEAD').trim();
+  const readme = git('show', 'HEAD:README.md');
+  const license = /^license:\s*(\S+)/m.exec(readme)?.[1] || '';
+  const files = [];
+  for (const line of git('ls-tree', '-r', '-l', 'HEAD').trim().split('\n')) {
+    const m = /^\d+ blob ([0-9a-f]{40})\s+(\d+)\t(.+)$/.exec(line);
+    if (!m) continue;
+    const text = Number(m[2]) < 1024 ? git('cat-file', '-p', m[1]) : '';
+    const lfs = /^version https:\/\/git-lfs\.github\.com\/spec\/v1\noid sha256:([0-9a-f]{64})\nsize (\d+)/.exec(text);
+    files.push({ type: 'file', path: m[3], size: Number(m[2]), oid: m[1], ...(lfs ? { lfs: { oid: lfs[1], size: Number(lfs[2]) } } : {}) });
+  }
+  return { info: { sha, private: false, gated: false, cardData: { license }, author: null }, files };
+}
+
 async function tree(repo, revision) {
+  const staged = stagedRepos().get(repo);
+  if (staged) return stagedRepo(staged).files;
   const files = [];
   let url = `${API}${repo}/tree/${revision}?recursive=true`;
   while (url) {
@@ -98,12 +133,23 @@ async function baseLicense(base, accept) {
   throw new Error('base model needs a source');
 }
 
+/** A model id: `<task>/<name>`, lower case. */
+export const MODEL_ID = /^[a-z][a-z0-9-]*\/[a-z0-9.-]+$/;
+
+/** The bases a source model credits, as a list (`base` is one object or a list of them). */
+export function sourceBases(m) {
+  return Array.isArray(m.base) ? m.base : [m.base];
+}
+
 /** Build the registry object from the source, reading the Hub. */
 export async function generate(source) {
   const out = { schema: 1, tasks: source.tasks, models: {} };
   const problems = [];
+  for (const [task, t] of Object.entries(source.tasks)) {
+    if (t.module != null && !/^[a-z][a-z0-9-]*$/.test(t.module)) problems.push(`${task}: bad module ${t.module}`);
+  }
   for (const [id, m] of Object.entries(source.models)) {
-    if (!new RegExp(`^(${TASKS.join('|')})/[a-z0-9.-]+$`).test(id)) problems.push(`${id}: bad model id`);
+    if (!MODEL_ID.test(id)) problems.push(`${id}: bad model id`);
     const accept = m.accept || [];
     for (const a of accept) if (!ACCEPTED_LICENSES[a]) problems.push(`${id}: accepts ${a}, which is not in ACCEPTED_LICENSES`);
     if (!id.startsWith(m.task + '/')) problems.push(`${id}: id does not start with its task`);
@@ -113,7 +159,8 @@ export async function generate(source) {
     const licenses = new Set();
     for (const [partName, p] of Object.entries(m.parts)) {
       if (!isCommit(p.revision)) { problems.push(`${id}/${partName}: revision is not a 40-hex commit`); continue; }
-      const { json: info } = await getJSON(`${API}${p.repo}/revision/${p.revision}`);
+      const staged = stagedRepos().get(p.repo);
+      const info = staged ? { ...stagedRepo(staged).info, author: p.repo.split('/')[0] } : (await getJSON(`${API}${p.repo}/revision/${p.revision}`)).json;
       if (info.sha !== p.revision) problems.push(`${id}/${partName}: the Hub returned ${info.sha} for ${p.revision}`);
       if (info.private) problems.push(`${p.repo}: private`);
       if (info.gated) problems.push(`${p.repo}: gated`);
@@ -166,19 +213,26 @@ export async function generate(source) {
         return { ...(v.when ? { when: v.when } : {}), dtype: v.dtype, files, bytes };
       });
     }
-    const base = await baseLicense(m.base, accept);
-    if (!base.ok) problems.push(`${id}: base licence ${base.license || '(none)'} is not allowed`);
-    if (denied(base.repo, base.accepted ? '' : base.license)) problems.push(`${id}: base on the deny list`);
+    const bases = [];
+    for (const b of sourceBases(m)) {
+      const base = await baseLicense(b, accept);
+      if (!base.ok) problems.push(`${id}: base licence ${base.license || '(none)'} is not allowed`);
+      if (denied(base.repo, base.accepted ? '' : base.license)) problems.push(`${id}: base on the deny list`);
+      if (b.part != null && !m.parts[b.part]) problems.push(`${id}: base ${b.name} names a part it does not have (${b.part})`);
+      bases.push({ name: b.name, author: b.author, url: base.url, license: base.license, ...(b.part != null ? { part: b.part } : {}) });
+    }
     out.models[id] = {
       task: m.task,
       name: m.name,
       license: [...licenses].join(' AND '),
       author: Object.values(parts)[0]?.author,
-      base: { name: m.base.name, author: m.base.author, url: base.url, license: base.license },
+      base: (({ part, ...b }) => b)(bases[0]),
+      ...(bases.length > 1 ? { bases } : {}),
       flag: m.flag,
       redistributes: m.redistributes,
       runtime: m.runtime,
       pipeline: m.pipeline,
+      ...(m.sampler ? { sampler: m.sampler } : {}),
       parts,
       devices,
       notes: m.notes,
@@ -192,45 +246,60 @@ export async function generate(source) {
   return { registry: out, problems };
 }
 
-/** The SDK module of a task: its own name unless the registry names another (`module`). */
-export function taskModule(registry, task) {
+/** The module directory of each task under sdk/: its `module`, else its name. */
+export function moduleOf(registry, task) {
   return registry.tasks[task]?.module || task;
 }
+/** The same as moduleOf (the name app/audio gave it). */
+export const taskModule = moduleOf;
 
-/** Every SDK module and the tasks it holds, in the registry's order. */
+/** Every module directory with the tasks it holds, in the order of the tasks. */
 export function modules(registry) {
   const out = new Map();
-  for (const task of Object.keys(registry.tasks)) {
-    const mod = taskModule(registry, task);
-    if (!out.has(mod)) out.set(mod, []);
-    out.get(mod).push(task);
-  }
+  for (const task of Object.keys(registry.tasks)) out.set(moduleOf(registry, task), [...(out.get(moduleOf(registry, task)) || []), task]);
   return out;
 }
 
 /**
- * Text of sdk/<module>/sizes.js. A module of one task (the module's own name) gives
- * DEFAULT_MODEL; a module of several tasks gives DEFAULT_MODELS, by task.
+ * Text of sdk/<module>/sizes.js. A module with one task (all of them today) gets
+ * that task's sizes; one with several gets the default model of each.
  */
-export function sizesSource(registry, module) {
-  const tasks = modules(registry).get(module) || [module];
+export function moduleSizesSource(registry, module) {
+  const tasks = modules(registry).get(module) || [];
+  if (tasks.length === 1) return sizesSource(registry, tasks[0]);
   const models = Object.fromEntries(Object.entries(registry.models).filter(([, m]) => tasks.includes(m.task)).map(([id, m]) => [id,
     Object.fromEntries(Object.entries(m.devices).map(([dev, vs]) => [dev, vs.map(v => ({ ...(v.when ? { when: v.when } : {}), dtype: v.dtype, bytes: v.bytes }))]))]));
-  const single = tasks.length === 1 && tasks[0] === module;
-  const defaults = single
-    ? `/** Default model of this task. */
-export const DEFAULT_MODEL = ${JSON.stringify(registry.tasks[module].default)};`
-    : `/** Default model of each task of this module. */
-export const DEFAULT_MODELS = Object.freeze(${JSON.stringify(Object.fromEntries(tasks.map(t => [t, registry.tasks[t].default])), null, 2)});`;
+  const defaults = Object.fromEntries(tasks.map(t => [t, registry.tasks[t].default]));
   return `// SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 UtopiaIA
 //
 // GENERATED by scripts/build-registry.mjs from registry/tasks.json. Do not edit.
 
-${defaults}
+/** Default model of each task of this module. */
+export const DEFAULT_MODELS = Object.freeze(${JSON.stringify(defaults, null, 2)});
 
 /**
- * Download size in bytes of every variant of this ${single ? 'task' : 'module'}'s models, by model id and
+ * Download size in bytes of every variant of this module's models, by model id and
+ * backend, in the registry's order of preference.
+ */
+export const SIZES = Object.freeze(${JSON.stringify(models, null, 2)});
+`;
+}
+
+/** Text of sdk/<module>/sizes.js for a module that holds one task. */
+export function sizesSource(registry, task) {
+  const models = Object.fromEntries(Object.entries(registry.models).filter(([, m]) => m.task === task).map(([id, m]) => [id,
+    Object.fromEntries(Object.entries(m.devices).map(([dev, vs]) => [dev, vs.map(v => ({ ...(v.when ? { when: v.when } : {}), dtype: v.dtype, bytes: v.bytes }))]))]));
+  return `// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 UtopiaIA
+//
+// GENERATED by scripts/build-registry.mjs from registry/tasks.json. Do not edit.
+
+/** Default model of this task. */
+export const DEFAULT_MODEL = ${JSON.stringify(registry.tasks[task].default)};
+
+/**
+ * Download size in bytes of every variant of this task's models, by model id and
  * backend, in the registry's order of preference.
  */
 export const SIZES = Object.freeze(${JSON.stringify(models, null, 2)});
@@ -270,7 +339,7 @@ async function main(argv) {
   for (const p of problems) console.log('✗ ' + p);
   if (problems.length) return 1;
   const files = new Map([[OUT, serialise(registry)]]);
-  for (const mod of modules(registry).keys()) files.set(join(ROOT, 'sdk', mod, 'sizes.js'), sizesSource(registry, mod));
+  for (const module of modules(registry).keys()) files.set(join(ROOT, 'sdk', module, 'sizes.js'), moduleSizesSource(registry, module));
   if (argv.includes('--check')) {
     let diff = 0;
     for (const [p, text] of files) {

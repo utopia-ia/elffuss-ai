@@ -1,0 +1,10 @@
+[
+  {"id": "dog", "seed": 11, "prompt": "A golden retriever runs through a sunlit meadow of tall grass and wildflowers toward the camera, its ears flapping, slow motion, shallow depth of field, warm afternoon light."},
+  {"id": "coast", "seed": 22, "prompt": "Aerial drone shot slowly flying over a rugged coastline at sunset, waves crashing against dark cliffs, orange and pink sky reflected on the water."},
+  {"id": "fisherman", "seed": 33, "prompt": "Close-up portrait of an elderly fisherman with a weathered face and a white beard, he looks at the camera and smiles, soft natural light, a harbor blurred in the background."},
+  {"id": "street", "seed": 44, "prompt": "A busy city street at night in the rain, neon signs reflecting on the wet asphalt, people with umbrellas walking past, cinematic lighting."},
+  {"id": "coffee", "seed": 55, "prompt": "A cup of coffee on a wooden table, steam rising gently, morning sunlight through a window, a cozy kitchen."},
+  {"id": "velero", "seed": 66, "prompt": "Un velero navega por un mar azul con olas suaves, gaviotas volando alrededor, un día soleado de verano."},
+  {"id": "car", "seed": 77, "prompt": "A red sports car drifts around a corner on a mountain road, dust and tire smoke, dramatic tracking shot."},
+  {"id": "cat", "seed": 88, "prompt": "a cat"}
+]

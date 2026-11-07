@@ -9,6 +9,7 @@ import { render, esc, fill } from './template.mjs';
 import { csp } from '../../deploy/headers.mjs';
 import { siteUrl } from '../../deploy/sites.mjs';
 import { pinnedUrl, repoPage } from '../../sdk/core/hub-url.js';
+import { modelBases } from '../../sdk/core/registry.js';
 import { runtimeUrls, transformersDir } from '../../sdk/core/runtimes.js';
 import { PINS, VENDOR_DIRS } from '../../sdk/core/runtime-pins.js';
 import { ortVariantFor } from '../../sdk/core/device.js';
@@ -16,6 +17,12 @@ import { ortVariantFor } from '../../sdk/core/device.js';
 const LANGS = ['es', 'en'];
 const mb = bytes => (bytes / 1e6 < 10 ? Math.round(bytes / 1e5) / 10 : Math.round(bytes / 1e6));
 export const formatMB = (bytes, lang) => (lang === 'es' ? String(mb(bytes)).replace('.', ',') : String(mb(bytes)));
+/** A size with its unit, as the pages show it: "31 MB", or "3,2 GB" / "3.2 GB" from a thousand megabytes up (shared/shell.js formatSize). */
+export const formatSize = (bytes, lang) => {
+  if (bytes < 1e9) return `${formatMB(bytes, lang)} MB`;
+  const n = String(Math.round(bytes / 1e8) / 10);
+  return `${lang === 'es' ? n.replace('.', ',') : n} GB`;
+};
 
 /** Paths of a site's pages for a channel (PRE lives under /beta/). */
 export function pagePaths(channel) {
@@ -38,6 +45,25 @@ export function siteModels(site, registry) {
   return (site.models || []).map(id => ({ id, ...registry.models[id] }));
 }
 
+/**
+ * True when a site ships Transformers.js: its model runs on it, or its task uses
+ * its tokenizers with ONNX Runtime directly (app.json `transformers: true`).
+ */
+export function siteUsesTransformers(site, registry) {
+  return Boolean(site.transformers) || siteModels(site, registry).some(m => m.runtime === 'transformers.js');
+}
+
+/**
+ * The SDK modules (directories under sdk/) a site ships: the module of its task
+ * (the registry says which), then those its app.json lists in `modules`, the
+ * integrations it offers. The catalog ships none.
+ */
+export function siteModules(site, registry) {
+  if (site.catalog || !site.task) return [];
+  const own = registry.tasks[site.task]?.module || site.task;
+  return [...new Set([own, ...(site.modules || [])])];
+}
+
 /** The ONNX Runtime variant a site ships. */
 export function siteOrtVariant(site, registry) {
   return ortVariantFor(siteModels(site, registry));
@@ -50,7 +76,7 @@ export function siteRuntimes(site, registry, manifest) {
   const variant = siteOrtVariant(site, registry);
   const ortId = VENDOR_DIRS.onnxruntimeWeb, tfId = VENDOR_DIRS.transformers, pdfId = VENDOR_DIRS.pdfjs;
   const out = [];
-  if (models.some(m => m.runtime === 'transformers.js')) {
+  if (siteUsesTransformers(site, registry)) {
     // Its file bundles two libraries of its own authors, each with its licence.
     const bundled = Object.entries(manifest.packages[tfId].licenses).filter(([, l]) => l.bundled)
       .map(([p, l]) => ({ label: `${l.bundled.replace(/@(?=[^@]*$)/, ' ')} (${l.license})`, href: `/vendor/${transformersDir(variant)}/${p}` }));
@@ -84,22 +110,45 @@ function variantSizes(model) {
 export function sizeText(model, t, lang) {
   const sizes = variantSizes(model);
   const min = Math.min(...sizes), max = Math.max(...sizes);
+  if (min >= 1e9 && min === max) return formatSize(min, lang);
   if (formatMB(min, lang) === formatMB(max, lang)) return fill(t['size.mb'], { n: formatMB(min, lang) });
   return fill(t['size.range'], { min: formatMB(min, lang), max: formatMB(max, lang) });
 }
 
-/** The model line of an app page, with its size in a span the shell refines. */
-export function modelLine(model, t, lang) {
-  const MARK = '\u0001SIZE\u0001';
-  const line = esc(fill(t['model.line'], { model: model.base.name, author: model.base.author, license: model.base.license, size: MARK }));
-  return line.replace(esc(MARK), `<span data-role="model-size">${esc(sizeText(model, t, lang))}</span>`) + ' ' + esc(t['privacy.download']);
+/** Items joined as a sentence: "a, b, y c" / "a, b and c" (the strings list.sep and list.last). */
+export function joinList(items, t) {
+  if (items.length <= 1) return items.join('');
+  return items.slice(0, -1).join(t['list.sep']) + t['list.last'] + items.at(-1);
 }
 
-/** The read-only storage panel: every file of every variant (of every model given), with its size. */
-export function storagePanel(model, t, lang, more = []) {
+/** The base models a model credits, as a sentence of `itemKey` ("{model}, de {author} ({license})"). */
+export function basesText(model, t, itemKey = 'model.item') {
+  return joinList(modelBases(model).map(b => fill(t[itemKey], { model: b.name, author: b.author, license: b.license })), t);
+}
+
+/**
+ * The model line of an app page, with its size in a span the shell refines
+ * (`sizeRole`: its data-role; a site with a second model names that one's apart).
+ */
+export function modelLine(model, t, lang, sizeRole = 'model-size') {
+  const MARK = '\u0001SIZE\u0001';
+  const many = modelBases(model).length > 1;
+  const line = esc(many
+    ? fill(t['model.lineMany'], { models: basesText(model, t), size: MARK })
+    : fill(t['model.line'], { model: model.base.name, author: model.base.author, license: model.base.license, size: MARK }));
+  return line.replace(esc(MARK), `<span data-role="${esc(sizeRole)}">${esc(sizeText(model, t, lang))}</span>`) + ' ' + esc(t['privacy.download']);
+}
+
+/**
+ * The read-only storage panel: every file of every variant of the site's models (one
+ * or a list, and any `more`), with its size. With several models a file is named by
+ * its repository.
+ */
+export function storagePanel(models, t, lang, more = []) {
   const seen = new Map();
-  const multi = more.length > 0;
-  for (const m of [model, ...more]) for (const v of Object.values(m.devices).flat()) {
+  const list = [...[models].flat(), ...more];
+  const multi = list.length > 1;
+  for (const m of list) for (const v of Object.values(m.devices).flat()) {
     for (const ref of v.files) {
       const i = ref.indexOf(':');
       const part = m.parts[ref.slice(0, i)], path = ref.slice(i + 1);
@@ -124,14 +173,7 @@ export function appFooter({ model, models = [model], runtimes, t, lang, licUrl, 
   const lines = [`  <p>${esc(t['footer.local'])}</p>`];
   const said = new Set();
   for (const m of models) {
-    const line = fill(t['footer.model'], { model: m.base.name, author: m.base.author, license: m.base.license });
-    if (!said.has(line)) { lines.push(`  <p>${esc(line)}</p>`); said.add(line); }
-    const authors = [...new Set(Object.values(m.parts).map(p => `${p.author}|${p.license}`))];
-    for (const a of authors) {
-      const [author, license] = a.split('|');
-      const conv = fill(t['footer.conversion'], { author, license });
-      if (author !== m.base.author && !said.has(conv)) { lines.push(`  <p>${esc(conv)}</p>`); said.add(conv); }
-    }
+    for (const line of modelCredits(m, t)) if (!said.has(line)) { lines.push(line); said.add(line); }
     for (const term of m.terms || []) {
       const key = `footer.terms.${term.name}`;
       if (t[key] && !said.has(key)) { lines.push(`  <p>${esc(t[key])}</p>`); said.add(key); }
@@ -142,14 +184,33 @@ export function appFooter({ model, models = [model], runtimes, t, lang, licUrl, 
   return lines.join('\n');
 }
 
+/** The footer lines that credit one model: its base models, then who converted its weights. */
+function modelCredits(model, t) {
+  const lines = [];
+  const bases = modelBases(model);
+  if (bases.length > 1) lines.push(`  <p>${esc(fill(t['footer.models'], { models: basesText(model, t, 'footer.modelItem') }))}</p>`);
+  else lines.push(`  <p>${esc(fill(t['footer.model'], { model: model.base.name, author: model.base.author, license: model.base.license }))}</p>`);
+  // Who published the ONNX weights: the parts whose .onnx files a variant downloads.
+  const used = new Set(Object.values(model.devices).flat().flatMap(v => v.files).filter(f => /\.onnx$/.test(f)).map(f => f.slice(0, f.indexOf(':'))));
+  const authors = [...new Set(Object.entries(model.parts).filter(([pn]) => used.has(pn)).map(([, p]) => `${p.author}|${p.license}`))];
+  for (const a of authors) {
+    const [author, license] = a.split('|');
+    if (!bases.some(b => b.author === author)) lines.push(`  <p>${esc(fill(t['footer.conversion'], { author, license }))}</p>`);
+  }
+  return lines;
+}
+
 /** Cards of the catalog: the tool sites, then the Elffuss apps. */
 export function catalogCards({ sites, registry, t, lang, channel }) {
   const tools = sites.filter(s => !s.catalog).map(s => {
     const m = registry.models[s.models[0]];
     const url = siteUrl(s, channel) + (lang === 'en' ? 'en/' : '');
     const ms = s.models.map(id => registry.models[id]);
-    const line = ms.length === 1 ? fill(t['card.model'], { model: m.base.name, author: m.base.author, license: m.base.license, size: sizeText(m, t, lang) })
-      : ms.map(x => fill(t['card.modelShort'], { model: x.base.name, author: x.base.author, license: x.base.license })).join(' · ');
+    const line = ms.length > 1
+      ? ms.map(x => fill(t['card.modelShort'], { model: x.base.name, author: x.base.author, license: x.base.license })).join(' · ')
+      : modelBases(m).length > 1
+        ? fill(t['card.models'], { models: basesText(m, t), size: sizeText(m, t, lang) })
+        : fill(t['card.model'], { model: m.base.name, author: m.base.author, license: m.base.license, size: sizeText(m, t, lang) });
     return `      <li><article class="card" data-site="${esc(s.site)}" data-model="${esc(s.models[0])}">
         <h3><a href="${esc(url)}">${esc(s.strings[lang]['catalog.name'])}</a></h3>
         <p>${esc(s.strings[lang]['catalog.line'])}</p>
@@ -178,9 +239,11 @@ export function licensesMain({ site, models, runtimes, t, base }) {
   if (models.length) {
     out.push(`  <h2>${esc(t['licenses.models'])}</h2>`, '  <ul>');
     for (const m of models) {
-      for (const p of Object.values(m.parts)) {
-        const text = fill(t['licenses.modelItem'], { model: m.base.name, author: m.base.author, license: m.base.license, repo: p.repo, revision: p.revision.slice(0, 12), repoLicense: p.license });
-        out.push(`    <li>${esc(text)} <a href="${esc(repoPage(p.repo, p.revision))}">${esc(p.repo)}</a> · <a href="${esc(m.base.url)}">${esc(m.base.name)}</a></li>`);
+      for (const [name, p] of Object.entries(m.parts)) {
+        // The work this part is: the base that names it, or the model's one base.
+        const b = modelBases(m).find(x => x.part === name) || m.base;
+        const text = fill(t['licenses.modelItem'], { model: b.name, author: b.author, license: b.license, repo: p.repo, revision: p.revision.slice(0, 12), repoLicense: p.license });
+        out.push(`    <li>${esc(text)} <a href="${esc(repoPage(p.repo, p.revision))}">${esc(p.repo)}</a> · <a href="${esc(b.url)}">${esc(b.name)}</a></li>`);
       }
     }
     out.push('  </ul>');
@@ -244,9 +307,13 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
       main = render(templates.main, { t, v, html: { toolCards: catalogCards({ sites, registry, t, lang, channel }), appCards: appCards({ apps, lang }) } });
       footer = `  <p><a href="${esc(lang === 'es' ? paths.licUrlEs : paths.licUrlEn)}">${esc(t['footer.licenses'])}</a> · <a href="https://elffuss.com/">elffuss.com</a></p>`;
     } else {
+      // The first model is the site's own. A second one that is a mode of the page
+      // gets its own line, `modelLine2`, with its size in `model-size-2`; a site that
+      // lists every model (`modelLines`) shows the one of the chosen mode.
       const model = models[0];
+      const lines = Object.fromEntries(models.map((m, i) => [i ? `modelLine${i + 1}` : 'modelLine', modelLine(m, t, lang, i ? `model-size-${i + 1}` : 'model-size')]));
       const modelLines = models.map((m, i) => `  <p data-role="model" data-model="${esc(m.id)}"${i ? ' hidden' : ''}>${modelLine(m, t, lang)}</p>`).join('\n');
-      main = render(templates.main, { t, v, html: { modelLine: modelLine(model, t, lang), modelLines, storage: storagePanel(model, t, lang, models.slice(1)) } });
+      main = render(templates.main, { t, v, html: { ...lines, modelLines, storage: storagePanel(models, t, lang) } });
       footer = appFooter({ model, models, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
     }
     const entry = installEntry(t, t.title);
@@ -330,5 +397,10 @@ export function configSource({ site, registry, channel, buildId, storeUrl, sites
     runtime: variant ? runtimeUrls({ variant, pdfjs: Boolean(site.pdfjs) }) : null,
     sites: Object.fromEntries(sites.map(s => [s.site, siteUrl(s, channel)])),
   };
+  // Only where a site ships more than its own task's module (the integrations it offers).
+  const modules = siteModules(site, registry);
+  if (modules.length > 1) cfg.modules = modules;
+  // Only where a site has more than one model (a page with modes): all of them, its own first.
+  if ((site.models || []).length > 1) cfg.models = [...site.models];
   return `// GENERATED by scripts/build.mjs. Do not edit.\nexport default Object.freeze(${JSON.stringify(cfg, null, 2)});\n`;
 }

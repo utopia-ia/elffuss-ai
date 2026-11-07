@@ -237,3 +237,36 @@ expiry of each; alerts only, no restarts for a static site.
   docroots. The tools then say `store-unavailable`; the other sites are as
   before.
 - **The CORS map (step 2):** its `.bak-<date>`, `nginx -t`, reload.
+
+## 9. Two new sites: image.elffuss.com and video.elffuss.com
+
+`image` (text-to-image) and `video` (a video from a photo, or from a text: two modes of
+one page) follow sections 1 to 8 like the others, with these steps of their own before
+PRE, in this order.
+
+1. **The converted weights on the Hub.** Two models have no conversion for the browser
+   on the Hub, so the registry pins ones UtopiaIA publishes there (registry/source.mjs),
+   each with the original licence and a NOTICE, in the UtopiaIA account on the Hub: the
+   repository sana-sprint-0.6b-1024px-onnx-web at `762399d3a10e6ec06afeffbdf7dd425c83004fb3`
+   (SANA-Sprint 0.6B, made with `scripts/text-to-image/`; its NOTICE carries the Gemma
+   Terms of Use of `text_encoder/`) and the repository Wan2.1-T2V-1.3B-web at
+   `3dbd66ddf838b03a751576500ed6b5e72c53a972` (Wan 2.1 T2V 1.3B with the rCM student and
+   the TAEHV decoder, made with `scripts/wan/`). Both are pushed;
+   `node scripts/build-registry.mjs --check` checks them with the rest.
+2. **The model store rule.** Version 3 (served today) plus the hosts `image` and
+   `video` and the files of their variants: SANA-Sprint, MI-GAN and Wan 2.1 (the depth
+   files of the video site are those of `depth`). Replace the two blocks of the broker
+   page with those of `tests/fixtures/broker/tools-permission.js`, which are what
+   `node scripts/broker-repos.mjs` prints; without other sites the page must then have
+   the sha256 of `tests/fixtures/broker/SOURCE.json`. Same recipe as section 1 (backup,
+   sha256 by `curl`, models, m1 and m2). The largest file a tool may ask for is now
+   1.3 GB (SANA-Sprint's text encoder) and a whole model 5.2 GB (Wan 2.1): check that the
+   store keeps files of that size before announcing the sites.
+3. **The CORS map.** One line per host next to the other tools in
+   `/etc/nginx/conf.d/elffuss-pesos-cors.conf`, as in section 2:
+   `"https://image.elffuss.com"  $http_origin;` and `"https://video.elffuss.com"  $http_origin;`,
+   then `nginx -t` and reload.
+
+Then sections 3 to 7 for each host (`deploy/nginx/sites-available/<host>*.conf`,
+`snippets/elffuss-ai-<site>-headers.conf`, `deploy/deploy-<site>.sh`). The catalog lists the
+new sites by itself: deploy `tools` again after them.

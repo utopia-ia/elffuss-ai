@@ -8,7 +8,7 @@
 // <extract>
 // Las herramientas (repo elffuss-ai): el catálogo y una web por herramienta. Solo
 // su nombre exacto y solo bajo elffuss.com, que es donde viven.
-const HERRAMIENTAS = /^https:\/\/(audio|cutout|depth|detect|ocr|tools)\.elffuss\.com$/;
+const HERRAMIENTAS = /^https:\/\/(audio|cutout|depth|detect|image|ocr|tools|video)\.elffuss\.com$/;
 // </extract>
 // <extract>
 // Lo que puede pedir una herramienta: bajar o consultar uno de los ficheros de su
@@ -23,10 +23,40 @@ const HERRAMIENTAS = /^https:\/\/(audio|cutout|depth|detect|ocr|tools)\.elffuss\
 // El bloque lo imprime scripts/broker-repos.mjs de ese repo, y un test de allí
 // comprueba que esta copia es exactamente la de su registro.
 const FICHEROS_HERRAMIENTAS = new Map([
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/scheduler/scheduler_config.json", 160],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/tokenizer/tokenizer.json", 34362873],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/tokenizer/tokenizer_config.json", 46996],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/transformer/config.json", 648],
+  ["https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/resolve/aa76e7f4f4928f378716b6716a2130fba3caf5b1/vae/config.json", 1280],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.onnx", 9880512],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.yml", 885],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx", 21159378],
   ["https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml", 150579],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/ctx.onnx", 56891],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/ctx.onnx_data", 164573184],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/part0.onnx", 94755],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/part0.onnx_data", 525190144],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/part1.onnx", 93598],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/part1.onnx_data", 457108480],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/part2.onnx", 94930],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/dit/part2.onnx_data", 457526272],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/embed_q4.bin", 607117312],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_0.onnx", 31416],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_0.onnx_data", 741851136],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_1.onnx", 31512],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_1.onnx_data", 741851136],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_2.onnx", 31704],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_2.onnx_data", 741851136],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_3.onnx", 31988],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/t5/encoder_3.onnx_data", 741867520],
+  ["https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/resolve/3dbd66ddf838b03a751576500ed6b5e72c53a972/vae/taew2_1_light.onnx", 39412019],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/text_encoder/embed_tokens_q4.bin", 294912000],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/text_encoder/embed_tokens_q4_scales.bin", 36864000],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/text_encoder/model_q4.onnx", 1298421504],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/transformer/model_fp16.onnx", 1189024647],
+  ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/vae_decoder/model_fp16.onnx", 318818869],
+  ["https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B/resolve/37ec512624d61f7aa208f7ea8140a131f93afc9a/google/umt5-xxl/tokenizer.json", 16837417],
+  ["https://huggingface.co/andraniksargsyan/migan/resolve/406830d0fa60666da0071c342ad2fbc8f30c5c64/migan.onnx", 29546882],
   ["https://huggingface.co/nekwo/misaki-en-us-g2p-onnx/resolve/4b3a605d2f605318ab4f762ab9855c44106528b7/misaki-en_us-g2p.json", 5724857],
   ["https://huggingface.co/nekwo/misaki-en-us-g2p-onnx/resolve/4b3a605d2f605318ab4f762ab9855c44106528b7/misaki-en_us-g2p.onnx", 3438244],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/config.json", 80],

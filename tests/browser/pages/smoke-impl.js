@@ -30,6 +30,25 @@ export async function load(ctx) {
 }
 
 const dimsOf = t => (t && Array.isArray(t.dims) ? t.dims : null);
+const ARRAYS = { float32: Float32Array, uint8: Uint8Array, int32: Int32Array, int64: BigInt64Array };
+
+/**
+ * One zero tensor per input of a session. A session with one float input takes
+ * `dims`, as before; one with several (an image and its mask, as MI-GAN takes)
+ * gets each input's type and shape from the session, its free dimensions set
+ * from `dims` (the batch to 1).
+ */
+function feedsOf(ort, s, dims) {
+  const meta = Array.isArray(s.inputMetadata) && s.inputMetadata.length ? s.inputMetadata : s.inputNames.map(name => ({ name, type: 'float32', shape: dims }));
+  if (meta.length === 1 && meta[0].type === 'float32') return { [meta[0].name]: new ort.Tensor('float32', new Float32Array(dims.reduce((a, b) => a * b, 1)), dims) };
+  const feeds = {};
+  for (const m of meta) {
+    const shape = (m.shape || dims).map((d, i) => (Number.isInteger(d) && d > 0 ? d : i === 0 ? 1 : dims[i] ?? 64));
+    const Arr = ARRAYS[m.type] || Float32Array;
+    feeds[m.name] = new ort.Tensor(m.type in ARRAYS ? m.type : 'float32', new Arr(shape.reduce((a, b) => a * b, 1)), shape);
+  }
+  return feeds;
+}
 
 /** Feeds for a session that takes several inputs (speech, text to audio): zeros of each input's type and shape, 4 for a free axis. */
 function feedsFromMetadata(ort, s) {
@@ -69,7 +88,7 @@ export async function run(state, input, opts, ctx) {
   const outputs = {};
   for (const [ref, s] of Object.entries(state.sessions)) {
     const dims = ref.startsWith('rec:') ? [1, 3, 48, 160] : [1, 3, 64, 64];
-    const feeds = (s.inputNames.length > 1 && feedsFromMetadata(state.ort, s)) || { [s.inputNames[0]]: new state.ort.Tensor('float32', new Float32Array(dims.reduce((a, b) => a * b, 1)), dims) };
+    const feeds = (s.inputNames.length > 1 && feedsFromMetadata(state.ort, s)) || feedsOf(state.ort, s, dims);
     const r = await s.run(feeds);
     outputs[ref] = Object.fromEntries(Object.entries(r).map(([k, t]) => [k, dimsOf(t)]));
   }
