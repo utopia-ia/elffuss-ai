@@ -20,7 +20,8 @@
 //             registry/tasks.json, LICENSES/, NOTICE.txt, shared/icons/*.png and the web app
 //             manifests manifest.es.json and manifest.en.json (pre: manifest.beta.<lang>.json)
 //   vendor/   only the runtimes this site uses, with their licences; Transformers.js
-//             rewritten to import the site's ONNX Runtime variant
+//             rewritten to import the site's ONNX Runtime variant; the Elffuss Engine's
+//             pinned files where a model runs part of itself on it
 // The runtimes are not in git: they come from the working tree's vendor/, which
 // must match vendor/manifest.json byte for byte (fetched first when missing,
 // see scripts/vendor.mjs --ensure).
@@ -33,7 +34,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { sites as readSites } from '../deploy/sites.mjs';
 import { STORE_ORIGIN, csp } from '../deploy/headers.mjs';
-import { sitePages, configSource, siteOrtVariant, siteModels, termFile, siteModules, siteUsesTransformers } from './lib/pages.mjs';
+import { sitePages, configSource, siteOrtVariant, siteModels, termFile, siteModules, siteUsesTransformers, siteUsesEngine } from './lib/pages.mjs';
 import { rewriteTransformers } from './lib/rewrite-transformers.mjs';
 import { ORT_VARIANTS, transformersDir, ortSpecifierFromTransformers } from '../sdk/core/runtimes.js';
 import { VENDOR_DIRS } from '../sdk/core/runtime-pins.js';
@@ -138,6 +139,11 @@ export function buildSite({ root, site, sites, channel, buildId, outDir, vendorD
       w(`vendor/${transformersDir(variant)}/transformers.web.min.js`, rewriteTransformers(src, ortSpecifierFromTransformers(variant)));
       // Its licence and those of the libraries its file bundles.
       for (const f of Object.keys(manifest.packages[tfId].licenses)) w(`vendor/${transformersDir(variant)}/${f}`, { from: join(vendorDir, tfId, f) });
+    }
+    // The engine's files and its licence, as pinned (our own code, Apache-2.0).
+    if (siteUsesEngine(site, registry)) {
+      const engine = readJSON(join(root, 'vendor', 'engine.json'));
+      for (const f of Object.keys(engine.files)) w(`vendor/${VENDOR_DIRS.engine}/${f}`, { from: join(vendorDir, VENDOR_DIRS.engine, f) });
     }
     if (site.pdfjs) {
       const pdfId = VENDOR_DIRS.pdfjs;

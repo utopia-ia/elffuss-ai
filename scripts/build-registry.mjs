@@ -236,6 +236,7 @@ export async function generate(source) {
       flag: m.flag,
       redistributes: m.redistributes,
       runtime: m.runtime,
+      ...(m.engine ? { engine: m.engine } : {}),
       pipeline: m.pipeline,
       ...(m.sampler ? { sampler: m.sampler } : {}),
       parts,

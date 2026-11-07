@@ -19,7 +19,8 @@ import { createProgress } from './progress.js';
 import { createVerifiedMemo, verifyFile } from './integrity.js';
 import { loadTransformers, createStoreFetch, createPipeline } from './tf-env.js';
 import { loadOrt, createSession } from './ort-env.js';
-import { PINS } from './runtime-pins.js';
+import { rangedFile } from './ranged.js';
+import { PINS, VENDOR_DIRS } from './runtime-pins.js';
 
 /**
  * @typedef {{ model?: string, device?: import('./device.js').DeviceRequest, registry?: import('./registry.js').Registry,
@@ -142,6 +143,38 @@ export class TaskContext {
     this.#progress.done(f.url, { fromStore: Boolean(this.#cached?.get(f.url)) });
     this.#log?.({ kind: 'file', url: f.url });
     return read || blob.arrayBuffer();
+  }
+
+  /**
+   * Ranged reads of one file of the variant, from the store, checked against the
+   * registry like `bytes` (once per browser): for a runtime that reads a large
+   * weights file tensor by tensor. Nothing is downloaded twice.
+   * @param {string} ref `<part>:<path>`
+   * @returns {Promise<import('./ranged.js').RangedFile>}
+   */
+  async ranged(ref) {
+    const f = resolveRef(this.model, ref);
+    if (!this.files.some(x => x.url === f.url)) throw new AiError('not-in-registry', `${ref} is not a file of this variant`);
+    const blob = await this.#store.get(f.url, { bytes: f.size, onProgress: p => this.#progress.file(f.url, p.loaded) });
+    const read = await verifyFile(blob, f, f.url, this.#memo);
+    this.#progress.done(f.url, { fromStore: Boolean(this.#cached?.get(f.url)) });
+    this.#log?.({ kind: 'file', url: f.url });
+    return rangedFile(read || blob, ref);
+  }
+
+  /**
+   * The Elffuss Engine module this site ships (its pinned copy, same origin), for a
+   * model whose registry entry names a port of it (`engine`).
+   */
+  async engine() {
+    const url = this.#runtime?.engine;
+    if (!this.model.engine) throw new AiError('not-in-registry', `${this.modelId} does not run on the Elffuss Engine`);
+    if (!url || !url.includes(`/${VENDOR_DIRS.engine}/`)) throw new AiError('runtime-mismatch', 'this site does not ship the pinned Elffuss Engine', { details: { want: VENDOR_DIRS.engine } });
+    try {
+      return await import(new URL(url, globalThis.location?.href).href);
+    } catch (err) {
+      throw new AiError('run-failed', 'the Elffuss Engine could not be loaded', { cause: err });
+    }
   }
 
   /** Text of one small file of the variant (UTF-8). */

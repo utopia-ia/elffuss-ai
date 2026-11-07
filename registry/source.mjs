@@ -12,6 +12,8 @@
 // backend in order of preference. `when: 'shader-f16'` means the WebGPU adapter
 // must offer that feature. File references are `<part>:<path in the repo>`. A
 // task's `module` is its directory under sdk/ when it is not the task's name.
+// A model's `engine` names the port of it in the Elffuss Engine that its WebGPU
+// variant runs (the sites that have the model ship the engine's pinned files).
 //
 // `node scripts/build-registry.mjs --resolve` rewrites the `revision:` lines of
 // this file to the current `main` commit of each repo, read live from the Hub.
@@ -20,6 +22,15 @@
 // the voices offered (Spanish, then American English) and the English phonemiser.
 const KOKORO_VOICES = ['ef_dora', 'em_alex', 'em_santa', 'af_heart', 'af_bella', 'af_nicole', 'am_michael', 'am_fenrir', 'am_puck'];
 const KOKORO_SHARED = ['main:tokenizer.json', ...KOKORO_VOICES.map(v => `main:voices/${v}.bin`), 'g2p:misaki-en_us-g2p.json', 'g2p:misaki-en_us-g2p.onnx'];
+
+// The files of MOSS-TTS-Nano: the official ONNX export (its two shared weight files hold
+// every weight) and the codec's decoder.
+const MOSS_FILES = [
+  'tts:browser_poc_manifest.json', 'tts:tts_browser_onnx_meta.json', 'tts:tokenizer.model',
+  'tts:moss_tts_prefill.onnx', 'tts:moss_tts_decode_step.onnx', 'tts:moss_tts_local_fixed_sampled_frame.onnx',
+  'tts:moss_tts_global_shared.data', 'tts:moss_tts_local_shared.data',
+  'codec:codec_browser_onnx_meta.json', 'codec:moss_audio_tokenizer_decode_full.onnx', 'codec:moss_audio_tokenizer_decode_shared.data',
+];
 
 export default {
   schema: 1,
@@ -238,28 +249,27 @@ export default {
     // the settings it was exported with, two shared weight files) and the decoder of its
     // codec, MOSS-Audio-Tokenizer-Nano. The voice is a voice prompt shipped as codes in
     // sdk/audio/moss-voice-es.js, so the codec's encoder is never downloaded. fp32, as
-    // published; WebAssembly, as the official browser runtime.
+    // published. On WebGPU the token-by-token part (prefill, frames) runs on the Elffuss
+    // Engine's port of the model (`engine`), reading its weights from the same two
+    // .data files, with the same frames; the codec stays on ONNX Runtime's WebAssembly.
+    // WebAssembly alone is the official browser runtime. Both variants are the same files.
     'text-to-speech/moss-tts-nano': {
       task: 'text-to-speech',
       name: { es: 'MOSS-TTS-Nano', en: 'MOSS-TTS-Nano' },
       base: { name: 'MOSS-TTS-Nano', author: 'OpenMOSS', source: { hf: 'OpenMOSS-Team/MOSS-TTS-Nano' } },
       runtime: 'onnxruntime-web',
+      engine: 'moss',
       pipeline: null,
       parts: {
         tts: { repo: 'OpenMOSS-Team/MOSS-TTS-Nano-100M-ONNX', revision: 'f52645cb467506d8e18e746ddd59482685b74e58', only: 'used' },
         codec: { repo: 'OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX', revision: 'ceff0d0749bfb3fa2d61149794ec6feef0d1e1ae', only: 'used' },
       },
       devices: {
+        webgpu: [
+          { dtype: 'fp32', files: MOSS_FILES },
+        ],
         wasm: [
-          {
-            dtype: 'fp32',
-            files: [
-              'tts:browser_poc_manifest.json', 'tts:tts_browser_onnx_meta.json', 'tts:tokenizer.model',
-              'tts:moss_tts_prefill.onnx', 'tts:moss_tts_decode_step.onnx', 'tts:moss_tts_local_fixed_sampled_frame.onnx',
-              'tts:moss_tts_global_shared.data', 'tts:moss_tts_local_shared.data',
-              'codec:codec_browser_onnx_meta.json', 'codec:moss_audio_tokenizer_decode_full.onnx', 'codec:moss_audio_tokenizer_decode_shared.data',
-            ],
-          },
+          { dtype: 'fp32', files: MOSS_FILES },
         ],
       },
       notes: {

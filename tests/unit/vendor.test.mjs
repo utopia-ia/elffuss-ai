@@ -7,10 +7,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { check, readManifest, SPECS } from '../../scripts/vendor.mjs';
+import { check, readManifest, readEngine, engineDir, relativeImports, engineClosure, SPECS, ENGINE } from '../../scripts/vendor.mjs';
 import { rewriteTransformers, ORT_IMPORTS, MODIFIED_NOTICE } from '../../scripts/lib/rewrite-transformers.mjs';
 import { PINS, VENDOR_DIRS } from '../../sdk/core/runtime-pins.js';
-import { ORT_VARIANTS, ortSpecifierFromTransformers, runtimeUrls } from '../../sdk/core/runtimes.js';
+import { ORT_VARIANTS, ortSpecifierFromTransformers, runtimeUrls, ENGINE_ENTRY } from '../../sdk/core/runtimes.js';
 
 const root = new URL('../../', import.meta.url);
 
@@ -51,15 +51,20 @@ test('the Transformers.js rewrite touches exactly the two ONNX Runtime imports, 
 
 test('runtime URLs stay under /vendor/ of the same origin', () => {
   const u = runtimeUrls({ variant: 'wasm', pdfjs: true });
-  for (const v of [u.ortBundle, u.ortMjs, u.ortWasm, u.transformers, ...Object.values(u.pdfjs)]) assert.match(v, /^\/vendor\//);
+  for (const v of [u.ortBundle, u.ortMjs, u.ortWasm, u.transformers, u.engine, ...Object.values(u.pdfjs)]) assert.match(v, /^\/vendor\//);
+  assert.equal(u.engine, `/vendor/${VENDOR_DIRS.engine}/${ENGINE_ENTRY}`);
   assert.match(u.transformers, /\+ort1\.30\.0-wasm\//);
   assert.throws(() => runtimeUrls({ variant: 'jsep' }));
 });
 
-test('only vendor/manifest.json is committed under vendor/: the runtimes are fetched by their pins', () => {
+test('only the pins are committed under vendor/: the runtimes are fetched by them', () => {
   const dir = new URL('.', root).pathname;
   const tracked = execFileSync('/usr/bin/git', ['-C', dir, 'ls-files', 'vendor'], { encoding: 'utf8' }).split('\n').filter(Boolean);
-  assert.deepEqual(tracked, ['vendor/manifest.json']);
+  for (const f of tracked) assert.ok(['vendor/manifest.json', 'vendor/engine.json'].includes(f), f);
+  assert.ok(tracked.includes('vendor/manifest.json'));
+  const engine = readEngine();
+  for (const p of Object.keys(engine.files)) execFileSync('/usr/bin/git', ['-C', dir, 'check-ignore', '-q', '--no-index', `vendor/${engineDir(engine)}/${p}`]);
+  assert.throws(() => execFileSync('/usr/bin/git', ['-C', dir, 'check-ignore', '-q', '--no-index', 'vendor/engine.json'], { stdio: 'ignore' }));
   const m = readManifest();
   for (const [id, e] of Object.entries(m.packages)) {
     for (const p of Object.keys({ ...e.files, ...e.licenses })) {
@@ -68,4 +73,41 @@ test('only vendor/manifest.json is committed under vendor/: the runtimes are fet
     }
   }
   assert.throws(() => execFileSync('/usr/bin/git', ['-C', dir, 'check-ignore', '-q', '--no-index', 'vendor/manifest.json'], { stdio: 'ignore' }));
+});
+
+test('the engine: pinned at a full commit of its public branch, its entry is what the sites import, and its pins are in runtime-pins.js', () => {
+  const e = readEngine();
+  assert.ok(e, 'vendor/engine.json');
+  assert.match(e.commit, /^[0-9a-f]{40}$/);
+  assert.equal(e.name, ENGINE.name);
+  assert.equal(e.branch, ENGINE.branch);
+  assert.equal(e.license, 'Apache-2.0');
+  assert.equal(e.entry, ENGINE_ENTRY);
+  assert.equal(VENDOR_DIRS.engine, engineDir(e));
+  assert.equal(PINS.engine, e.commit.slice(0, 12));
+  for (const l of ENGINE.licenses) assert.ok(e.files[l], l + ' is pinned with the files');
+  for (const [p, m] of Object.entries(e.files)) {
+    assert.match(m.sha256, /^[0-9a-f]{64}$/, p);
+    assert.match(m.gitOid, /^[0-9a-f]{40}$/, p);
+  }
+});
+
+test('the engine: exactly the import closure of its entry, every file Apache-2.0 under our copyright', () => {
+  const e = readEngine();
+  const dir = new URL(`vendor/${engineDir(e)}/`, root);
+  const read = p => readFileSync(new URL(p, dir));
+  const closure = engineClosure(read, e.entry);
+  assert.deepEqual([...closure.keys(), ...ENGINE.licenses].sort(), Object.keys(e.files).sort(), 'nothing missing, nothing extra');
+  for (const p of closure.keys()) {
+    const head = read(p).toString('utf8').split('\n').slice(0, 2).join('\n');
+    assert.match(head, /^\/\/ SPDX-License-Identifier: Apache-2\.0( AND MIT)?\n\/\/ Copyright \(c\) 2026 UtopiaIA$/, p);
+  }
+  assert.match(read('LICENSE').toString('utf8'), /Apache License\s+Version 2\.0/);
+});
+
+test('relativeImports finds static imports, re-exports and literal dynamic imports, and nothing else', () => {
+  const src = "import { a } from './a.js';\nexport { b } from \"../b.js\";\nconst m = await import('./c.js');\nimport './d.js';\nimport x from 'pkg';\nconst u = import(name);\n// from './e.js' in a comment is still a file";
+  assert.deepEqual(relativeImports(src).sort(), ['../b.js', './a.js', './c.js', './d.js', './e.js']);
+  const files = { 'js/m.js': "import { x } from './x.js'; import('./y.js');", 'js/x.js': "export * from './y.js';", 'js/y.js': '' };
+  assert.deepEqual([...engineClosure(p => Buffer.from(files[p]), 'js/m.js').keys()], ['js/m.js', 'js/x.js', 'js/y.js']);
 });

@@ -128,6 +128,17 @@ export const MOSS_SENTENCES = [
   ['C', 'Gracias por venir. ¿Te hace un zumo de naranja o prefieres un café con azúcar? Cerca de aquí hay una plaza preciosa.', 5, 15],
 ];
 
+/**
+ * The seed of the comparison of the two runtimes of Elffuss's own voice. The frames are
+ * the same draw for draw unless a uniform number falls within float rounding of a
+ * boundary between two codes: the logits of the two runtimes differ in their last bits,
+ * and then one code can flip and the reading goes its own way from there. With seed 7,
+ * sentence C meets one such tie at its sixth frame (the cumulative probability and the
+ * number agree to about one part in a million; checked with the engine's own CPU
+ * sampler, which picks what its WebGPU sampler picks). Seed 11 meets none in A, B and C.
+ */
+export const AB_SEED = 11;
+
 /** Prompts of the opt-in quality set (ELFFUSS_AI_AUDIO_QUALITY=1): [mode, name, prompt, seconds, steps]. */
 export const QUALITY_SET = [
   ['music', 'lofi', 'Lo-fi hip hop beat with mellow Rhodes chords, soft vinyl crackle, brushed drums and a warm upright bass, 80 BPM', 30, 8],
@@ -197,7 +208,7 @@ export default [
     },
   },
   {
-    name: 'speech in Spanish with Elffuss\'s own voice (MOSS-TTS-Nano, WebAssembly): sentences A, B and C, sound and of a plausible length',
+    name: 'speech in Spanish with Elffuss\'s own voice (MOSS-TTS-Nano, the engine on WebGPU, WebAssembly without it): sentences A, B and C, sound and of a plausible length',
     sites: ['audio'],
     async run(t, site) {
       const ctx = await t.newContext();
@@ -211,13 +222,53 @@ export default [
         await page.fill('[data-input="text"]', text);
         const c = await generate(t, page);
         save(`browser-mossnano-design-${k}-${t.config}.wav`, c.buf);
-        t.equal(c.last.device, 'wasm', `${k}: backend`);
+        t.equal(c.last.device, t.config === 'A' ? 'webgpu' : 'wasm', `${k}: backend`);
+        t.equal(c.last.ran, t.config === 'A' ? 'webgpu-engine' : 'wasm', `${k}: runtime of the frames`);
         const m = checkSound(t, `speech es ${k}`, c.wav, { rate: 48000, channels: 1, band: [80, 8000] });
         t.ok(m.seconds > min && m.seconds < max, `speech es ${k}: ${m.seconds} s`);
       }
       t.equal(t.hubFull().filter(u => /Kokoro|misaki|stable-audio|moss_audio_tokenizer_encode/.test(u)).length, 0, 'only MOSS-TTS-Nano\'s files were asked for (no encoder: the voice is shipped as codes)');
       t.noPageErrors();
       await t.noCsp(page);
+      t.networkClean(site);
+    },
+  },
+  {
+    name: 'Elffuss\'s own voice: the engine on WebGPU and ONNX Runtime on WebAssembly give the same frames for sentences A, B and C with the same seed',
+    sites: ['audio'],
+    configs: ['A'],
+    async run(t, site) {
+      const read = async (path, device, ran) => {
+        const ctx = await t.newContext();
+        const page = await t.open(ctx, site, path);
+        await setMode(page, 'speech');
+        const out = {};
+        for (const [k, text] of MOSS_SENTENCES) {
+          await page.fill('[data-input="text"]', text);
+          const c = await generate(t, page);
+          save(`moss-ab-${k}-${ran}.wav`, c.buf);
+          t.equal(c.last.device, device, `${ran} ${k}: backend`);
+          t.equal(c.last.ran, ran, `${ran} ${k}: runtime of the frames`);
+          t.equal(c.last.seed, AB_SEED, `${ran} ${k}: seed`);
+          out[k] = { codes: c.last.codes, ms: c.last.framesMs, wav: c.buf };
+        }
+        t.noPageErrors();
+        await t.noCsp(page);
+        await ctx.close();
+        return out;
+      };
+      const engine = await read(`/?test-seed=${AB_SEED}`, 'webgpu', 'webgpu-engine');
+      const ort = await read(`/?device=wasm&test-seed=${AB_SEED}`, 'wasm', 'wasm');
+      for (const [k] of MOSS_SENTENCES) {
+        const a = engine[k].codes, b = ort[k].codes;
+        const frames = c => (c || []).reduce((s, x) => s + x.length, 0);
+        t.ok(frames(b) > 0, `${k}: ONNX Runtime gave frames`);
+        const flat = c => (c || []).flatMap((chunk, i) => chunk.map((f, j) => `${i}.${j}:${f.join(',')}`));
+        const fa = flat(a), fb = flat(b);
+        const first = fa.findIndex((f, i) => f !== fb[i]);
+        t.ok(fa.length === fb.length && first < 0, `${k}: the same frames (${frames(a)} on the engine, ${frames(b)} on ONNX Runtime${first >= 0 ? `; first difference at chunk.frame ${fa[first]?.split(':')[0]}: engine ${fa[first]?.split(':')[1]}, ONNX Runtime ${fb[first]?.split(':')[1]}` : ''})`);
+        t.note(`${k}: ${frames(a)} frames; WAV ${engine[k].wav.equals(ort[k].wav) ? 'identical' : 'different'}; frames ONNX Runtime / engine ${(ort[k].ms / engine[k].ms).toFixed(2)}`);
+      }
       t.networkClean(site);
     },
   },

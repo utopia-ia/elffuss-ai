@@ -54,6 +54,14 @@ export function siteUsesTransformers(site, registry) {
 }
 
 /**
+ * True when a site ships the Elffuss Engine: one of its models runs a part of
+ * itself on it (registry `engine`).
+ */
+export function siteUsesEngine(site, registry) {
+  return !site.catalog && siteModels(site, registry).some(m => m.engine);
+}
+
+/**
  * The SDK modules (directories under sdk/) a site ships: the module of its task
  * (the registry says which), then those its app.json lists in `modules`, the
  * integrations it offers. The catalog ships none.

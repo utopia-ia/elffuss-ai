@@ -79,7 +79,7 @@ Returns `number`: how many were rewritten
 
 ## `sdk/audio/index.js`
 
-Audio from text in the browser: music and sound effects with Stable Audio 3 Small (Stability AI, Stability AI Community License; its text encoder T5Gemma is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebAssembly, in Spanish and English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The models come from their Hugging Face repositories at pinned revisions, through the Elffuss model store. Each task class runs its model in a module Worker of this module (its URL is relative to this file, so the module can be served from any origin together with the core and the runtimes).
+Audio from text in the browser: music and sound effects with Stable Audio 3 Small (Stability AI, Stability AI Community License; its text encoder T5Gemma is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebGPU (its frames on the Elffuss Engine) or WebAssembly, in Spanish and English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The models come from their Hugging Face repositories at pinned revisions, through the Elffuss model store. Each task class runs its model in a module Worker of this module (its URL is relative to this file, so the module can be served from any origin together with the core and the runtimes).
  The options of run() are plain JSON, so a chat or an agent can pass a tool call straight through: { prompt, seconds, seed } for music and sound effects, { text, voice, lang, speed } for speech. A run gives a WAV Blob and what it is.
 
 ### `SPEECH_MODELS`
@@ -108,10 +108,10 @@ English, else `model` (the task's `model` option) or MOSS-TTS-Nano.
 ### Type `AudioResult`
 
 ```ts
-{ blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number, model: string, device: 'webgpu'|'wasm', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>
+{ blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number, model: string, device: 'webgpu'|'wasm'|'webgpu-engine', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>
 ```
 
-What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it.
+What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it. `device` is where the model ran: Elffuss's own voice on WebGPU gives `webgpu-engine` (its frames on the Elffuss Engine, the codec on WebAssembly), with the same frames as `wasm` for the same text and seed.
 
 ### Type `AudioProgress`
 
@@ -174,7 +174,7 @@ with shader-f16. Same options and result as `Music`; `seconds` 0.5 to 30 (5).
 ### `class Speech`
 
 Speech from text, in Spanish with Elffuss's own voice (MOSS-TTS-Nano, about 720 MB,
-WebAssembly) or in English (and Kokoro's Spanish voices) with Kokoro 82M (WebGPU or
+WebGPU or WebAssembly) or in English (and Kokoro's Spanish voices) with Kokoro 82M (WebGPU or
 WebAssembly). The voice picks the model; each is loaded the first time a run needs it.
 Long texts are read sentence by sentence and joined with natural pauses.
 
@@ -380,6 +380,27 @@ the assistant's token, then one per codebook).
 | `uniform` | `() => number` | in [0, 1) |
 | `codebook` | `number` | size of each codebook |
 
+### `uniformsDrawn(frames, max)`
+
+Uniform numbers the official runtime draws for a chunk that gave `frames` frames
+with at most `max`: N_VQ + 1 per step, the step that ends the chunk included.
+
+| Parameter | Type | |
+|---|---|---|
+| `frames` | `number` |  |
+| `max` | `number` |  |
+
+### `uniformStream(draw)`
+
+The uniform numbers of a run, with a way back: a runtime that draws ahead (the
+engine draws a whole batch of frames before it knows where the chunk ends) gives
+back what the official runtime would not have drawn, and the next chunk or
+reading starts from them. So a seed gives the same frames on every runtime.
+
+| Parameter | Type | |
+|---|---|---|
+| `draw` | `() => number` |  |
+
 ### `toMono(data, channels, samples, length = samples)`
 
 One channel of a [1, channels, samples] audio tensor's data, or their mean.
@@ -581,10 +602,15 @@ backend, in the registry's order of preference.
 ## `sdk/audio/speech-moss.impl.js`
 
 Speech in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0), from its official ONNX export: the global transformer (prefill, then one decode step per frame with its key/value cache), the local graph that samples a frame of 16 codes with the settings it was exported with, and the codec's decoder. The voice is a voice prompt shipped as codes (moss-voice-*.js), so no audio is encoded here.
+ Two runtimes for the frames, one result. On WebGPU the token-by-token part (the prefill and every frame) runs on the Elffuss Engine's port of the model, which reads its weights from the same two .data files and samples as the official graph does, with the same uniform numbers: the frames are the same as on WebAssembly, where ONNX Runtime runs the official graphs. The codec is ONNX Runtime's WebAssembly on both.
 
 ### `MAX_TEXT`
 
 Longest text accepted, in characters.
+
+### `ENGINE_BATCH`
+
+Frames the engine queues per submit (one readback each): the rest of a batch past the end is dropped.
 
 ### `normalizeMossSpeech(input)`
 
@@ -597,7 +623,8 @@ Check and complete the options of a run.
 ### `generateFrames(state, rows, uniform, onFrame, test, max = MAX_FRAMES)`
 
 The frames of one chunk: prefill, then a frame and a decode step at a time, until
-the model ends the chunk or `max` frames.
+the model ends the chunk or `max` frames. `uniform` is a `uniformStream`: each
+runtime takes from it the numbers the official runtime takes, no more.
 
 ## `sdk/audio/speech.impl.js`
 

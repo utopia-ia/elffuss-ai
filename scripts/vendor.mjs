@@ -27,16 +27,40 @@
 // by their git blob hash. Licences of code a file bundles (Transformers.js
 // carries @huggingface/jinja and @huggingface/tokenizers) come from those
 // packages, checked by their tarball's sha512, or from their repository.
+//
+// The Elffuss Engine (our own WebGPU runtime, Apache-2.0) is not on npm. Only the
+// files its MOSS-TTS-Nano port needs are taken, from a commit of its public
+// branch, and pinned in vendor/engine.json: commit, and per file size, sha256 and
+// git blob hash.
+//   node scripts/vendor.mjs --pin-engine <commit>   (re)pin from a local clone of the
+//                                                    engine (ELFFUSS_ENGINE_GIT, else
+//                                                    ../elffuss-engine): the commit must
+//                                                    be on its public branch; the files are
+//                                                    the import closure of the entry
+// --fetch reads each pinned blob from that clone, else from the public repository
+// on GitHub by its blob hash, and checks both hashes either way.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync, renameSync } from 'node:fs';
-import { join, dirname, relative, sep } from 'node:path';
+import { join, dirname, relative, sep, posix } from 'node:path';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readTgz } from './lib/tar.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const VENDOR = join(ROOT, 'vendor');
 const MANIFEST = join(VENDOR, 'manifest.json');
+const ENGINE_PIN = join(VENDOR, 'engine.json');
 const PINS_FILE = join(ROOT, 'sdk', 'core', 'runtime-pins.js');
+const GIT = '/usr/bin/git';
+
+/** The engine: where its public copy lives, which branch may be shipped, and what is taken. */
+export const ENGINE = Object.freeze({
+  name: 'elffuss-engine',
+  github: 'utopia-ia/elffuss-engine',
+  branch: 'public-clean',
+  entry: 'js/moss.js',
+  licenses: ['LICENSE'],
+});
 
 // What is taken from each package. Changing this needs a --pin.
 export const SPECS = {
@@ -90,8 +114,16 @@ export function readManifest() {
   return JSON.parse(readFileSync(MANIFEST, 'utf8'));
 }
 
-/** Text of sdk/core/runtime-pins.js for a manifest. */
-export function pinsSource(manifest) {
+/** The engine pin (vendor/engine.json), or null when there is none. */
+export function readEngine() {
+  return existsSync(ENGINE_PIN) ? JSON.parse(readFileSync(ENGINE_PIN, 'utf8')) : null;
+}
+
+/** Directory of the pinned engine under vendor/: name@<12 characters of the commit>. */
+export const engineDir = e => `${e.name}@${e.commit.slice(0, 12)}`;
+
+/** Text of sdk/core/runtime-pins.js for a manifest (and the engine pin). */
+export function pinsSource(manifest, engine = readEngine()) {
   const pins = {};
   const dirs = {};
   for (const [id, e] of Object.entries(manifest.packages)) {
@@ -99,6 +131,10 @@ export function pinsSource(manifest) {
     if (!key) throw new Error('no key for ' + e.name);
     pins[key] = e.version;
     dirs[key] = id;
+  }
+  if (engine) {
+    pins.engine = engine.commit.slice(0, 12);
+    dirs.engine = engineDir(engine);
   }
   return `// SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 UtopiaIA
@@ -126,9 +162,26 @@ function listFiles(dir, base = dir) {
 }
 
 /** Offline check. Returns a list of problems (empty when all is well). */
-export function check(manifest = readManifest()) {
+export function check(manifest = readManifest(), engine = readEngine()) {
   const problems = [];
   const expected = new Set(['manifest.json']);
+  if (engine) {
+    expected.add('engine.json');
+    const dir = engineDir(engine);
+    if (!/^[0-9a-f]{40}$/.test(engine.commit || '')) problems.push('engine.json: the commit is not a full hash');
+    if (engine.name !== ENGINE.name || engine.branch !== ENGINE.branch) problems.push('engine.json: not the engine\'s public branch');
+    if (!engine.files?.[engine.entry]) problems.push('engine.json: the entry is not among the files');
+    for (const [path, meta] of Object.entries(engine.files || {})) {
+      const rel = `${dir}/${path}`;
+      expected.add(rel);
+      const p = join(VENDOR, rel);
+      if (!existsSync(p)) { problems.push(`${rel}: missing`); continue; }
+      const b = readFileSync(p);
+      if (b.length !== meta.size) problems.push(`${rel}: size ${b.length}, pin ${meta.size}`);
+      if (sha256(b) !== meta.sha256) problems.push(`${rel}: sha256 differs from the pin`);
+      if (gitOid(b) !== meta.gitOid) problems.push(`${rel}: git blob hash differs from the pin`);
+    }
+  }
   for (const [id, e] of Object.entries(manifest.packages)) {
     if (id !== `${e.name}@${e.version}`) problems.push(`${id}: entry id does not match name@version`);
     if (!/^\d+\.\d+\.\d+$/.test(e.version)) problems.push(`${id}: version is not an exact release`);
@@ -149,8 +202,85 @@ export function check(manifest = readManifest()) {
     if (!expected.has(f)) problems.push(`${f}: in vendor/ but not in the manifest`);
   }
   const pins = existsSync(PINS_FILE) ? readFileSync(PINS_FILE, 'utf8') : '';
-  if (pins !== pinsSource(manifest)) problems.push('sdk/core/runtime-pins.js does not match the manifest (run --pin or --fetch)');
+  if (pins !== pinsSource(manifest, engine)) problems.push('sdk/core/runtime-pins.js does not match the manifest (run --pin or --fetch)');
   return problems;
+}
+
+// ── The engine ──────────────────────────────────────────────────────────────
+
+/** The local clone of the engine, when there is one. */
+function engineClone() {
+  const dir = process.env.ELFFUSS_ENGINE_GIT || join(ROOT, '..', 'elffuss-engine');
+  try {
+    execFileSync(GIT, ['-C', dir, 'rev-parse', '--git-dir'], { stdio: 'ignore' });
+    return dir;
+  } catch { return null; }
+}
+
+const gitShow = (dir, commit, path) => execFileSync(GIT, ['-C', dir, 'cat-file', 'blob', `${commit}:${path}`], { maxBuffer: 64 << 20 });
+
+/**
+ * Relative module specifiers of a JavaScript file: static imports and re-exports
+ * (`from './x.js'`) and dynamic imports of a literal (`import('./x.js')`).
+ */
+export function relativeImports(src) {
+  const out = new Set();
+  for (const m of src.matchAll(/\bfrom\s*['"](\.{1,2}\/[^'"]+)['"]|\bimport\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)|\bimport\s*['"](\.{1,2}\/[^'"]+)['"]/g)) out.add(m[1] || m[2] || m[3]);
+  return [...out];
+}
+
+/** The files of the entry's import closure at a commit, with their bytes. */
+export function engineClosure(read, entry) {
+  const files = new Map();
+  const queue = [entry];
+  while (queue.length) {
+    const p = queue.shift();
+    if (files.has(p)) continue;
+    const b = read(p);
+    files.set(p, b);
+    for (const spec of relativeImports(b.toString('utf8'))) queue.push(posix.normalize(posix.join(posix.dirname(p), spec)));
+  }
+  return files;
+}
+
+/** Pin the engine at a commit of its public branch, from the local clone. */
+function pinEngine(commitish) {
+  const dir = engineClone();
+  if (!dir) throw new Error('no local clone of the engine: set ELFFUSS_ENGINE_GIT');
+  const commit = execFileSync(GIT, ['-C', dir, 'rev-parse', '--verify', `${commitish}^{commit}`], { encoding: 'utf8' }).trim();
+  const branches = execFileSync(GIT, ['-C', dir, 'branch', '-a', '--contains', commit, '--format=%(refname:short)'], { encoding: 'utf8' }).split('\n').map(s => s.trim());
+  if (!branches.some(b => b === ENGINE.branch || b.endsWith('/' + ENGINE.branch))) throw new Error(`${commit} is not on the engine's ${ENGINE.branch} branch: only the public copy may be shipped`);
+  const bytes = engineClosure(p => gitShow(dir, commit, p), ENGINE.entry);
+  for (const l of ENGINE.licenses) bytes.set(l, gitShow(dir, commit, l));
+  const entry = {
+    schema: 1, name: ENGINE.name, license: 'Apache-2.0', repository: `https://github.com/${ENGINE.github}`, branch: ENGINE.branch, commit, entry: ENGINE.entry,
+    files: Object.fromEntries([...bytes].sort(([a], [b]) => a.localeCompare(b)).map(([p, b]) => [p, { size: b.length, sha256: sha256(b), gitOid: gitOid(b) }])),
+  };
+  for (const old of readdirSync(VENDOR)) if (old.startsWith(ENGINE.name + '@')) rmSync(join(VENDOR, old), { recursive: true, force: true });
+  writePackage(engineDir(entry), bytes);
+  writeFileSync(ENGINE_PIN, JSON.stringify(entry, null, 2) + '\n');
+  writeFileSync(PINS_FILE, pinsSource(readManifest(), entry));
+  return entry;
+}
+
+/** Download (or read from the local clone) every pinned engine file, verified. */
+async function fetchEngine(engine, log) {
+  const dir = engineClone();
+  const bytes = new Map();
+  for (const [path, meta] of Object.entries(engine.files)) {
+    let b = null, from = '';
+    if (dir) { try { b = gitShow(dir, engine.commit, path); from = 'local clone'; } catch { b = null; } }
+    if (!b) {
+      const r = await fetch(`https://api.github.com/repos/${ENGINE.github}/git/blobs/${meta.gitOid}`, { headers: { accept: 'application/vnd.github.raw', 'user-agent': 'elffuss-ai-vendor' } });
+      if (!r.ok) throw new Error(`${ENGINE.name} ${path}: not in a local clone and HTTP ${r.status} from GitHub`);
+      b = Buffer.from(await r.arrayBuffer());
+      from = 'GitHub';
+    }
+    if (b.length !== meta.size || sha256(b) !== meta.sha256 || gitOid(b) !== meta.gitOid) throw new Error(`${ENGINE.name} ${path}: the bytes from the ${from} differ from the pin`);
+    bytes.set(path, b);
+  }
+  writePackage(engineDir(engine), bytes);
+  log(`✓ ${engineDir(engine)}: ${bytes.size} files match vendor/engine.json`);
 }
 
 async function getJSON(url) {
@@ -274,7 +404,9 @@ async function fetchAll(log = console.log) {
     writePackage(id, bytes);
     log(`✓ ${id}: tarball sha512 and ${bytes.size} files match the manifest`);
   }
-  return check(m);
+  const engine = readEngine();
+  if (engine) await fetchEngine(engine, log);
+  return check(m, engine);
 }
 
 const FETCH_HINT = 'run `node scripts/vendor.mjs --fetch` (network) to download the pinned runtimes';
@@ -304,7 +436,9 @@ async function main(argv) {
     for (const p of problems) console.log('✗ ' + p);
     const m = readManifest();
     const n = Object.values(m.packages).reduce((s, e) => s + Object.keys(e.files).length + Object.keys(e.licenses).length, 0);
-    console.log(problems.length ? `vendor: ${problems.length} problems` : `vendor: ${Object.keys(m.packages).length} packages, ${n} files, all match the manifest`);
+    const e = readEngine();
+    const engine = e ? `, and ${engineDir(e)} with ${Object.keys(e.files).length} files` : '';
+    console.log(problems.length ? `vendor: ${problems.length} problems` : `vendor: ${Object.keys(m.packages).length} packages, ${n} files${engine}, all match their pins`);
     return problems.length ? 1 : 0;
   }
   if (argv[0] === '--fetch') {
@@ -330,7 +464,12 @@ async function main(argv) {
     console.log(`✓ pinned ${id}: ${Object.keys(entry.files).length} files, ${Object.keys(entry.licenses).length} licence files`);
     return 0;
   }
-  console.error('usage: vendor.mjs --check | --fetch | --ensure | --pin <name@version>');
+  if (argv[0] === '--pin-engine' && argv[1]) {
+    const e = pinEngine(argv[1]);
+    console.log(`✓ pinned ${engineDir(e)} (${e.branch}): ${Object.keys(e.files).length} files`);
+    return 0;
+  }
+  console.error('usage: vendor.mjs --check | --fetch | --ensure | --pin <name@version> | --pin-engine <commit>');
   return 2;
 }
 

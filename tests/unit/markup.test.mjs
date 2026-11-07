@@ -196,6 +196,12 @@ test('each site ships only its runtimes', () => {
   }
   for (const s of ['depth', 'ocr']) assert.ok(has(s, 'vendor/onnxruntime-web@1.30.0/dist/ort-wasm-simd-threaded.asyncify.wasm'), `${s}: the WebGPU variant`);
   assert.equal(has('ocr', 'vendor/@huggingface'), false, 'the OCR uses ONNX Runtime directly');
+  // The Elffuss Engine: its pinned files where a model runs part of itself on it (Elffuss's own voice), nowhere else.
+  const engine = JSON.parse(readFileSync(join(ROOT, 'vendor', 'engine.json'), 'utf8'));
+  const dir = `vendor/${engine.name}@${engine.commit.slice(0, 12)}`;
+  for (const f of Object.keys(engine.files)) assert.ok(has('audio', `${dir}/${f}`), `audio: ${f}`);
+  assert.equal(readdirSync(join(pro.out, 'audio', 'vendor', ...dir.split('/').slice(1), 'js')).length, Object.keys(engine.files).filter(f => f.startsWith('js/')).length, 'audio: only the pinned files of the engine');
+  for (const s of pro.sites.map(x => x.site).filter(x => x !== 'audio')) assert.equal(has(s, dir), false, `${s}: no engine`);
 });
 
 test('licences: what Transformers.js bundles, the modified-file line, and the source of the MPL parts', () => {

@@ -816,6 +816,7 @@
       "flag": null,
       "redistributes": false,
       "runtime": "onnxruntime-web",
+      "engine": "moss",
       "pipeline": null,
       "parts": {
         "tts": {
@@ -880,6 +881,25 @@
         }
       },
       "devices": {
+        "webgpu": [
+          {
+            "dtype": "fp32",
+            "files": [
+              "tts:browser_poc_manifest.json",
+              "tts:tts_browser_onnx_meta.json",
+              "tts:tokenizer.model",
+              "tts:moss_tts_prefill.onnx",
+              "tts:moss_tts_decode_step.onnx",
+              "tts:moss_tts_local_fixed_sampled_frame.onnx",
+              "tts:moss_tts_global_shared.data",
+              "tts:moss_tts_local_shared.data",
+              "codec:codec_browser_onnx_meta.json",
+              "codec:moss_audio_tokenizer_decode_full.onnx",
+              "codec:moss_audio_tokenizer_decode_shared.data"
+            ],
+            "bytes": 717414286
+          }
+        ],
         "wasm": [
           {
             "dtype": "fp32",

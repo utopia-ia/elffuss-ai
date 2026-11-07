@@ -456,6 +456,18 @@ A queue of turns. ONNX Runtime Web cannot run two sessions of one instance at th
 
 Returns `{ run<T>(fn: () => Promise<T>): Promise<T>, readonly pending: number, idle(): Promise<void> }`.
 
+## `sdk/core/ranged.js`
+
+Reading parts of a file that is already here: a model's weights file from the store (a Blob), or its bytes once read. A runtime that takes its tensors one by one (the Elffuss Engine) reads each from its offset, without a second download and without holding the whole file once more. Pure, no DOM.
+
+### Type `RangedFile`
+
+```ts
+{ size: number, slice(offset: number, length: number): Promise<ArrayBuffer> }
+```
+
+`slice` gives a new ArrayBuffer of exactly `length` bytes from `offset`.
+
 ## `sdk/core/registry.js`
 
 Reading registry/tasks.json: which model a task uses, which files a variant needs, their pinned URLs, sizes and hashes. Pure functions over the parsed JSON, plus one loader for the browser.
@@ -658,6 +670,12 @@ Files of each ONNX Runtime Web variant, relative to its package directory.
 
 Files of PDF.js that the OCR site serves, relative to its package directory.
 
+### `ENGINE_ENTRY`
+
+The module of the Elffuss Engine that a site imports, relative to the engine's
+directory: its MOSS-TTS-Nano port (the token-by-token part of the speech on
+WebGPU). Only the import closure of this file is vendored (vendor/engine.json).
+
 ### `transformersDir(variant)`
 
 Directory of the Transformers.js copy whose two ONNX Runtime imports point at
@@ -684,7 +702,7 @@ Same-origin URLs of the runtimes of one site.
 |---|---|---|
 | `opts` | `{ variant: 'webgpu'\|'wasm', base?: string, pdfjs?: boolean }` | `base` is the URL of /vendor/ (default `/vendor/`). |
 
-Returns `{ variant: string, ortBundle: string, ortMjs: string, ortWasm: string, transformers: string, pdfjs?: { lib: string, worker: string, wasmUrl: string, cMapUrl: string, standardFontDataUrl: string, iccUrl: string } }`.
+Returns `{ variant: string, ortBundle: string, ortMjs: string, ortWasm: string, transformers: string, engine: string, pdfjs?: { lib: string, worker: string, wasmUrl: string, cMapUrl: string, standardFontDataUrl: string, iccUrl: string } }`.
 
 ## `sdk/core/store-bridge.js`
 
@@ -769,6 +787,8 @@ What a task implementation may use. One per load.
 - `.modelFetch()`: Transformers.js with its fetch going to the store at this variant's pinned files, for a task that loads its model by class (`from_pretrained`) rather than as a pipeline.
 - `.ort()`: ONNX Runtime Web, pinned and set up (direct use).
 - `.bytes(ref)`: The bytes of one file of the variant, from the store, checked against the registry.
+- `.ranged(ref)`: Ranged reads of one file of the variant, from the store, checked against the registry like `bytes` (once per browser): for a runtime that reads a large weights file tensor by tensor. Nothing is downloaded twice.
+- `.engine()`: The Elffuss Engine module this site ships (its pinned copy, same origin), for a model whose registry entry names a port of it (`engine`).
 - `.text(ref)`: Text of one small file of the variant (UTF-8).
 - `.session(ref, opts)`: An ONNX Runtime session of one file of the variant, on this load's backend.
 

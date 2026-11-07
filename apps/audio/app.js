@@ -18,6 +18,8 @@ const { t, lang } = shell;
 const $ = s => document.querySelector(s);
 const history = createHistory();
 const probe = shell.config.testHooks ? (shell.diagnostics.audio = { runs: 0, last: null }) : null;
+// Test builds only: ?test-seed=<n> reads with that seed (the page gives speech none), so two runtimes can be compared.
+const testSeed = probe && /^\d+$/.test(new URLSearchParams(location.search).get('test-seed') || '') ? Number(new URLSearchParams(location.search).get('test-seed')) : undefined;
 const oggReady = canEncodeOgg();
 
 const modelOf = task => shell.config.models.find(id => id.startsWith(task + '/'));
@@ -230,7 +232,7 @@ $('[data-action="clear-history"]').addEventListener('click', async e => {
 
 // ── the primary action ──────────────────────────────────────────────────────
 function inputOf(m) {
-  if (m === 'speech') return { text: els.text.value, voice: els.voice.value, ...(els.speed.disabled ? {} : { speed: Number(els.speed.value) }) };
+  if (m === 'speech') return { text: els.text.value, voice: els.voice.value, ...(els.speed.disabled ? {} : { speed: Number(els.speed.value) }), ...(testSeed != null ? { seed: testSeed } : {}) };
   const seed = els.seed.value.trim() === '' ? undefined : Number(els.seed.value);
   return { prompt: els.prompt.value, seconds: Number(els.seconds.value), seed, steps: Number(els.steps.value) };
 }
@@ -256,7 +258,7 @@ shell.onPrimary(async ({ signal }) => {
     shell.setStatus(t('status.done'));
     try { await history.add(clip); } catch { /* no room in this browser: the clip stays on screen */ }
     await renderHistory();
-    if (probe) Object.assign(probe, { runs: probe.runs + 1, last: { mode: m, device, decoder: result.decoder, seconds: result.seconds, sampleRate: result.sampleRate, channels: result.channels, seed: result.seed, stats: result.stats, bytes: result.blob.size } });
+    if (probe) Object.assign(probe, { runs: probe.runs + 1, last: { mode: m, device, ran: result.device, codes: result.codes, framesMs: result.framesMs, decoder: result.decoder, seconds: result.seconds, sampleRate: result.sampleRate, channels: result.channels, seed: result.seed, stats: result.stats, bytes: result.blob.size } });
   } catch (err) {
     if (probe) probe.error = `${err?.code}: ${err?.message}${err?.cause ? ' | ' + (err.cause.message || err.cause) : ''}`;
     throw err;
