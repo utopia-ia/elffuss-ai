@@ -20,6 +20,20 @@ export const N_VQ = 16;
 export const CHUNK_TOKENS = 75;
 /** Frames a chunk may take at most (30 s at 12.5 frames a second). */
 export const MAX_FRAMES = 375;
+/**
+ * Fewest frames a chunk of text should give, per character: Spanish read at its
+ * pace gives about 0.7 to 1 frame a character. Now and then the model ends a chunk
+ * after its first sentence; under this it is read again (see MAX_READS).
+ */
+export const MIN_FRAMES_PER_CHAR = 0.4;
+/** Readings of a chunk at most, when one ends too early: the longest is kept. */
+export const MAX_READS = 3;
+
+/** True when a chunk's frames are too few for its text (an early end). */
+export function endedEarly(text, frames) {
+  const chars = String(text).replace(/\s+/g, ' ').trim().length;
+  return chars >= 20 && frames < MIN_FRAMES_PER_CHAR * chars;
+}
 
 /** The voices of MOSS-TTS-Nano: a voice prompt each, shipped as codes. */
 export const MOSS_VOICES = Object.freeze([

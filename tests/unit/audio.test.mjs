@@ -388,6 +388,14 @@ test('MOSS-TTS-Nano: the run options', () => {
   assert.throws(() => normalizeMossSpeech({ text: 'x'.repeat(20001) }), e => e.code === 'too-large');
 });
 
+test('MOSS-TTS-Nano: a chunk that ends far too early is read again', () => {
+  const b = 'Cuando quieras, te cuento un cuento antes de dormir. Había una vez una ciudad pequeña junto al mar, donde las gaviotas cantaban al amanecer.';
+  assert.equal(moss.endedEarly(b, 41), true, 'the first sentence only (seen in Chrome): 41 frames for 140 characters');
+  assert.equal(moss.endedEarly(b, 93), false, 'the shortest whole reading seen');
+  assert.equal(moss.endedEarly('Hola.', 3), false, 'a very short text is never judged');
+  assert.ok(moss.MAX_READS >= 2);
+});
+
 test('MOSS-TTS-Nano: stereo to mono', () => {
   const data = Float32Array.from([1, 1, 0.5, 9, 0, 0, -0.5, 9]);
   assert.deepEqual([...moss.toMono(data, 2, 4, 3)], [0.5, 0.5, 0]);

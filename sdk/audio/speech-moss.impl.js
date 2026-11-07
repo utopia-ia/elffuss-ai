@@ -10,7 +10,7 @@
 import { AiError } from '../core/errors.js';
 import { parseModel, createTokenizer, nmtNfkc } from './spm.js';
 import { createRng, randomSeed, isSeed } from './rng.js';
-import { MOSS_SAMPLE_RATE, MOSS_VOICES, MAX_FRAMES, mossVoice, cleanText, chunkText, cloneRows, frameRow, frameInputs, toMono } from './moss.js';
+import { MOSS_SAMPLE_RATE, MOSS_VOICES, MAX_FRAMES, MAX_READS, mossVoice, cleanText, chunkText, cloneRows, frameRow, frameInputs, toMono, endedEarly } from './moss.js';
 import { joinSpeech, measure } from './signal.js';
 import { encodeWav } from './wav.js';
 
@@ -171,11 +171,19 @@ export async function run(state, input, opts, ctx) {
   const rng = createRng(o.seed);
   const uniform = () => rng.uniform();
   const pieces = [];
-  let framesTotal = 0;
+  let framesTotal = 0, rereads = 0;
   for (let i = 0; i < chunks.length; i++) {
     ctx.report('running', { stage: 'chunk', chunk: i + 1, chunks: chunks.length });
     const rows = cloneRows(state.manifest, voice.codes.CODES, state.tok.encode(chunks[i].text));
-    const got = await generateFrames(state, rows, uniform, n => { if (n % 5 === 0) ctx.report('running', { stage: 'frame', chunk: i + 1, chunks: chunks.length, frames: n }); }, Boolean(opts?.test?.failRun));
+    // A reading that ends too early for its text is done again (the same generator
+    // goes on, so a seed still repeats the whole result); the longest is kept.
+    let got = [];
+    for (let read = 0; read < MAX_READS; read++) {
+      const take = await generateFrames(state, rows, uniform, n => { if (n % 5 === 0) ctx.report('running', { stage: 'frame', chunk: i + 1, chunks: chunks.length, frames: n }); }, Boolean(opts?.test?.failRun));
+      if (take.length > got.length) got = take;
+      if (!endedEarly(chunks[i].text, got.length)) break;
+      rereads++;
+    }
     framesTotal += got.length;
     ctx.report('running', { stage: 'decode', chunk: i + 1, chunks: chunks.length });
     pieces.push({ samples: await decodeAudio(state, got), pause: chunks[i].pause });
@@ -189,7 +197,7 @@ export async function run(state, input, opts, ctx) {
     value: {
       blob, mime: 'audio/wav', seconds: samples.length / MOSS_SAMPLE_RATE, sampleRate: MOSS_SAMPLE_RATE, channels: 1,
       model: ctx.modelId, device: ctx.device, dtype: ctx.dtype, voice: o.voice, lang: o.lang, seed: o.seed,
-      chunks: chunks.length, frames: framesTotal, texts: chunks.map(c => c.text), stats,
+      chunks: chunks.length, frames: framesTotal, rereads, texts: chunks.map(c => c.text), stats,
     },
     transfer: [],
   };
