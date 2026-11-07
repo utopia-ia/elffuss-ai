@@ -11,7 +11,7 @@
 //
 // Before anything: the cache has room (5 GB), the weights are cached, the model
 // store page is the pinned one, and the sites are built for the test channel (each
-// test has a time limit: its `timeout`, else ELFFUSS_AI_TEST_TIMEOUT, else 20 minutes)
+// test has a time limit: its `timeout`, else ELFFUSS_AI_TEST_TIMEOUT, else DEFAULT_LIMIT)
 // into $ELFFUSS_AI_CACHE/dist-test. Configuration A takes the machine's
 // coordination lock and always gives it back. A spec file under specs/ exports a
 // list of { name, sites, configs?, run(t, site) }; see harness.mjs for `t`.
@@ -31,6 +31,8 @@ import { mergeStrings } from '../../scripts/build.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MIN_FREE = 5 * 1024 ** 3;
+/** A test's time limit when it sets none (milliseconds). */
+const DEFAULT_LIMIT = 20 * 60 * 1000;
 
 function parse(argv) {
   const o = { configs: ['A', 'B'], sites: null, only: null, browser: 'chrome', headed: false, keepGoing: false };
@@ -136,9 +138,9 @@ async function main(argv) {
               hub.corrupt(null);
               const t = new TestRun({ playwright, browser, config, cache, headless: !opts.headed, sites: all, registry, hub, strings, probe: pre.probe });
               let error = null, timer = null;
-              // Every test has a time limit (its own `timeout`, else ELFFUSS_AI_TEST_TIMEOUT, else 20
-              // min): a page that waits for something that never comes fails, never stalls the run.
-              const limit = spec.timeout || Number(process.env.ELFFUSS_AI_TEST_TIMEOUT) || 20 * 60 * 1000;
+              // Every test has a time limit (its own `timeout`, else ELFFUSS_AI_TEST_TIMEOUT, else
+              // DEFAULT_LIMIT): a page that waits for something that never comes fails, never stalls the run.
+              const limit = spec.timeout || Number(process.env.ELFFUSS_AI_TEST_TIMEOUT) || DEFAULT_LIMIT;
               const late = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(limit / 60000)} min`)), limit); });
               try { await Promise.race([spec.run(t, site), late]); } catch (e) { error = String(e?.stack || e).split('\n').slice(0, 3).join(' | '); }
               finally { clearTimeout(timer); }
