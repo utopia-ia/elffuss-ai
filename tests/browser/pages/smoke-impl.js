@@ -30,11 +30,10 @@ export async function load(ctx) {
   for (const f of ctx.files) {
     if (f.path.endsWith('.onnx')) {
       const graph = new Uint8Array(await ctx.bytes(f.ref));
-      const names = new TextDecoder('latin1').decode(graph);
       const ext = [];
       for (const d of data) {
         const name = d.path.split('/').pop();
-        if (!names.includes(name)) continue;
+        if (!holds(graph, name)) continue;
         if (!dataBytes.has(d.ref)) dataBytes.set(d.ref, new Uint8Array(await ctx.bytes(d.ref)));
         ext.push({ path: name, data: dataBytes.get(d.ref) });
       }
@@ -47,6 +46,21 @@ export async function load(ctx) {
 }
 
 const dimsOf = t => (t && Array.isArray(t.dims) ? t.dims : null);
+
+/**
+ * Whether a graph's bytes hold a name (the location of its external weights), searched
+ * as bytes: a graph with its weights inside can be larger than the longest string
+ * JavaScript makes (SANA-Sprint's transformer, 1.2 GB), so it is never decoded as text.
+ */
+function holds(bytes, name) {
+  const n = new TextEncoder().encode(name);
+  for (let i = bytes.indexOf(n[0]); i !== -1 && i <= bytes.length - n.length; i = bytes.indexOf(n[0], i + 1)) {
+    let j = 1;
+    while (j < n.length && bytes[i + j] === n[j]) j++;
+    if (j === n.length) return true;
+  }
+  return false;
+}
 const ARRAYS = { float32: Float32Array, uint8: Uint8Array, int32: Int32Array, int64: BigInt64Array };
 
 /**
@@ -75,7 +89,8 @@ function feedsFromMetadata(ort, s) {
   for (const m of meta) {
     const dims = (m.shape || []).map(d => (typeof d === 'number' && d > 0 ? d : 4));
     const n = dims.reduce((a, b) => a * b, 1);
-    const data = m.type === 'int64' ? new BigInt64Array(n) : m.type === 'int32' ? new Int32Array(n) : m.type === 'bool' ? new Uint8Array(n).fill(1) : new Float32Array(n).fill(m.type === 'float32' ? 1 : 0);
+    const data = m.type === 'int64' ? new BigInt64Array(n) : m.type === 'int32' ? new Int32Array(n) : m.type === 'bool' ? new Uint8Array(n).fill(1)
+      : m.type === 'uint8' ? new Uint8Array(n) : new Float32Array(n).fill(m.type === 'float32' ? 1 : 0); // uint8: MI-GAN's picture and mask
     feeds[m.name] = new ort.Tensor(m.type === 'bool' ? 'bool' : m.type, data, dims);
   }
   return feeds;
