@@ -22,9 +22,26 @@ export async function load(ctx) {
   if (ctx.test?.failLoad) await ort.InferenceSession.create(new Uint8Array([1, 2, 3, 4]));
   const sessions = {};
   const texts = {};
+  // Weights kept apart from their graph: `<graph>.onnx_data` or a `.data` file several
+  // graphs share (MOSS-TTS-Nano). A graph gets the ones whose name it holds.
+  const DATA = /(\.onnx_data(_\d+)?|\.data)$/;
+  const data = ctx.files.filter(f => DATA.test(f.path));
+  const dataBytes = new Map();
   for (const f of ctx.files) {
-    if (f.path.endsWith('.onnx')) sessions[f.ref] = await ctx.session(f.ref);
-    else texts[f.ref] = (await ctx.text(f.ref)).length;
+    if (f.path.endsWith('.onnx')) {
+      const graph = new Uint8Array(await ctx.bytes(f.ref));
+      const names = new TextDecoder('latin1').decode(graph);
+      const ext = [];
+      for (const d of data) {
+        const name = d.path.split('/').pop();
+        if (!names.includes(name)) continue;
+        if (!dataBytes.has(d.ref)) dataBytes.set(d.ref, new Uint8Array(await ctx.bytes(d.ref)));
+        ext.push({ path: name, data: dataBytes.get(d.ref) });
+      }
+      sessions[f.ref] = ext.length
+        ? await ort.InferenceSession.create(graph, { executionProviders: [ctx.device], graphOptimizationLevel: 'all', externalData: ext })
+        : await ctx.session(f.ref);
+    } else if (!DATA.test(f.path)) texts[f.ref] = (await ctx.text(f.ref)).length;
   }
   return { kind: 'ort', ort, sessions, texts };
 }
