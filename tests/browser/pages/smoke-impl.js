@@ -120,7 +120,11 @@ export async function run(state, input, opts, ctx) {
   const outputs = {};
   for (const [ref, s] of Object.entries(state.sessions)) {
     const dims = ref.startsWith('rec:') ? [1, 3, 48, 160] : [1, 3, 64, 64];
-    const feeds = (s.inputNames.length > 1 && feedsFromMetadata(state.ort, s)) || feedsOf(state.ort, s, dims);
+    // Several inputs, or one whose declared shape the generic picture does not fit (SANA's
+    // text encoder takes [1, tokens, 2304], its decoder 32 channels): zeros from its metadata.
+    const fits = m => !m?.shape || (m.shape.length === dims.length && m.shape.every((d, i) => !(Number.isInteger(d) && d > 0) || d === dims[i]));
+    const meta = Array.isArray(s.inputMetadata) ? s.inputMetadata : [];
+    const feeds = ((s.inputNames.length > 1 || (meta.length === 1 && !fits(meta[0]))) && feedsFromMetadata(state.ort, s)) || feedsOf(state.ort, s, dims);
     const r = await s.run(feeds);
     outputs[ref] = Object.fromEntries(Object.entries(r).map(([k, t]) => [k, dimsOf(t)]));
   }

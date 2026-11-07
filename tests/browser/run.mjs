@@ -10,7 +10,8 @@
 //     [--configs A,B] [--sites depth,ocr] [--only <text>] [--browser chrome|chromium|both] [--headed] [--keep-going]
 //
 // Before anything: the cache has room (5 GB), the weights are cached, the model
-// store page is the pinned one, and the sites are built for the test channel
+// store page is the pinned one, and the sites are built for the test channel (each
+// test has a time limit: its `timeout`, else ELFFUSS_AI_TEST_TIMEOUT, else 20 minutes)
 // into $ELFFUSS_AI_CACHE/dist-test. Configuration A takes the machine's
 // coordination lock and always gives it back. A spec file under specs/ exports a
 // list of { name, sites, configs?, run(t, site) }; see harness.mjs for `t`.
@@ -134,8 +135,13 @@ async function main(argv) {
               hub.reset();
               hub.corrupt(null);
               const t = new TestRun({ playwright, browser, config, cache, headless: !opts.headed, sites: all, registry, hub, strings, probe: pre.probe });
-              let error = null;
-              try { await spec.run(t, site); } catch (e) { error = String(e?.stack || e).split('\n').slice(0, 3).join(' | '); }
+              let error = null, timer = null;
+              // Every test has a time limit (its own `timeout`, else ELFFUSS_AI_TEST_TIMEOUT, else 20
+              // min): a page that waits for something that never comes fails, never stalls the run.
+              const limit = spec.timeout || Number(process.env.ELFFUSS_AI_TEST_TIMEOUT) || 20 * 60 * 1000;
+              const late = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${Math.round(limit / 60000)} min`)), limit); });
+              try { await Promise.race([spec.run(t, site), late]); } catch (e) { error = String(e?.stack || e).split('\n').slice(0, 3).join(' | '); }
+              finally { clearTimeout(timer); }
               await t.close();
               const ok = !error && t.failures.length === 0;
               if (!ok) failed++;
