@@ -58,7 +58,6 @@ export default [
       await page.selectOption('main [data-input="gen-seconds"]', '1');
       await page.selectOption('main [data-input="steps"]', '2');
       await page.fill('main [data-input="seed"]', '7');
-      await page.dispatchEvent('main [data-input="seed"]', 'change');
       await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
       await page.click('main button.primary');
       await page.waitForFunction(() => globalThis.__elffuss.video.text?.runs >= 1 || globalThis.__elffuss.errors.length > 0, null, { timeout: 3600000, polling: 1000 });

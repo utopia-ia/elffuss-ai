@@ -353,7 +353,9 @@ integration('textToVideo').then(async fn => {
   const range = ({ min, max }) => Array.from({ length: max - min + 1 }, (_, i) => min + i);
   opt(ui.genSeconds, range(gen.SECONDS), gen.SECONDS.default, n => t('text.secondsValue', { n }));
   opt(ui.steps, range(gen.STEPS), gen.STEPS.default, n => String(n));
-  for (const c of [ui.size, ui.genSeconds, ui.steps, ui.seed]) c.addEventListener('change', () => { if (mode === 'text') checkText(); });
+  // The seed does not change what the device needs (a bad one is refused by the run
+  // itself): it never re-checks, so leaving its field to press the button keeps the button on.
+  for (const c of [ui.size, ui.genSeconds, ui.steps]) c.addEventListener('change', () => { if (mode === 'text') checkText(); });
   ui.prompt.addEventListener('input', textReady);
   for (const r of document.querySelectorAll('main [data-input="mode"]')) r.addEventListener('change', () => { if (r.checked) setMode(r.value).catch(err => shell.showError(err)); });
   ui.modes.hidden = false;
