@@ -11,6 +11,7 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | detect | `detect/rfdetr-nano` | [RF-DETR Nano](https://github.com/roboflow/rf-detr), by Roboflow | Apache-2.0 (base: Apache-2.0) | WASM q8 · 29 MB |
 | ocr | `ocr/pp-ocrv6-small` | [PP-OCRv6](https://github.com/PaddlePaddle/PaddleOCR), by PaddlePaddle | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 31 MB<br>WASM fp32 · 31 MB |
 | text-to-image | `text-to-image/sana-sprint-0.6b` | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0) | WebGPU q4f16 (with shader-f16) · 3172 MB |
+| image-to-video | `image-to-video/depth-parallax` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything<br>[MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN), by Picsart AI Research | Apache-2.0 AND MIT (base: Apache-2.0, MIT) | WebGPU fp16 (with shader-f16) · 79 MB<br>WebGPU fp32 · 129 MB<br>WASM q8 · 57 MB |
 
 ## `remove-bg/ben2`
 
@@ -65,3 +66,17 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | Backend | Variant | Files | Download |
 |---|---|---|---|
 | WebGPU | q4f16 (shader-f16) | `main:tokenizer/tokenizer.json`, `main:tokenizer/tokenizer_config.json`, `main:transformer/config.json`, `main:vae/config.json`, `main:scheduler/scheduler_config.json`, `onnx:text_encoder/model_q4.onnx`, `onnx:text_encoder/embed_tokens_q4.bin`, `onnx:text_encoder/embed_tokens_q4_scales.bin`, `onnx:transformer/model_fp16.onnx`, `onnx:vae_decoder/model_fp16.onnx` | 3172 MB |
+
+## `image-to-video/depth-parallax`
+
+- Base model (part `depth`): [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything, Apache-2.0.
+- Base model (part `inpaint`): [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN), by Picsart AI Research, MIT.
+- Part `depth`: [onnx-community/depth-anything-v2-small](https://huggingface.co/onnx-community/depth-anything-v2-small/tree/4472b7362082ad9968fee890ca0f1e5aca36b93d) at `4472b7362082ad9968fee890ca0f1e5aca36b93d`, Apache-2.0.
+- Part `inpaint`: [andraniksargsyan/migan](https://huggingface.co/andraniksargsyan/migan/tree/406830d0fa60666da0071c342ad2fbc8f30c5c64) at `406830d0fa60666da0071c342ad2fbc8f30c5c64`, MIT.
+- Note: Two models: the depth of the photo, and the background hidden behind what is near. The camera and the video are made by code.
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | fp16 (shader-f16) | `depth:preprocessor_config.json`, `depth:onnx/model_fp16.onnx`, `inpaint:migan.onnx` | 79 MB |
+| WebGPU | fp32 | `depth:preprocessor_config.json`, `depth:onnx/model.onnx`, `inpaint:migan.onnx` | 129 MB |
+| WASM | q8 | `depth:preprocessor_config.json`, `depth:onnx/model_quantized.onnx`, `inpaint:migan.onnx` | 57 MB |

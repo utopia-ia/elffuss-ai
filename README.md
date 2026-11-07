@@ -58,6 +58,7 @@ from Wikimedia Commons and on an invoice drawn by `scripts/make-fixtures.mjs`
 | [detect.elffuss.com](https://detect.elffuss.com/en/) | Find up to 80 kinds of objects, in a photo or with the camera | RF-DETR Nano by Roboflow (Apache-2.0) | WebAssembly |
 | [depth.elffuss.com](https://depth.elffuss.com/en/) | Work out what is near and what is far, with a colour map, a 3D view and 16-bit PNG | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
 | [image.elffuss.com](https://image.elffuss.com/en/) | Create a picture from a description, with shapes, a seed to repeat it and PNG download | SANA-Sprint 0.6B by NVlabs (Apache-2.0), its text encoder Gemma 2 2B IT (Gemma Terms of Use) | WebGPU |
+| [video.elffuss.com](https://video.elffuss.com/en/) | Turn a photo into a video: a 3D camera move through its layers, a live preview, MP4 with an optional soundtrack | Depth Anything V2 Small by depth-anything (Apache-2.0) and MI-GAN by Picsart AI Research (MIT) | WebGPU or WebAssembly (models), WebGL2 and WebCodecs (video) |
 | [tools.elffuss.com](https://tools.elffuss.com/en/) | The catalog of every Elffuss tool | none | none |
 
 Every site is in Spanish at its root and in English under `/en/`.
@@ -201,6 +202,7 @@ exact size (`node scripts/broker-repos.mjs` prints that list).
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
 | `@elffuss/ai/text-to-image` | Pictures from a text description (PNG) | [image.elffuss.com](https://image.elffuss.com/) | in use |
+| `@elffuss/ai/video` | A video from a photo: a 3D camera move over its depth, as MP4 | [video.elffuss.com](https://video.elffuss.com/) | in use |
 <!-- modules:end -->
 
 Each task module also exports `<task>/sizes`, the download size of each of its
@@ -216,11 +218,13 @@ the files under `sdk/` as shown above.
 | detect | [RF-DETR Nano](https://github.com/roboflow/rf-detr) | Roboflow | Apache-2.0 | 29 MB (WebAssembly, q8) |
 | depth | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small) | depth-anything | Apache-2.0 | 50 or 99 MB (WebGPU, fp16 or fp32), 27 MB (WebAssembly, q8) |
 | text-to-image | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px) | NVlabs | Apache-2.0 (text encoder: Gemma Terms of Use) | 3.2 GB (WebGPU with float16 shaders: 4-bit text encoder, float16 transformer and decoder) |
+| image-to-video | Depth Anything V2 Small (the same files) and [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN) | depth-anything, Picsart AI Research | Apache-2.0, MIT | 79 or 129 MB (WebGPU), 57 MB (WebAssembly); 30 MB when the depth model is already in the browser |
 
-The weights are ONNX exports from `onnx-community` and `PaddlePaddle` on Hugging
-Face and, for SANA-Sprint, a conversion published by UtopiaIA (made with
-`scripts/text-to-image/`), with the tokenizer and configuration read from the
-original repository. None of them is part of this repository.
+The weights are ONNX exports from `onnx-community`, `PaddlePaddle` and
+`andraniksargsyan` (an author of MI-GAN) on Hugging Face and, for SANA-Sprint, a
+conversion published by UtopiaIA (made with `scripts/text-to-image/`), with the
+tokenizer and configuration read from the original repository. None of them is
+part of this repository.
 [docs/MODELS.md](docs/MODELS.md) gives every repository, pinned commit and file.
 
 ## Repository
@@ -324,7 +328,7 @@ and served with the sites; the runtimes' licence files are fetched with them by
   mask is resized following its bilinear resampling.
 - [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) (Apache-2.0): the OCR
   follows its DB post-processing, rotated crop and CTC decoding; no code is copied.
-- The model authors: PramaLLC, PaddlePaddle, Roboflow and depth-anything.
+- The model authors: PramaLLC, PaddlePaddle, Roboflow, depth-anything and Picsart AI Research.
 
 Elffuss AI is part of [Elffuss](https://elffuss.com/).
 

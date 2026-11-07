@@ -143,5 +143,5 @@ export default [
 ];
 
 /** One input each site can run on (fixtures of the site's own tests). */
-const SAMPLE_INPUT = { cutout: 'cutout/foto.jpg', depth: 'depth/foto.jpg', detect: 'detect/foto.jpg', ocr: 'ocr/factura.png' };
+const SAMPLE_INPUT = { cutout: 'cutout/foto.jpg', depth: 'depth/foto.jpg', detect: 'detect/foto.jpg', ocr: 'ocr/factura.png', video: 'depth/foto.jpg' };
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));

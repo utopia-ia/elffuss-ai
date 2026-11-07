@@ -1,0 +1,12 @@
+/* Layout of the video site only (see shared/README.md): the picture first, as large as the window allows; the
+   settings in a grid that becomes one column on a phone; the video of the result as wide as its card. */
+main > figure.stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+main > figure.stage > img, main > figure.stage > canvas { width: auto; max-width: 100%; max-height: 70vh; height: auto; }
+.settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.75rem 1rem; margin: 0; padding: 1rem; }
+.settings > label { display: flex; flex-direction: column; gap: 0.35rem; }
+.settings > label.check { flex-direction: row; align-items: center; }
+.settings > p { grid-column: 1 / -1; margin: 0; }
+.modes { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin: 0; padding: 0; }
+.actions > label.grow { display: flex; align-items: center; gap: 0.5rem; flex: 1 1 12rem; }
+.actions > label.grow > input { flex: 1; }
+.result .card > video { display: block; width: 100%; max-height: 75vh; }

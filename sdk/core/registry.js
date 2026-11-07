@@ -12,11 +12,14 @@ import { pinnedUrl } from './hub-url.js';
  * @typedef {{ size: number, sha256?: string, gitOid?: string }} RegistryFileMeta
  * @typedef {{ repo: string, revision: string, license: string, author: string, files: Record<string, RegistryFileMeta> }} RegistryPart
  * @typedef {{ when?: 'shader-f16', dtype: string, files: string[], bytes: number }} RegistryVariant
+ * @typedef {{ name: string, author: string, url: string, license: string, part?: string }} RegistryBase
  * @typedef {{ task: string, name: { es: string, en: string }, license: string, author: string,
- *   base: { name: string, author: string, url: string, license: string }, flag: string|null, redistributes: boolean,
+ *   base: RegistryBase, bases?: RegistryBase[], flag: string|null, redistributes: boolean,
  *   runtime: 'transformers.js'|'onnxruntime-web', pipeline: string|null, parts: Record<string, RegistryPart>,
  *   devices: { webgpu?: RegistryVariant[], wasm?: RegistryVariant[] }, notes: { es: string|null, en: string|null } }} RegistryModel
- * @typedef {{ schema: 1, tasks: Record<string, { default: string }>, models: Record<string, RegistryModel> }} Registry
+ *   `bases` is there when a model joins the work of several authors (one per part it names); `base` is then the first.
+ * @typedef {{ schema: 1, tasks: Record<string, { default: string, module?: string }>, models: Record<string, RegistryModel> }} Registry
+ *   A task's `module` is the directory of its module under sdk/ (the task's own name when absent).
  * @typedef {{ ref: string, part: string, path: string, url: string, size: number, sha256?: string, gitOid?: string }} ResolvedFile
  */
 
@@ -66,6 +69,23 @@ export function defaultModelId(registry, task) {
   const t = registry.tasks[task];
   if (!t) throw new AiError('not-in-registry', `task ${task} is not in the registry`, { details: { task } });
   return t.default;
+}
+
+/** The directory under sdk/ of a task's module: its `module`, or the task's own name. */
+export function taskModule(registry, task) {
+  const t = registry.tasks[task];
+  if (!t) throw new AiError('not-in-registry', `task ${task} is not in the registry`, { details: { task } });
+  return t.module || task;
+}
+
+/**
+ * Every base model a registry model credits, in order: `bases` when the model
+ * joins several, else its one `base`.
+ * @param {RegistryModel} model
+ * @returns {RegistryBase[]}
+ */
+export function modelBases(model) {
+  return Array.isArray(model.bases) && model.bases.length ? model.bases : [model.base];
 }
 
 /**
@@ -135,13 +155,19 @@ export function toolFiles(registry) {
   return [...seen].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([url, size]) => ({ url, size }));
 }
 
-/** Every pinned URL of the registry with its size (what the catalog asks the store about). */
+/**
+ * Every pinned URL of the registry with its size (what the catalog asks the store
+ * about), each once: two models may share a part (the same repo at the same commit).
+ */
 export function registryUrls(registry) {
-  const out = [];
+  const seen = new Map();
   for (const m of Object.values(registry.models)) {
     for (const p of Object.values(m.parts)) {
-      for (const [path, meta] of Object.entries(p.files)) out.push({ url: pinnedUrl(p.repo, p.revision, path), size: meta.size });
+      for (const [path, meta] of Object.entries(p.files)) {
+        const url = pinnedUrl(p.repo, p.revision, path);
+        if (!seen.has(url)) seen.set(url, { url, size: meta.size });
+      }
     }
   }
-  return out;
+  return [...seen.values()];
 }

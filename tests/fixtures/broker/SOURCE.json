@@ -1,10 +1,8 @@
 {
-  "what": "The model-store page the browser tests serve at http://localhost:8789/: the broker page that models.elffuss.com serves, with the read-only permission for the tool sites (version 4: version 3, served today, plus the image site and the files of its model; two blocks, copied in tools-permission.js).",
+  "what": "The model-store page the browser tests serve at http://localhost:8789/: the broker page that models.elffuss.com serves (version 3, sha256 baseSha256) with the read-only permission for the tool sites brought to this registry: the hosts of deploy/sites.mjs and the files of the variants of registry/tasks.json, the two blocks copied in tools-permission.js (as node scripts/broker-repos.mjs prints them).",
   "file": "server/broker/index.html of the broker repository",
   "cachePath": "$ELFFUSS_AI_CACHE/broker/index.html",
-  "baseSha256": "631e00c6d5c86261384c56a5f5d28d5d21d536d34815b110d1e6da30eb3acd5d",
-  "sha256": "a54ef91aedd0a9cc819b9b270ebba0cbba705eedbfefa123ed7924b1706291c3",
-  "make": "node scripts/make-broker-fixture.mjs --base <server/broker/index.html as served today> --patch <the proposed tools patch>",
-  "servedSha256": "4dc44b50ffac9e11a1b2279a73d8754b50efbdb098469b7417e9f12c2ca381a0",
-  "makeV4": "the page served today (sha256 servedSha256) with the two blocks of the previous tools-permission.js replaced by the current ones (deploy/DEPLOY.md, image site)"
+  "baseSha256": "4dc44b50ffac9e11a1b2279a73d8754b50efbdb098469b7417e9f12c2ca381a0",
+  "sha256": "08b571086e06bf74e45634922eae6bd8526e0dc7b6e564dbf40726493083551e",
+  "make": "node scripts/make-broker-fixture.mjs --base <server/broker/index.html as served today, version 3> --patch <the broker patch for the commit being tested, without the hosts and files of sites not in it>"
 }

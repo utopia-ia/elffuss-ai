@@ -15,7 +15,8 @@
 //   index.html, en/index.html, licencias/index.html, en/licenses/index.html, 404.html, robots.txt
 //     (pre: the same under beta/, without robots.txt)
 //   v/<id>/   app.js (or catalog.js), the site's other modules, app.css, config.js,
-//             strings.es.json, strings.en.json, shared/, sdk/core/, sdk/<task>/,
+//             strings.es.json, strings.en.json, shared/, sdk/core/, sdk/<module>/ (its task's,
+//             and those app.json lists in `modules`),
 //             registry/tasks.json, LICENSES/, NOTICE.txt, shared/icons/*.png and the web app
 //             manifests manifest.es.json and manifest.en.json (pre: manifest.beta.<lang>.json)
 //   vendor/   only the runtimes this site uses, with their licences; Transformers.js
@@ -32,7 +33,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { sites as readSites } from '../deploy/sites.mjs';
 import { STORE_ORIGIN, csp } from '../deploy/headers.mjs';
-import { sitePages, configSource, siteOrtVariant, siteUsesTransformers } from './lib/pages.mjs';
+import { sitePages, configSource, siteOrtVariant, siteModules, siteUsesTransformers } from './lib/pages.mjs';
 import { rewriteTransformers } from './lib/rewrite-transformers.mjs';
 import { ORT_VARIANTS, transformersDir, ortSpecifierFromTransformers } from '../sdk/core/runtimes.js';
 import { VENDOR_DIRS } from '../sdk/core/runtime-pins.js';
@@ -106,7 +107,10 @@ export function buildSite({ root, site, sites, channel, buildId, outDir, vendorD
   for (const f of listFiles(join(root, 'shared'))) if (/\.(css|js)$/.test(f) || /^icons\/[\w-]+\.png$/.test(f)) w(v + 'shared/' + f, { from: join(root, 'shared', f) });
   for (const lang of ['es', 'en']) w(`${v}strings.${lang}.json`, JSON.stringify(strings[lang], null, 2) + '\n');
   for (const f of listFiles(join(root, 'sdk', 'core'))) w(`${v}sdk/core/${f}`, { from: join(root, 'sdk', 'core', f) });
-  if (site.task) for (const f of listFiles(join(root, 'sdk', site.task))) w(`${v}sdk/${site.task}/${f}`, { from: join(root, 'sdk', site.task, f) });
+  for (const mod of siteModules(site, registry)) {
+    if (!existsSync(join(root, 'sdk', mod, 'index.js'))) throw new Error(`${site.site}: the module sdk/${mod}/ does not exist`);
+    for (const f of listFiles(join(root, 'sdk', mod))) w(`${v}sdk/${mod}/${f}`, { from: join(root, 'sdk', mod, f) });
+  }
   w(`${v}registry/tasks.json`, { from: join(root, 'registry', 'tasks.json') });
   w(`${v}config.js`, configSource({ site, registry, channel, buildId, storeUrl, sites }));
   w(`${v}LICENSES/Apache-2.0.txt`, { from: join(root, 'LICENSES', 'Apache-2.0.txt') });

@@ -478,17 +478,27 @@ Reading registry/tasks.json: which model a task uses, which files a variant need
 { when?: 'shader-f16', dtype: string, files: string[], bytes: number }
 ```
 
+### Type `RegistryBase`
+
+```ts
+{ name: string, author: string, url: string, license: string, part?: string }
+```
+
 ### Type `RegistryModel`
 
 ```ts
-{ task: string, name: { es: string, en: string }, license: string, author: string, base: { name: string, author: string, url: string, license: string }, flag: string|null, redistributes: boolean, runtime: 'transformers.js'|'onnxruntime-web', pipeline: string|null, parts: Record<string, RegistryPart>, devices: { webgpu?: RegistryVariant[], wasm?: RegistryVariant[] }, notes: { es: string|null, en: string|null } }
+{ task: string, name: { es: string, en: string }, license: string, author: string, base: RegistryBase, bases?: RegistryBase[], flag: string|null, redistributes: boolean, runtime: 'transformers.js'|'onnxruntime-web', pipeline: string|null, parts: Record<string, RegistryPart>, devices: { webgpu?: RegistryVariant[], wasm?: RegistryVariant[] }, notes: { es: string|null, en: string|null } }
 ```
+
+`bases` is there when a model joins the work of several authors (one per part it names); `base` is then the first.
 
 ### Type `Registry`
 
 ```ts
-{ schema: 1, tasks: Record<string, { default: string }>, models: Record<string, RegistryModel> }
+{ schema: 1, tasks: Record<string, { default: string, module?: string }>, models: Record<string, RegistryModel> }
 ```
+
+A task's `module` is the directory of its module under sdk/ (the task's own name when absent).
 
 ### Type `ResolvedFile`
 
@@ -525,6 +535,21 @@ Returns `RegistryModel`.
 ### `defaultModelId(registry, task)`
 
 The default model id of a task.
+
+### `taskModule(registry, task)`
+
+The directory under sdk/ of a task's module: its `module`, or the task's own name.
+
+### `modelBases(model)`
+
+Every base model a registry model credits, in order: `bases` when the model
+joins several, else its one `base`.
+
+| Parameter | Type | |
+|---|---|---|
+| `model` | `RegistryModel` |  |
+
+Returns `RegistryBase[]`.
 
 ### `resolveRef(model, ref)`
 
@@ -580,7 +605,8 @@ Returns `{ url: string, size: number }[]`.
 
 ### `registryUrls(registry)`
 
-Every pinned URL of the registry with its size (what the catalog asks the store about).
+Every pinned URL of the registry with its size (what the catalog asks the store
+about), each once: two models may share a part (the same repo at the same commit).
 
 ## `sdk/core/runtime-pins.js`
 

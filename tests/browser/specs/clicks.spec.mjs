@@ -30,6 +30,7 @@ const APPS = {
   depth: { input: 'main label.drop input[type="file"]', file: 'depth/foto.jpg', save: 'main section.result [data-action="download-color"]' },
   detect: { input: 'main label.drop input[type="file"]', file: 'detect/foto.jpg', save: 'main section.result [data-action="download-png"]' },
   ocr: { input: 'input[data-input="files"]', file: 'ocr/factura.png', save: 'main section.result [data-action="download-zip"]' },
+  video: { input: 'main label.drop input[type="file"]', file: 'depth/foto.jpg', save: 'main section.result [data-action="download"]' },
 };
 
 /** Results so far: runs of the site's task, or the end of the OCR queue. */
@@ -89,7 +90,7 @@ async function saveInOneClick(t, page, sel, label) {
 export default [
   {
     name: 'clicks: first visit 1 click (download and run), second visit 0, the result saved in 1',
-    sites: ['cutout', 'depth', 'detect', 'ocr'],
+    sites: ['cutout', 'depth', 'detect', 'ocr', 'video'],
     async run(t, site) {
       const app = APPS[site.site];
       const s = t.strings[site.site].es;

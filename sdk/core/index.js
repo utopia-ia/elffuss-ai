@@ -9,7 +9,7 @@ export { probeWebGPU, chooseVariant, variantFits, isShaderError, threadCount, or
 export { createQueue } from './queue.js';
 export { createProgress, missingBytes, STATUSES } from './progress.js';
 export { HUB_ORIGIN, pinnedUrl, parsePinnedUrl, storeKey, repoPage } from './hub-url.js';
-export { loadRegistry, getModel, defaultModelId, resolveRef, variantFiles, findFile, registryRepos, registryUrls } from './registry.js';
+export { loadRegistry, getModel, defaultModelId, taskModule, modelBases, resolveRef, variantFiles, findFile, registryRepos, registryUrls } from './registry.js';
 export { createStoreClient, DEFAULT_STORE_URL } from './store-client.js';
 export { createWorkerStore, serveStore } from './store-bridge.js';
 export { createVerifiedMemo, verifyFile, sha256Hex, gitBlobSha1 } from './integrity.js';

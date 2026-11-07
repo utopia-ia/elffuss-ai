@@ -8,7 +8,7 @@
 // <extract>
 // Las herramientas (repo elffuss-ai): el catálogo y una web por herramienta. Solo
 // su nombre exacto y solo bajo elffuss.com, que es donde viven.
-const HERRAMIENTAS = /^https:\/\/(cutout|depth|detect|image|ocr|tools)\.elffuss\.com$/;
+const HERRAMIENTAS = /^https:\/\/(cutout|depth|detect|image|ocr|tools|video)\.elffuss\.com$/;
 // </extract>
 // <extract>
 // Lo que puede pedir una herramienta: bajar o consultar uno de los ficheros de su
@@ -37,6 +37,7 @@ const FICHEROS_HERRAMIENTAS = new Map([
   ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/text_encoder/model_q4.onnx", 1298421504],
   ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/transformer/model_fp16.onnx", 1189024647],
   ["https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/resolve/762399d3a10e6ec06afeffbdf7dd425c83004fb3/vae_decoder/model_fp16.onnx", 318818869],
+  ["https://huggingface.co/andraniksargsyan/migan/resolve/406830d0fa60666da0071c342ad2fbc8f30c5c64/migan.onnx", 29546882],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/config.json", 80],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/onnx/model_fp16.onnx", 219121675],
   ["https://huggingface.co/onnx-community/BEN2-ONNX/resolve/c552aa82688edce09f0ac9d2e31ad53d9d629010/preprocessor_config.json", 391],

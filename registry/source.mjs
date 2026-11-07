@@ -6,10 +6,12 @@
 // writes registry/tasks.json (sizes, hashes and licences come from the Hub,
 // never from here).
 //
-// Per model: the task, the visible name, the base model it credits, the parts
-// (Hugging Face repo pinned to a 40-hex commit), and the variants per backend in
-// order of preference. `when: 'shader-f16'` means the WebGPU adapter must offer
-// that feature. File references are `<part>:<path in the repo>`.
+// Per model: the task, the visible name, the base model it credits (a list when
+// the model joins the work of several authors, each naming the part it is), the
+// parts (Hugging Face repo pinned to a 40-hex commit), and the variants per
+// backend in order of preference. `when: 'shader-f16'` means the WebGPU adapter
+// must offer that feature. File references are `<part>:<path in the repo>`. A
+// task's `module` is its directory under sdk/ when it is not the task's name.
 //
 // `node scripts/build-registry.mjs --resolve` rewrites the `revision:` lines of
 // this file to the current `main` commit of each repo, read live from the Hub.
@@ -22,6 +24,7 @@ export default {
     detect: { default: 'detect/rfdetr-nano' },
     ocr: { default: 'ocr/pp-ocrv6-small' },
     'text-to-image': { default: 'text-to-image/sana-sprint-0.6b' },
+    'image-to-video': { default: 'image-to-video/depth-parallax', module: 'video' },
   },
   models: {
     'remove-bg/ben2': {
@@ -148,6 +151,40 @@ export default {
       // Apache-2.0 model, as in the original repository.
       flag: 'gemma-terms',
       redistributes: true,
+    },
+    // A video from one photo: Depth Anything V2 Small gives the depth (the same
+    // files, at the same commit, as depth/depth-anything-v2-small, so the store
+    // keeps them once), and MI-GAN paints what is hidden behind what is near. The
+    // camera, the layers and the video itself are code, not models.
+    'image-to-video/depth-parallax': {
+      task: 'image-to-video',
+      name: { es: 'Depth Anything V2 Small y MI-GAN', en: 'Depth Anything V2 Small and MI-GAN' },
+      base: [
+        { name: 'Depth Anything V2 Small', author: 'depth-anything', source: { hf: 'depth-anything/Depth-Anything-V2-Small' }, part: 'depth' },
+        { name: 'MI-GAN', author: 'Picsart AI Research', source: { github: 'Picsart-AI-Research/MI-GAN' }, part: 'inpaint' },
+      ],
+      runtime: 'onnxruntime-web',
+      pipeline: null,
+      parts: {
+        depth: { repo: 'onnx-community/depth-anything-v2-small', revision: '4472b7362082ad9968fee890ca0f1e5aca36b93d' },
+        inpaint: { repo: 'andraniksargsyan/migan', revision: '406830d0fa60666da0071c342ad2fbc8f30c5c64' },
+      },
+      // The depth variants follow depth/depth-anything-v2-small; MI-GAN has one file.
+      devices: {
+        webgpu: [
+          { when: 'shader-f16', dtype: 'fp16', files: ['depth:preprocessor_config.json', 'depth:onnx/model_fp16.onnx', 'inpaint:migan.onnx'] },
+          { dtype: 'fp32', files: ['depth:preprocessor_config.json', 'depth:onnx/model.onnx', 'inpaint:migan.onnx'] },
+        ],
+        wasm: [
+          { dtype: 'q8', files: ['depth:preprocessor_config.json', 'depth:onnx/model_quantized.onnx', 'inpaint:migan.onnx'] },
+        ],
+      },
+      notes: {
+        es: 'Dos modelos: la profundidad de la foto y el fondo que queda detrás de lo que está cerca. La cámara y el vídeo los hace el código.',
+        en: 'Two models: the depth of the photo, and the background hidden behind what is near. The camera and the video are made by code.',
+      },
+      flag: null,
+      redistributes: false,
     },
   },
 };

@@ -11,6 +11,7 @@
 | `@elffuss/ai/detect` | Object detection, 80 COCO classes | [detect.elffuss.com](https://detect.elffuss.com/) | in use |
 | `@elffuss/ai/ocr` | Text from images and PDFs | [ocr.elffuss.com](https://ocr.elffuss.com/) | in use |
 | `@elffuss/ai/text-to-image` | Pictures from a text description (PNG) | [image.elffuss.com](https://image.elffuss.com/) | in use |
+| `@elffuss/ai/video` | A video from a photo: a 3D camera move over its depth, as MP4 | [video.elffuss.com](https://video.elffuss.com/) | in use |
 
 ## API reference
 
@@ -22,6 +23,7 @@ Generated from the JSDoc of `sdk/`.
 - [`ocr`](api/ocr.md)
 - [`remove-bg`](api/remove-bg.md)
 - [`text-to-image`](api/text-to-image.md)
+- [`video`](api/video.md)
 
 ## Also here
 

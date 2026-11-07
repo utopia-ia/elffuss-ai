@@ -40,7 +40,7 @@ test('1. the Hub host and its resolve path only appear in sdk/core/hub-url.js', 
 });
 
 test('2. every model-id-shaped literal is in tasks.json', () => {
-  const re = /(['"`])((?:remove-bg|depth|detect|ocr)\/[a-z0-9][a-z0-9.\-]*)\1/g;
+  const re = /(['"`])((?:remove-bg|depth|detect|ocr|image-to-video)\/[a-z0-9][a-z0-9.\-]*)\1/g;
   const unknown = [];
   for (const f of codeFiles) {
     for (const m of f.text.matchAll(re)) if (!reg.models[m[2]]) unknown.push(`${f.path}: ${m[2]}`);
