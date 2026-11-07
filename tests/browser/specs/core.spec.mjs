@@ -18,6 +18,10 @@ const variantUrls = (t, site, device) => {
   return variantFiles(m, choice.variant).map(f => f.url).sort();
 };
 
+/** A WebGPU-only model (SANA-Sprint, Stable Audio) in the configuration without WebGPU: nothing loads, by design. */
+const nothingToLoad = (t, site) => t.config === 'B' && !t.registry.models[site.models[0]].devices.wasm;
+const SKIP_NOTE = 'a WebGPU-only model: nothing to load without WebGPU';
+
 export default [
   {
     name: 'loads the model through the store, on the expected backend, and runs it',
@@ -26,6 +30,7 @@ export default [
       const ctx = await t.newContext();
       const page = await t.open(ctx, site, '/__test__/core.html', { wait: 'smoke' });
       const s = await t.smoke(page);
+      if (nothingToLoad(t, site)) { t.equal(s.error?.code, 'webgpu-unavailable', 'a WebGPU-only model says WebGPU is missing'); t.note(SKIP_NOTE); return; }
       if (!t.ok(!s.error, `load failed: ${JSON.stringify(s.error)}`)) return;
       const want = expectedDevice(site, t.registry, t.config);
       t.equal(s.info.device, want, 'backend');
@@ -59,7 +64,9 @@ export default [
       else t.equal(s.info?.device, 'webgpu', 'WebGPU when asked and available');
       const page2 = await t.open(ctx, site, '/__test__/core.html?device=wasm', { wait: 'smoke' });
       const s2 = await t.smoke(page2);
-      t.equal(s2.info?.device, 'wasm', 'WebAssembly when asked');
+      // a WebGPU-only model (SANA-Sprint, Stable Audio) refuses WebAssembly, as a WebAssembly-only one refuses WebGPU
+      if (!m.devices.wasm) t.equal(s2.error?.code, 'device-unsupported', 'WebAssembly on a WebGPU-only model');
+      else t.equal(s2.info?.device, 'wasm', 'WebAssembly when asked');
       t.equal(t.hub.counts.refused.length, 0, 'nothing refused by the Hub mock');
       t.noPageErrors();
     },
@@ -68,6 +75,7 @@ export default [
     name: 'after a failure inside the runtime, the next run works in a new Worker',
     sites: 'apps',
     async run(t, site) {
+      if (nothingToLoad(t, site)) { t.note(SKIP_NOTE); return; }
       const ctx = await t.newContext();
       const page = await t.open(ctx, site, '/__test__/core.html?test-fail=run&runs=2', { wait: 'smoke' });
       const s = await t.smoke(page);
@@ -82,6 +90,7 @@ export default [
     name: 'a runtime that is not the pinned version is refused',
     sites: 'apps',
     async run(t, site) {
+      if (nothingToLoad(t, site)) { t.note(SKIP_NOTE); return; }
       const ctx = await t.newContext();
       const page = await t.open(ctx, site, '/__test__/core.html?test-pin=0.0.0', { wait: 'smoke' });
       const s = await t.smoke(page);
@@ -93,6 +102,7 @@ export default [
     sites: 'apps',
     configs: ['B'],
     async run(t, site) {
+      if (nothingToLoad(t, site)) { t.note(SKIP_NOTE); return; }
       const ctx = await t.newContext();
       const urls = variantUrls(t, site, 'auto');
       const m = t.registry.models[site.models[0]];
