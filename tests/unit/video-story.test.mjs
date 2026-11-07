@@ -10,10 +10,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   planStory, checkPlan, splitActions, clipCount, clipFrames, videoFrames, sizeForAspect, containRect,
-  STORY_SIZES, SDEDIT_TIME, CLIP_FRAMES, CARRY, MAX_CLIPS, PLAN_GUIDE,
+  STORY_SIZES, SDEDIT_TIME, BIG_CHANGE_TIME, isBigChange, CLIP_FRAMES, CARRY, MAX_CLIPS, PLAN_GUIDE,
 } from '../../sdk/video-gen/story/plan.js';
 import { foldMask, controlTokens, knownFrames, maskFrameIndex, CONTROL_VALUES } from '../../sdk/video-gen/story/control.js';
-import { colorStats, colorTransform, applyTransform, matchClip, blendStats } from '../../sdk/video-gen/story/color.js';
+import { colorStats, colorTransform, applyTransform, matchClip, blendStats, anchorSpread } from '../../sdk/video-gen/story/color.js';
 import { grid } from '../../sdk/video-gen/latent.js';
 import { estimateStory, storyPeakBytes, STORY_MODEL } from '../../sdk/video-gen/story.js';
 import { placePhoto } from '../../sdk/video-gen/story-impl.js';
@@ -45,7 +45,8 @@ test('plan: the template spreads the actions, each keyframe from the one before'
   const p = planStory({ prompt: 'un zorro que despierta en el bosque al amanecer, se estira y sale corriendo', seconds: 9, seed: 7 });
   assert.equal(p.shots.length, 4); assert.equal(p.clips.length, 3); assert.equal(p.seed, 7);
   assert.equal(p.shots[0].from, undefined, 'the first from the text alone');
-  p.shots.slice(1).forEach((s, i) => { assert.equal(s.from, i); assert.equal(s.t, SDEDIT_TIME); });
+  p.shots.slice(1).forEach((s, i) => assert.equal(s.from, i));
+  assert.deepEqual(p.shots.map(s => s.t), [undefined, SDEDIT_TIME, SDEDIT_TIME, BIG_CHANGE_TIME], 'running is a move of the whole body: from the text alone');
   assert.match(p.shots[2].prompt, /se estira/); assert.match(p.shots[3].prompt, /sale corriendo/);
   assert.match(p.clips[2], /^un zorro .*sale corriendo$/, 'every clip keeps the subject and place');
   checkPlan(p);
@@ -59,6 +60,14 @@ test('plan: the template spreads the actions, each keyframe from the one before'
   assert.ok(two.clips[0].length > 0);
   checkPlan(two, { start: true, end: true });
   assert.throws(() => planStory({ prompt: '', seconds: 3 }), /description or two photos/);
+});
+
+test('plan: which actions move the whole body (their keyframe starts from the text alone)', () => {
+  for (const t of ['sale corriendo', 'the fox runs off', 'salta al río', 'it jumps', 'se pone de pie', 'gets up', 'turns round', 'se da la vuelta', 'despega y vuela'])
+    assert.equal(isBigChange(t), true, t);
+  for (const t of ['mira a cámara', 'looks at the camera', 'se estira', 'empieza a nevar', 'pan y vino', 'opens its eyes', 'gira la cabeza'])
+    assert.equal(isBigChange(t), false, t);
+  assert.deepEqual(planStory({ prompt: 'haz que nieve y que el zorro mire a cámara', seconds: 6, start: true }).shots.map(s => s.t), [undefined, SDEDIT_TIME, SDEDIT_TIME]);
 });
 
 test('plan: a written plan is checked before anything runs', () => {
@@ -150,6 +159,17 @@ test('colour: a frame matched to itself does not change; a drifted one comes bac
   const s0 = colorStats(a), s1 = { mean: s0.mean.map(v => v + 10), std: s0.std.map(v => v * 2) };
   assert.deepEqual(blendStats(s0, s1, 0, 5), s0);
   assert.deepEqual(blendStats(s0, s1, 4, 5), s1);
+});
+
+test('colour: a keyframe painted from another keeps its means but not the contrast it piled up', () => {
+  const n = 64 * 64, src = new Uint8ClampedArray(n * 4);
+  for (let p = 0; p < n; p++) src.set([(p * 7) % 120 + 60, (p * 13) % 100 + 70, (p * 3) % 90 + 80, 255], p * 4);
+  // darker (a new light) and harder (the drift)
+  const kf = Uint8ClampedArray.from(src, (v, i) => (i % 4 === 3 ? 255 : (v - 128) * 1.4 + 100));
+  const before = colorStats(kf), out = anchorSpread(Uint8ClampedArray.from(kf), src, 1);
+  const a = colorStats(out), b = colorStats(src);
+  assert.ok(Math.abs(a.std[0] - b.std[0]) < 1.5, `contrast back to the source's (${a.std[0].toFixed(1)} vs ${b.std[0].toFixed(1)})`);
+  assert.ok(Math.abs(a.mean[0] - before.mean[0]) < 1.5, 'the new, darker light stays');
 });
 
 test('estimate: the storyboard model\'s download and memory, honest reasons', async () => {

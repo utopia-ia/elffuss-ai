@@ -28,7 +28,7 @@ import { SAMPLERS, flowTimes, step } from './schedule.js';
 import { toHalf } from './half.js';
 import { checkPlan, withStyle, clipFrames, containRect, CARRY } from './story/plan.js';
 import { knownFrames, foldMask, controlTokens } from './story/control.js';
-import { matchClip } from './story/color.js';
+import { matchClip, anchorSpread } from './story/color.js';
 import { encodeVideo } from '../video/encode.js';
 import { fitSoundtrack } from '../video/audio.js';
 import { generate as paint } from '../text-to-image/pipeline.js';
@@ -240,6 +240,7 @@ async function keyframes(state, ctx, input, signal) {
         prompt: withStyle(plan, shot.prompt), seed: plan.seed, W, H, k, count: n, signal,
         init: from ? { ...from, t: shot.t } : null,
       });
+      if (from) anchorSpread(img.rgba, from.rgba);
     }
     keys[k] = img;
     ctx.report('running', { stage: 'keyframe', index: k, count: n, done: true, image: shrink(img.rgba, W, H, Math.min(W, 2 * PREVIEW_WIDTH)) });
@@ -382,7 +383,7 @@ async function clips(state, ctx, input, opts, signal) {
 
   // 2. The prompts' keys and values for the base and the VACE blocks, then the parts.
   ctx.report('running', { stage: 'load', index: 0, count: 1 });
-  // (the sessions stay until the clips are made: their outputs live on the GPU)
+  // (the sessions stay until the clips are made: their outputs stay on the device)
   state.wan = { parts: [], ctx: [], decoder: null, tae: null };
   const ckvs = [];
   for (const [ref, data] of [[FILES.ctx, []], [FILES.vctx, ['web:dit/ctx.onnx_data']]]) {

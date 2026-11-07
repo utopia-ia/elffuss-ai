@@ -73,10 +73,14 @@ test('licences are allowed, nothing is on the deny list, nothing is redistribute
       assert.ok(!DENY_REPOS.some(re => re.test(p.repo)), p.repo);
       assert.ok(accepted.includes(p.license) || !DENY_LICENSES.some(re => re.test(p.license)), p.license);
     }
-    // Two models are conversions published for these sites (redistributed), each in
+    // Three models are conversions published for these sites (redistributed), each in
     // a part that carries its licence and notice. SANA-Sprint's text encoder is
-    // Gemma 2, under the Gemma Terms of Use: it says so with its flag.
-    const converted = { 'text-to-image/sana-sprint-0.6b': ['onnx', 'gemma-terms'], 'text-to-video/wan2.1-t2v-1.3b-rcm': ['web', null] }[id];
+    // Gemma 2, under the Gemma Terms of Use: it says so with its flag (and so does the
+    // storyboard model, which uses SANA-Sprint for its keyframes).
+    const converted = {
+      'text-to-image/sana-sprint-0.6b': ['onnx', 'gemma-terms'], 'text-to-video/wan2.1-t2v-1.3b-rcm': ['web', null],
+      'text-to-video/wan2.1-vace-1.3b-rcm': ['vace', 'gemma-terms'],
+    }[id];
     if (converted) {
       assert.equal(m.redistributes, true, id);
       assert.equal(m.flag, converted[1], id);

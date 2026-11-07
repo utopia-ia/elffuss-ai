@@ -385,5 +385,57 @@ export default {
       flag: null,
       redistributes: true,
     },
+    // A video that does what it is asked (a storyboard): SANA-Sprint paints a keyframe per
+    // shot and Wan 2.1 VACE 1.3B makes the clip between each pair. The VACE module
+    // (UtopiaIA, scripts/wan/export_vace.py) is woven into the T2V transformer of
+    // wan2.1-t2v-1.3b-rcm: its graphs read that model's published weights (part<i>.onnx_data,
+    // ctx.onnx_data), so only the VACE weights and the tiny encoder are new. SANA's files are
+    // those of text-to-image/sana-sprint-0.6b, with its image encoder (SDEdit keyframes).
+    'text-to-video/wan2.1-vace-1.3b-rcm': {
+      task: 'text-to-video',
+      name: { es: 'Wan 2.1 VACE 1.3B (rCM) y SANA-Sprint', en: 'Wan 2.1 VACE 1.3B (rCM) and SANA-Sprint' },
+      base: [
+        { name: 'Wan2.1-VACE-1.3B', author: 'Wan-AI', source: { hf: 'Wan-AI/Wan2.1-VACE-1.3B' }, part: 'vace' },
+        { name: 'Wan2.1-T2V-1.3B', author: 'Wan-AI', source: { hf: 'Wan-AI/Wan2.1-T2V-1.3B' }, part: 'tok' },
+        { name: 'rCM Wan2.1 T2V 1.3B 480p', author: 'worstcoder (rCM, NVlabs/Tsinghua)', source: { hf: 'worstcoder/rcm-Wan' }, part: 'web' },
+        { name: 'lighttaew2_1 (TAEHV)', author: 'lightx2v / madebyollin', source: { hf: 'lightx2v/Autoencoders' }, part: 'vace' },
+        { name: 'SANA-Sprint 0.6B', author: 'NVlabs', source: { hf: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px' }, part: 'sana' },
+      ],
+      runtime: 'onnxruntime-web',
+      pipeline: null,
+      sampler: 'rcm',
+      parts: {
+        tok: { repo: 'Wan-AI/Wan2.1-T2V-1.3B', revision: '37ec512624d61f7aa208f7ea8140a131f93afc9a' },
+        web: { repo: 'UtopiaIA/Wan2.1-T2V-1.3B-web', revision: '3dbd66ddf838b03a751576500ed6b5e72c53a972' },
+        vace: { repo: 'UtopiaIA/Wan2.1-VACE-1.3B-web', revision: 'caac656e0e828334e0dc55a66457a33d46568fee' },
+        sana: { repo: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers', revision: 'aa76e7f4f4928f378716b6716a2130fba3caf5b1' },
+        sanaw: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '131c0f31f7607f8e92e7209dfeb968e8b7f44374' },
+      },
+      devices: {
+        webgpu: [
+          {
+            when: 'shader-f16',
+            dtype: 'q8f16',
+            files: [
+              'tok:google/umt5-xxl/tokenizer.json',
+              'web:t5/embed_q4.bin', 'web:t5/encoder_0.onnx', 'web:t5/encoder_1.onnx', 'web:t5/encoder_2.onnx', 'web:t5/encoder_3.onnx',
+              'web:dit/ctx.onnx', 'web:dit/part0.onnx_data', 'web:dit/part1.onnx_data', 'web:dit/part2.onnx_data', 'web:vae/taew2_1_light.onnx',
+              'vace:dit/vctx.onnx', 'vace:dit/vpart0.onnx', 'vace:dit/vpart1.onnx', 'vace:dit/vpart2.onnx', 'vace:vae/lighttaew2_1_encoder.onnx',
+              'sana:tokenizer/tokenizer.json', 'sana:tokenizer/tokenizer_config.json', 'sana:transformer/config.json',
+              'sana:vae/config.json', 'sana:scheduler/scheduler_config.json',
+              'sanaw:text_encoder/model_q4.onnx', 'sanaw:text_encoder/embed_tokens_q4.bin', 'sanaw:text_encoder/embed_tokens_q4_scales.bin',
+              'sanaw:transformer/model_fp16.onnx', 'sanaw:vae_decoder/model_fp16.onnx', 'sanaw:vae_encoder/model_fp16.onnx',
+            ],
+          },
+        ],
+      },
+      notes: {
+        es: 'Primero las imágenes clave (SANA-Sprint), una por plano; después los clips entre ellas (Wan 2.1 VACE, 4 pasos). Casi todo lo comparte con el vídeo desde texto y con las imágenes.',
+        en: 'First the keyframes (SANA-Sprint), one per shot; then the clips between them (Wan 2.1 VACE, 4 steps). It shares most of its files with video from text and with pictures.',
+      },
+      // SANA's text encoder is Gemma 2 2B IT, under the Gemma Terms of Use (as in text-to-image).
+      flag: 'gemma-terms',
+      redistributes: true,
+    },
   },
 };

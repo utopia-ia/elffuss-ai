@@ -14,7 +14,9 @@
 //   { prompt, from: k, t }         SDEdit from keyframe k: noised to time t (π/2 is all
 //                                  noise), then denoised with the new text; t 1.45 keeps
 //                                  the subject, the place and the light and lets the pose
-//                                  change; 1.57 (π/2) is the text alone with the same seed
+//                                  change a little; 1.57 (π/2) is the text alone with the
+//                                  same seed, for a move of the whole body (run, jump, turn
+//                                  round, stand up), which 1.45 does not reach
 // Big changes go a little at a time over the keyframes: a change that appears only
 // in the last one is crammed into the last frames of its clip.
 
@@ -24,12 +26,21 @@ import { AiError } from '../../core/errors.js';
 export const SHOT_SECONDS = 3;
 /** Clips of the longest video (9 s). */
 export const MAX_CLIPS = 3;
-/** Frames of a clip (3 s at 16 fps, 1 + 4k). */
+/** Frames of a clip: one shot at Wan's frame rate, 1 + 4k (49 = 1 + 4 · 12). */
 export const CLIP_FRAMES = 49;
 /** Frames of a clip handed on to the next one, and the extra frames that clip makes so each adds 3 s. */
 export const CARRY = 5;
 /** SDEdit start time of a keyframe made from the one before. */
 export const SDEDIT_TIME = 1.45;
+/** …and of one whose pose changes a lot (running, jumping, turning round, standing up): the text alone, same seed. */
+export const BIG_CHANGE_TIME = 1.57;
+
+// Actions that move the whole body: from 1.45 SANA keeps the pose (a standing fox does not start
+// running), so their keyframe starts from the text alone. Spanish and English, any form.
+const BIG_MOVES = /\b(run|runs|running|ran|dash(es|ing)?|sprint|jump|jumps|jumping|leap|turns? (a)?round|turning round|stand(s|ing)? up|gets? up|sits? down|lies? down|flies|flying|takes? off|corre|corren|corriendo|correr|sale corriendo|echa a correr|salta|saltan|saltando|saltar|brinca|se levanta|se pone de pie|de pie|se sienta|se tumba|se acuesta|se da la vuelta|da media vuelta|gira el cuerpo|vuela|volando|despega|huye)\b/i;
+
+/** True when an action moves the whole body (see BIG_MOVES). */
+export const isBigChange = text => BIG_MOVES.test(String(text || ''));
 /** The longest a prompt of the plan can be, in characters. */
 export const MAX_PROMPT = 600;
 
@@ -145,7 +156,10 @@ export function planStory({ prompt, seconds = 9, start = false, end = false, see
     else {
       const r = run[k - 1];
       const deg = r.len > 1 ? ` (${degree(r.pos, r.len, lang)})` : '';
-      shots.push({ prompt: clip(withScene(perClip[k - 1]) + deg), from: k - 1, t: SDEDIT_TIME });
+      const what = perClip[k - 1];
+      // a new big move (not the one already shown in the keyframe before) starts from the text alone
+      const big = isBigChange(what) && (k < 2 || perClip[k - 2] !== what || r.pos === 1);
+      shots.push({ prompt: clip(withScene(what) + deg), from: k - 1, t: big ? BIG_CHANGE_TIME : SDEDIT_TIME });
     }
   }
   const still = lang === 'es' ? 'movimiento suave y natural' : 'smooth natural motion';

@@ -18,6 +18,7 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | text-to-image | `text-to-image/sana-sprint-0.6b` | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0) | WebGPU q4f16 (with shader-f16) · 3479 MB |
 | image-to-video | `image-to-video/depth-parallax` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything<br>[MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN), by Picsart AI Research | Apache-2.0 AND MIT (base: Apache-2.0, MIT) | WebGPU fp16 (with shader-f16) · 79 MB<br>WebGPU fp32 · 129 MB<br>WASM q8 · 57 MB |
 | text-to-video | `text-to-video/wan2.1-t2v-1.3b-rcm` | [Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), by Wan-AI<br>[rCM Wan2.1 T2V 1.3B 480p](https://huggingface.co/worstcoder/rcm-Wan), by worstcoder (rCM, NVlabs/Tsinghua)<br>[lighttaew2_1 (TAEHV)](https://huggingface.co/lightx2v/Autoencoders), by lightx2v / madebyollin | Apache-2.0 (base: Apache-2.0, Apache-2.0, Apache-2.0) | WebGPU q8f16 (with shader-f16) · 5236 MB |
+| text-to-video | `text-to-video/wan2.1-vace-1.3b-rcm` | [Wan2.1-VACE-1.3B](https://huggingface.co/Wan-AI/Wan2.1-VACE-1.3B), by Wan-AI<br>[Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), by Wan-AI<br>[rCM Wan2.1 T2V 1.3B 480p](https://huggingface.co/worstcoder/rcm-Wan), by worstcoder (rCM, NVlabs/Tsinghua)<br>[lighttaew2_1 (TAEHV)](https://huggingface.co/lightx2v/Autoencoders), by lightx2v / madebyollin<br>[SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0, Apache-2.0, Apache-2.0, Apache-2.0, Apache-2.0) | WebGPU q8f16 (with shader-f16) · 9527 MB |
 
 ## `remove-bg/ben2`
 
@@ -153,3 +154,23 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | Backend | Variant | Files | Download |
 |---|---|---|---|
 | WebGPU | q8f16 (shader-f16) | `tok:google/umt5-xxl/tokenizer.json`, `web:dit/ctx.onnx`, `web:dit/part0.onnx`, `web:dit/part1.onnx`, `web:dit/part2.onnx`, `web:t5/embed_q4.bin`, `web:t5/encoder_0.onnx`, `web:t5/encoder_1.onnx`, `web:t5/encoder_2.onnx`, `web:t5/encoder_3.onnx`, `web:vae/taew2_1_light.onnx`, `web:dit/ctx.onnx_data`, `web:dit/part0.onnx_data`, `web:dit/part1.onnx_data`, `web:dit/part2.onnx_data`, `web:t5/encoder_0.onnx_data`, `web:t5/encoder_1.onnx_data`, `web:t5/encoder_2.onnx_data`, `web:t5/encoder_3.onnx_data` | 5236 MB |
+
+## `text-to-video/wan2.1-vace-1.3b-rcm`
+
+- Base model (part `vace`): [Wan2.1-VACE-1.3B](https://huggingface.co/Wan-AI/Wan2.1-VACE-1.3B), by Wan-AI, Apache-2.0.
+- Base model (part `tok`): [Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), by Wan-AI, Apache-2.0.
+- Base model (part `web`): [rCM Wan2.1 T2V 1.3B 480p](https://huggingface.co/worstcoder/rcm-Wan), by worstcoder (rCM, NVlabs/Tsinghua), Apache-2.0.
+- Base model (part `vace`): [lighttaew2_1 (TAEHV)](https://huggingface.co/lightx2v/Autoencoders), by lightx2v / madebyollin, Apache-2.0.
+- Base model (part `sana`): [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs, Apache-2.0.
+- Part `tok`: [Wan-AI/Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B/tree/37ec512624d61f7aa208f7ea8140a131f93afc9a) at `37ec512624d61f7aa208f7ea8140a131f93afc9a`, Apache-2.0.
+- Part `web`: [UtopiaIA/Wan2.1-T2V-1.3B-web](https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/tree/3dbd66ddf838b03a751576500ed6b5e72c53a972) at `3dbd66ddf838b03a751576500ed6b5e72c53a972`, Apache-2.0.
+- Part `vace`: [UtopiaIA/Wan2.1-VACE-1.3B-web](https://huggingface.co/UtopiaIA/Wan2.1-VACE-1.3B-web/tree/caac656e0e828334e0dc55a66457a33d46568fee) at `caac656e0e828334e0dc55a66457a33d46568fee`, Apache-2.0.
+- Part `sana`: [Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/tree/aa76e7f4f4928f378716b6716a2130fba3caf5b1) at `aa76e7f4f4928f378716b6716a2130fba3caf5b1`, Apache-2.0.
+- Part `sanaw`: [UtopiaIA/sana-sprint-0.6b-1024px-onnx-web](https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/tree/131c0f31f7607f8e92e7209dfeb968e8b7f44374) at `131c0f31f7607f8e92e7209dfeb968e8b7f44374`, Apache-2.0.
+- Redistributed: a conversion of the original weights published by UtopiaIA, with the original licence and a NOTICE.
+- Licence note: the text encoder is Gemma 2 2B IT, by Google, provided under and subject to the Gemma Terms of Use (ai.google.dev/gemma/terms) and the Gemma Prohibited Use Policy, as in the original repository.
+- Note: First the keyframes (SANA-Sprint), one per shot; then the clips between them (Wan 2.1 VACE, 4 steps). It shares most of its files with video from text and with pictures.
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | q8f16 (shader-f16) | `tok:google/umt5-xxl/tokenizer.json`, `web:t5/embed_q4.bin`, `web:t5/encoder_0.onnx`, `web:t5/encoder_1.onnx`, `web:t5/encoder_2.onnx`, `web:t5/encoder_3.onnx`, `web:dit/ctx.onnx`, `web:dit/part0.onnx_data`, `web:dit/part1.onnx_data`, `web:dit/part2.onnx_data`, `web:vae/taew2_1_light.onnx`, `vace:dit/vctx.onnx`, `vace:dit/vpart0.onnx`, `vace:dit/vpart1.onnx`, `vace:dit/vpart2.onnx`, `vace:vae/lighttaew2_1_encoder.onnx`, `sana:tokenizer/tokenizer.json`, `sana:tokenizer/tokenizer_config.json`, `sana:transformer/config.json`, `sana:vae/config.json`, `sana:scheduler/scheduler_config.json`, `sanaw:text_encoder/model_q4.onnx`, `sanaw:text_encoder/embed_tokens_q4.bin`, `sanaw:text_encoder/embed_tokens_q4_scales.bin`, `sanaw:transformer/model_fp16.onnx`, `sanaw:vae_decoder/model_fp16.onnx`, `sanaw:vae_encoder/model_fp16.onnx`, `web:t5/encoder_0.onnx_data`, `web:t5/encoder_1.onnx_data`, `web:t5/encoder_2.onnx_data`, `web:t5/encoder_3.onnx_data`, `web:dit/ctx.onnx_data`, `vace:dit/vctx.onnx_data`, `vace:dit/vpart0.onnx_data`, `vace:dit/vpart1.onnx_data`, `vace:dit/vpart2.onnx_data` | 9527 MB |

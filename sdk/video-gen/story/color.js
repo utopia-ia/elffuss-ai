@@ -75,3 +75,15 @@ export function matchClip(frames, first, last, strength = 1) {
   frames.forEach((f, i) => applyTransform(f, colorTransform(colorStats(f, 4), blendStats(a, b, i, frames.length), strength)));
   return frames;
 }
+
+/**
+ * Keep a keyframe painted from another (SDEdit) from piling up contrast: its spread on each
+ * YCbCr axis moves back toward the source's (`strength`), its means stay (a new light, night,
+ * snow still shows). Each SDEdit step adds a little contrast; down a chain of keyframes it
+ * compounds (measured 51 → 72 over two steps). In place, RGBA bytes.
+ */
+export function anchorSpread(rgba, source, strength = 0.8) {
+  const a = colorStats(rgba, 4), b = colorStats(source, 4);
+  const to = { mean: a.mean, std: a.std.map((v, k) => v + strength * (b.std[k] - v)) };
+  return applyTransform(rgba, colorTransform(a, to));
+}
