@@ -169,14 +169,19 @@ export default [
       await page.waitForSelector('[data-role="image-chosen"]:not([hidden])');
       t.ok(await page.isDisabled('input[name="aspect"][value="16:9"]'), 'the shape comes from the photo');
       const src = await page.evaluate(() => globalThis.__elffuss.image.source);
-      await page.fill('input[data-input="strength"]', '60');
-      const d = await create(page, { prompt: 'the same scene as a watercolour painting', seed: '5', aspect: null, steps: null }).catch(err => ({ errors: [String(err)] }));
+      t.equal(await page.inputValue('input[data-input="strength"]'), '70', 'the default strength');
+      const d = await create(page, { prompt: 'en acuarela', seed: '5', aspect: null, steps: null }).catch(err => ({ errors: [String(err)] }));
       t.equal(d.errors, [], `errors (${JSON.stringify(d.why || [])})`);
       const r = d.image.result;
-      t.equal([r?.fromImage, r?.strength, r?.steps], [true, 0.6, 2], 'made from the picture, at the strength asked');
+      t.equal([r?.fromImage, r?.strength, r?.steps], [true, 0.7, 2], 'made from the picture, at the strength asked');
+      t.ok((d.image.caption || '').length > 20, `the picture was described first (${(d.image.caption || '').slice(0, 60)}…)`);
+      const used = await page.textContent('[data-role="used-prompt"]');
+      t.ok(used.includes('watercolor') && used.length > 40, `the prompt used leads with the caption and says the change: ${used.slice(0, 90)}…`);
+      await page.click('button[data-action="edit-prompt"]');
+      t.ok((await page.inputValue('textarea[data-input="prompt"]')).length > 40, 'Edit puts the prompt used in the box');
       t.ok(Math.abs(r.width / r.height - src.width / src.height) < 0.03, `the photo's shape (${r.width} × ${r.height} from ${src.width} × ${src.height})`);
       t.ok(d.image.stages.includes('encode-image'), 'the picture is read first');
-      t.ok((await page.textContent('[data-role="from-image-meta"]')).includes('60'), 'the result says it came from the picture');
+      t.ok((await page.textContent('[data-role="from-image-meta"]')).includes('70'), 'the result says it came from the picture');
       t.equal(await page.evaluate(() => document.querySelectorAll('[style]').length), 0, 'no inline styles');
       // Removing the picture gives the shapes back.
       await page.click('button[data-action="remove-image"]');

@@ -20,7 +20,8 @@ const picture = (w, h) => ({ width: w, height: h, rgba: new Uint8ClampedArray(w 
 test('strength: a start time from 1.11 (the picture barely moves) to 1.55 (the text leads)', () => {
   assert.ok(Math.abs(strengthTime(0) - Math.atan(2)) < 1e-12);
   assert.ok(Math.abs(strengthTime(1) - Math.atan(60)) < 1e-12 && strengthTime(1) < Math.PI / 2, 'never all noise: the picture always hints');
-  assert.ok(Math.abs(strengthTime(DEFAULT_STRENGTH) - 1.506) < 0.005, 'the default: a new light or style, the same layout');
+  assert.equal(DEFAULT_STRENGTH, 0.7);
+  assert.ok(Math.abs(strengthTime(DEFAULT_STRENGTH) - 1.5245) < 0.005, 'the default: a new light or style, the same layout');
   assert.ok(Math.abs(strengthTime(0.3) - 1.39) < 0.01, '0.3: small changes');
   for (let k = 0; k < 10; k++) assert.ok(strengthTime((k + 1) / 10) > strengthTime(k / 10), 'it grows with the strength');
   assert.equal(strengthTime(-1), strengthTime(0)); assert.equal(strengthTime(2), strengthTime(1), 'clamped');
@@ -113,4 +114,24 @@ test('an existing SANA cache (762399 URLs) needs only the encoder\'s bytes to ma
   assert.equal(needed[0].lazy, true, 'and it is a lazy file of the variant');
   assert.equal(needed.reduce((s, f) => s + f.size, 0), 306441950, 'its bytes, and nothing else');
   assert.ok(needed[0].url.includes('/resolve/131c0f31f7607f8e92e7209dfeb968e8b7f44374/vae_encoder/'), 'read from the commit that added it');
+});
+
+test('prompt: a change is written after what the picture shows; a whole scene is used as it is', async () => {
+  const { composePrompt, isChangeRequest, shortCaption } = await import('../../sdk/text-to-image/compose.js');
+  const cap = 'The image shows a red fox sitting on the ground among autumn leaves. The fox is looking to the left. The sun is shining through the trees. There are more trees far away.';
+  for (const t of ['en acuarela', 'de noche', 'nevando', 'estilo cómic', 'the same scene as a watercolor painting', 'la misma escena pero de noche', 'as a pencil drawing', 'in winter'])
+    assert.equal(isChangeRequest(t), true, t);
+  assert.equal(isChangeRequest('A lighthouse on a cliff at sunset with waves crashing on the rocks below, dramatic sky'), false);
+  const w = composePrompt(cap, 'en acuarela');
+  assert.equal(w.composed, true);
+  assert.ok(w.prompt.startsWith('a red fox sitting on the ground'), `the subject first, without «The image shows»: ${w.prompt}`);
+  assert.match(w.prompt, /as a watercolor painting/, 'the Spanish change in the English the model follows');
+  assert.match(composePrompt(cap, 'de noche').prompt, /at night/);
+  assert.match(composePrompt(cap, 'estilo cómic').prompt, /comic book style/);
+  assert.match(composePrompt(cap, 'the same scene as a watercolor painting').prompt, /fox.*, as a watercolor painting$/, '«the same scene» is the caption');
+  const scene = 'A lighthouse on a cliff at sunset with waves crashing on the rocks below, dramatic sky';
+  assert.deepEqual(composePrompt(cap, scene), { prompt: scene, composed: false });
+  assert.deepEqual(composePrompt('', 'en acuarela'), { prompt: 'en acuarela', composed: false }, 'without a caption: the text');
+  assert.ok(shortCaption(cap + ' ' + cap, 240).length <= 240, 'the caption is kept short');
+  assert.ok(!shortCaption(cap).endsWith('.'));
 });

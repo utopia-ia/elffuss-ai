@@ -16,7 +16,7 @@ export const DEFAULT_STEPS = 2;
 /** Longest prompt accepted, in characters (the model reads at most 300 tokens of it). */
 export const MAX_PROMPT_CHARS = 2000;
 /** How far a picture made from another may move from it when none is asked (0 close … 1 free). */
-export const DEFAULT_STRENGTH = 0.6;
+export const DEFAULT_STRENGTH = 0.7;
 /** Pixels of a picture made from another: about a megapixel, in the shape of the one given. */
 const FROM_IMAGE_PIXELS = 1024 * 1024;
 
@@ -24,8 +24,9 @@ const FROM_IMAGE_PIXELS = 1024 * 1024;
  * The SDEdit start time of a strength (TrigFlow time, π/2 is all noise). What a picture
  * keeps changes fast near π/2, so the scale is even in log(tan t): t = atan(2·30^strength).
  * 0 → 1.11 (the picture barely moves), 0.3 → 1.39 (small changes of pose and detail),
- * 0.6 → 1.51 (a new light or style, the same layout: "at night", "as a watercolour"),
- * 1 → 1.55 (the text leads, the picture only hints). Measured on SANA-Sprint 0.6B.
+ * 0.6 → 1.51, 0.7 → 1.52 (a new light or style, the same layout: "at night", "as a watercolour";
+ * the default, with the prompt led by the picture's caption: compose.js), 1 → 1.55 (the text
+ * leads, the picture only hints). Measured on SANA-Sprint 0.6B, four pictures × four changes.
  * @param {number} strength 0 to 1
  */
 export function strengthTime(strength) {
@@ -52,7 +53,7 @@ export function sizeFromImage(w, h) {
  *   without one, a random seed is used and returned. `steps` 1 to 4 (default 2).
  *   `image` (optional): a picture to start from, `{ width, height, rgba }` (RGBA bytes;
  *   TextToImage turns a Blob or an ImageBitmap into one); the result keeps its shape
- *   (about a megapixel) and `strength` (0 to 1, default 0.6) says how far it may move
+ *   (about a megapixel) and `strength` (0 to 1, default 0.7) says how far it may move
  *   from it: low keeps the picture and changes its look, high follows the text more.
  */
 

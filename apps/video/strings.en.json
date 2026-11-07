@@ -100,5 +100,6 @@
   "story.change": "Change",
   "story.continue": "Continue ({s})",
   "story.continueNow": "Continue",
-  "story.changed": "Change a picture's text and paint it again. When you like it, continue."
+  "story.changed": "Change a picture's text and paint it again. When you like it, continue.",
+  "story.stage.caption": "Looking at your photo…"
 }

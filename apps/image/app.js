@@ -9,8 +9,11 @@
 // this browser only. The first download waits for the primary button, which says
 // its size; a browser that cannot run the model is told so before anything is
 // downloaded.
-import { createShell } from './shared/shell.js';
-import { TextToImage, estimate, normalizeRequest, MAX_SEED, ASPECTS, canStartFromImage, sizeFromImage } from './sdk/text-to-image/index.js';
+import { createShell, formatSize, fill } from './shared/shell.js';
+import { TextToImage, estimate, normalizeRequest, MAX_SEED, ASPECTS, canStartFromImage, sizeFromImage, composePrompt, IMAGE_ENCODER } from './sdk/text-to-image/index.js';
+import { ImageToText } from './sdk/image-to-text/index.js';
+import { eagerFiles, resolveRef } from './sdk/core/registry.js';
+import { chooseVariant } from './sdk/core/device.js';
 import { openHistory } from './history.js';
 
 /** Longest side of the previews kept in the history. */
@@ -42,6 +45,10 @@ let task = null; // the SDK task, created on the first run and kept for the next
 let shown = null; // blob: URLs on screen
 let blocked = false; // this browser cannot run the model
 let source = null; // the picture to start from: { blob, url, name, width, height }
+let eyes = null; // the image-to-text task that describes it (its caption leads the prompt)
+let caption = null; // { blob, text } the caption of the picture chosen
+/** The model that describes a picture: the site's second one. */
+const CAPTION_MODEL = (shell.config.models || [])[1] || null;
 
 /** An element with attributes and children, built through the DOM (never from HTML text). */
 function el(tag, attrs = {}, ...children) {
@@ -76,6 +83,26 @@ function readForm() {
   return normalizeRequest({ prompt: text, aspect: checked('aspect'), steps: Number(checked('steps')), seed });
 }
 
+/**
+ * The first-use label with a picture: what is still missing to make a picture from it — SANA's
+ * first download, its image encoder and the model that describes the picture.
+ */
+async function photoLabel() {
+  if (!source || !CAPTION_MODEL || !shell.store) return;
+  const sana = shell.model, eyesModel = shell.registry.models[CAPTION_MODEL];
+  let files;
+  try {
+    const own = chooseVariant(sana, 'webgpu', shell.probe).variant;
+    files = [...eagerFiles(sana, own), resolveRef(sana, IMAGE_ENCODER), ...eagerFiles(eyesModel, chooseVariant(eyesModel, 'auto', shell.probe).variant)];
+  } catch { return; }
+  let missing = 0;
+  try { for (const f of files) if (!(await shell.store.has(f.url, f.size))) missing += f.size; } catch { return; }
+  const b = $('main button.primary');
+  if (!source || !b || shell.busy) return;
+  b.textContent = missing ? fill(b.dataset.labelDownload, { size: formatSize(missing, shell.lang) }) : b.dataset.labelRun;
+  if (probe) probe.photoMissing = missing;
+}
+
 /** The named shape nearest to w × h (for the frame while the picture is made). */
 function nearestAspect(w, h) {
   let best = '1:1', gap = Infinity;
@@ -98,6 +125,7 @@ async function choose(file) {
   if (source) { chosenImg.src = source.url; chosenImg.width = source.width; chosenImg.height = source.height; chosenName.textContent = source.name; }
   for (const r of document.querySelectorAll('input[name="aspect"], input[name="steps"]')) r.disabled = Boolean(source);
   syncFrame();
+  if (source) await photoLabel(); else await shell.refreshStorage()?.catch?.(() => null);
   if (probe) probe.source = source ? { width: source.width, height: source.height } : null;
 }
 
@@ -149,6 +177,8 @@ async function show(result) {
     el('img', { src: url, alt: t('result.alt', { prompt: result.prompt }), width: result.width, height: result.height }),
     el('p', { class: 'muted', 'data-role': 'result-meta' }, t('result.meta', { width: result.width, height: result.height, seed: result.seed, steps: result.steps })),
     result.fromImage && el('p', { 'data-role': 'from-image-meta' }, t('fromImage.result', { name: source?.name || t('file.name'), pct: Math.round(result.strength * 100) })),
+    result.fromImage && el('p', { 'data-role': 'used-prompt' }, t('fromImage.used', { prompt: result.prompt }), ' ',
+      button('edit-prompt', t('fromImage.edit'), () => { prompt.value = result.prompt; prompt.focus(); shell.setReady(!blocked && !shell.busy); })),
     result.truncated && el('p', { 'data-role': 'truncated' }, t('result.truncated'))));
   frame.hidden = true;
   section.querySelector('.actions')?.scrollIntoView?.({ block: 'nearest' });
@@ -194,6 +224,16 @@ async function primary({ signal }) {
   cancel.hidden = false;
   task ||= new TextToImage(shell.taskOptions({ device: 'webgpu' }));
   try {
+    if (req.image && CAPTION_MODEL) {
+      // the change the person wrote, after what the picture shows: the subject stays
+      stageText.textContent = t('stage.caption');
+      if (caption?.blob !== source.blob) {
+        eyes ||= new ImageToText(shell.taskOptions({ device: 'auto', model: CAPTION_MODEL }));
+        caption = { blob: source.blob, text: (await eyes.run(source.blob, { want: 'caption', signal })).caption || '' };
+        if (probe) probe.caption = caption.text;
+      }
+      req.prompt = composePrompt(caption.text, req.prompt).prompt;
+    }
     const result = await task.generate(req, { signal });
     await show(result);
     shell.setStatus('');

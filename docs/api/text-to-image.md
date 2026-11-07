@@ -3,6 +3,36 @@
 
 Imported as `@elffuss/ai/text-to-image`, `@elffuss/ai/text-to-image/sizes`.
 
+## `sdk/text-to-image/compose.js`
+
+The prompt of a picture made from another. People write the change they want («en acuarela», «de noche», «the same scene as a watercolor»), not the picture: given alone, SANA paints the change and forgets the subject (a watercolour landscape where the fox was). So when the text is a change, the prompt is the picture's own caption (image-to-text) followed by the change, and a few common Spanish changes are written in the English the model follows best. A text that describes a whole scene is used as it is. Pure functions.
+
+### `isChangeRequest(text)`
+
+Whether a text asks for a change of the picture rather than describing a whole scene: short
+(six words or fewer), or opening like a change («en…», «de…», «como…», «as a…», «in…», «the
+same…»), or short-ish (up to twelve words) and naming a style, a light or the weather.
+
+| Parameter | Type | |
+|---|---|---|
+| `text` | `string` |  |
+
+### `shortCaption(caption, max = 240)`
+
+The first sentences of a caption, at most `max` characters, without its final full stop.
+
+### `composePrompt(caption, text)`
+
+The prompt for a picture made from another: the caption and the change when the text is a
+change, the text itself when it describes a whole scene (or there is no caption).
+
+| Parameter | Type | |
+|---|---|---|
+| `caption` | `string` | what the picture shows (image-to-text, English) |
+| `text` | `string` | what the person wrote |
+
+Returns `{ prompt: string, composed: boolean }`.
+
 ## `sdk/text-to-image/impl.js`
 
 The text-to-image task where the model runs (a Worker): SANA-Sprint 0.6B with ONNX Runtime Web on WebGPU. Three sessions (the Gemma 2 text model with 4-bit weights, the transformer and the decoder in float16), the 4-bit token table and the tokenizer, all from the store through the task context and checked against the registry. The model's numbers (latent channels, scaling factor, guidance scale, sampler) are read from its own configuration files at the pinned commit. No fetch, no DOM.
@@ -199,8 +229,9 @@ How far a picture made from another may move from it when none is asked (0 close
 The SDEdit start time of a strength (TrigFlow time, π/2 is all noise). What a picture
 keeps changes fast near π/2, so the scale is even in log(tan t): t = atan(2·30^strength).
 0 → 1.11 (the picture barely moves), 0.3 → 1.39 (small changes of pose and detail),
-0.6 → 1.51 (a new light or style, the same layout: "at night", "as a watercolour"),
-1 → 1.55 (the text leads, the picture only hints). Measured on SANA-Sprint 0.6B.
+0.6 → 1.51, 0.7 → 1.52 (a new light or style, the same layout: "at night", "as a watercolour";
+the default, with the prompt led by the picture's caption: compose.js), 1 → 1.55 (the text
+leads, the picture only hints). Measured on SANA-Sprint 0.6B, four pictures × four changes.
 
 | Parameter | Type | |
 |---|---|---|
@@ -218,7 +249,7 @@ Returns `{ width: number, height: number }`.
 { prompt: string, aspect?: '1:1'|'4:3'|'3:2'|'16:9'|'3:4'|'2:3'|'9:16', width?: number, height?: number, seed?: number, steps?: 1|2|3|4 }
 ```
 
-`aspect` (default 1:1) picks a trained size of about a megapixel; `width` and `height` (256 to 2048) ask for an exact size instead, generated at the nearest trained shape and scaled and cropped to it. `seed` (0 to 4294967295) repeats a picture: the same prompt, seed, steps and size give the same image; without one, a random seed is used and returned. `steps` 1 to 4 (default 2). `image` (optional): a picture to start from, `{ width, height, rgba }` (RGBA bytes; TextToImage turns a Blob or an ImageBitmap into one); the result keeps its shape (about a megapixel) and `strength` (0 to 1, default 0.6) says how far it may move from it: low keeps the picture and changes its look, high follows the text more.
+`aspect` (default 1:1) picks a trained size of about a megapixel; `width` and `height` (256 to 2048) ask for an exact size instead, generated at the nearest trained shape and scaled and cropped to it. `seed` (0 to 4294967295) repeats a picture: the same prompt, seed, steps and size give the same image; without one, a random seed is used and returned. `steps` 1 to 4 (default 2). `image` (optional): a picture to start from, `{ width, height, rgba }` (RGBA bytes; TextToImage turns a Blob or an ImageBitmap into one); the result keeps its shape (about a megapixel) and `strength` (0 to 1, default 0.7) says how far it may move from it: low keeps the picture and changes its look, high follows the text more.
 
 ## `sdk/text-to-image/rng.js`
 

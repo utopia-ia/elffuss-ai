@@ -100,5 +100,6 @@
   "story.change": "Cambiar",
   "story.continue": "Seguir ({s})",
   "story.continueNow": "Seguir",
-  "story.changed": "Cambia el texto de una imagen y píntala de nuevo. Cuando te guste, sigue."
+  "story.changed": "Cambia el texto de una imagen y píntala de nuevo. Cuando te guste, sigue.",
+  "story.stage.caption": "Mirando tu foto…"
 }

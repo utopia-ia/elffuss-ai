@@ -51,5 +51,8 @@
   "fromImage.bad": "This browser cannot open that picture.",
   "fromImage.result": "Made from your picture ({name}), changing {pct} %.",
   "stage.encode-image": "Reading your picture…",
-  "drop": "Drop a photo here, paste it or click to choose it"
+  "drop": "Drop a photo here, paste it or click to choose it",
+  "fromImage.used": "Used: “{prompt}”.",
+  "fromImage.edit": "Edit",
+  "stage.caption": "Looking at your picture…"
 }

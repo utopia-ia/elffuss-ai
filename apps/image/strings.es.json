@@ -51,5 +51,8 @@
   "fromImage.bad": "Esa imagen no se puede abrir en este navegador.",
   "fromImage.result": "Hecha desde tu imagen ({name}), cambiando un {pct} %.",
   "stage.encode-image": "Leyendo tu imagen…",
-  "drop": "Suelta aquí una foto, pégala o pulsa para elegirla"
+  "drop": "Suelta aquí una foto, pégala o pulsa para elegirla",
+  "fromImage.used": "Se ha usado: «{prompt}».",
+  "fromImage.edit": "Editar",
+  "stage.caption": "Mirando tu imagen…"
 }

@@ -3,10 +3,13 @@
   "host": "image.elffuss.com",
   "testPort": 8795,
   "task": "text-to-image",
-  "models": ["text-to-image/sana-sprint-0.6b"],
+  "models": ["text-to-image/sana-sprint-0.6b", "image-to-text/florence-2-base-ft"],
   "camera": false,
   "pdfjs": false,
   "transformers": true,
   "status": "ready",
-  "accept": "image/*"
+  "accept": "image/*",
+  "modules": [
+    "image-to-text"
+  ]
 }

@@ -20,6 +20,7 @@ import { toAiError, AiError } from '../core/errors.js';
 import { normalizeRequest } from './request.js';
 
 export { normalizeRequest, DEFAULT_STEPS, MAX_PROMPT_CHARS, DEFAULT_STRENGTH, strengthTime, sizeFromImage } from './request.js';
+export { composePrompt, isChangeRequest, shortCaption } from './compose.js';
 export { ASPECTS, TRAINED_SIZES, resolveSize } from './shapes.js';
 export { MAX_SEED, randomSeed } from './rng.js';
 

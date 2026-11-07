@@ -43,6 +43,7 @@ const ui = {
 const imageModel = shell.modelId;
 const textModel = (shell.config.models || [])[1] || null;
 const storyModel = (shell.config.models || [])[2] || null;
+const captionModel = (shell.config.models || [])[3] || null; // what a photo shows, so the story keeps its subject
 const quality = pageQuality();
 const runner = shell.taskRunner(o => new Video({ ...o, onProgress: p => { shell.onProgress(p); stage(p); } }));
 const probe = shell.config.testHooks ? (shell.diagnostics.video = { runs: 0, scenes: 0, frames: 0 }) : null;
@@ -322,7 +323,7 @@ async function storyPhoto(which, input) {
   const f = input.files?.[0];
   storyPics[which] = null;
   if (f) {
-    try { storyPics[which] = { ...(await gen.readPhoto(f)), name: f.name }; }
+    try { storyPics[which] = { ...(await gen.readPhoto(f)), name: f.name, blob: f }; }
     catch { input.value = ''; shell.setStatus(t('story.badPhoto')); }
   }
   const sz = storySize();
@@ -338,6 +339,19 @@ async function runStory(signal) {
   const lang = shell.lang;
   const seed = ui.storySeed.value.trim() ? Number(ui.storySeed.value) : (crypto.getRandomValues(new Uint32Array(1))[0] >>> 1);
   const plan = gen.planStory({ prompt: ui.storyPrompt.value, seconds: Number(ui.storySeconds.value), start: Boolean(storyPics.start), end: Boolean(storyPics.end), seed, lang });
+  // With a photo, what it shows leads every keyframe and clip (the plan's shared style): people
+  // write the change («haz que nieve»), and without the subject in the words the model loses it.
+  const photo = storyPics.start || storyPics.end;
+  if (photo && captionModel && !plan.style) {
+    shell.setStatus(t('story.stage.caption'));
+    try {
+      const { ImageToText } = await import('./sdk/image-to-text/index.js');
+      const { shortCaption } = await import('./sdk/text-to-image/compose.js');
+      const eyes = new ImageToText(shell.taskOptions({ device: 'auto', model: captionModel }));
+      try { plan.style = shortCaption((await eyes.run(photo.blob, { want: 'caption', signal })).caption); } finally { await eyes.dispose().catch(() => {}); }
+      if (probe) probe.storyCaption = plan.style;
+    } catch (err) { if (err?.code === 'aborted') throw err; /* the story is made without it */ }
+  }
   const size = storySize();
   const photos = { ...(storyPics.start ? { start: storyPics.start.picture } : {}), ...(storyPics.end ? { end: storyPics.end.picture } : {}) };
   forgetResult();
