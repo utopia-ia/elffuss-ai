@@ -5,7 +5,7 @@
 # Wan 2.1 VACE (rCM base, 4 steps), stitched into one MP4, plus a frame sheet and the previews.
 #   python -I run.py <plan.json> [--tag x] [--base rcm|vace] [--steps 4] [--enc vae|tae]
 #                    [--size 832x480] [--frames 49] [--only-keyframes] [--reuse-keyframes]
-# Plan: { "name", "size", "seed", "style", "shots": [{ "prompt", "image"?, "from"?, "strength"? }],
+# Plan: { "name", "size", "seed", "style", "shots": [{ "prompt", "image"?, "from"?, "t"? }],
 #         "clips": [prompt, …] (one fewer than shots), "carry": 0 }
 import argparse, json, pathlib, sys, time
 import numpy as np
@@ -52,7 +52,7 @@ def main():
                 prompt = s['prompt'] + (', ' + style if style else '')
                 src = s.get('from')
                 init = None if src is None else (keys[src] if isinstance(src, int) else Image.open(OUT / src))
-                img = KF.keyframe(prompt, W, H, s.get('seed', seed), init=init, strength=s.get('strength', 0.6), previews=pv)
+                img = KF.keyframe(prompt, W, H, s.get('seed', seed), init=init, t=s.get('t', 1.3), previews=pv)
             img.save(kdir / f'k{i}.png'); keys.append(img)
             for j, p in enumerate(pv):
                 p.save(kdir / f'k{i}_step{j}.png')

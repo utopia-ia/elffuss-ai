@@ -7,14 +7,16 @@
 # sampler is the same 4-step one the browser already runs for text-to-video.
 #   base 'rcm': rCM weights for the 30 base blocks, 4 steps, no CFG
 #   base 'vace': the original VACE weights, UniPC, 25 steps, CFG 5 (the slow reference)
-import math, pathlib, sys, time
+import math, os, pathlib, sys, time
 import numpy as np
 import torch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from common import DEVICE, TAEHV_DIR, snapshot, hub_file, empty_cache  # noqa: E402
 
-DT = torch.bfloat16
+DT = {'bf16': torch.bfloat16, 'fp16': torch.float16, 'fp32': torch.float32}[os.environ.get('SB_DTYPE', 'bf16')]
+# SB_FAKEQ="8,4": weights through the browser export's block quantizer (base bits, VACE bits)
+FAKEQ = tuple(int(b) for b in os.environ['SB_FAKEQ'].split(',')) if os.environ.get('SB_FAKEQ') else None
 _m = {}
 NEG = ('Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, '
        'worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn '
@@ -42,7 +44,7 @@ def transformer(base):
         _m.pop('tr', None); empty_cache()
         from diffusers import WanVACETransformer3DModel
         snap = snapshot('Wan-AI/Wan2.1-VACE-1.3B-diffusers')
-        tr = WanVACETransformer3DModel.from_pretrained(snap / 'transformer', torch_dtype=DT)
+        tr = WanVACETransformer3DModel.from_pretrained(snap / 'transformer', torch_dtype=torch.float32)
         if base == 'rcm':
             from diffusers.loaders.single_file_utils import convert_wan_transformer_to_diffusers
             sd = strip_prefix(torch.load(hub_file('worstcoder/rcm-Wan', 'rCM_Wan2.1_T2V_1.3B_480p.pt'), map_location='cpu', weights_only=False, mmap=True))
@@ -51,12 +53,32 @@ def transformer(base):
             sd = convert_wan_transformer_to_diffusers(sd)
             own = tr.state_dict()
             bad = [k for k in sd if k not in own or own[k].shape != sd[k].shape]
-            r = tr.load_state_dict({k: v.to(DT) for k, v in sd.items() if k not in bad}, strict=False)
+            r = tr.load_state_dict({k: v.float() for k, v in sd.items() if k not in bad}, strict=False)
             missing = [k for k in r.missing_keys if not k.startswith('vace_')]
             print('rcm swap:', len(sd) - len(bad), 'tensors in; not matching', bad[:4], '; base keys left from VACE', missing[:6], flush=True)
             assert not missing, missing
-        _m.update(tr=tr.to(DEVICE).eval(), base=base)
+        if FAKEQ:
+            fake_quantize(tr, *FAKEQ)
+        _m.update(tr=tr.to(DEVICE, DT).eval(), base=base)
     return _m['tr']
+
+
+def fake_quantize(tr, bits, vbits):
+    """Replace each linear weight the browser quantizes by its dequantized MatMulNBits value
+    (block 32, the exporter's own quantizer): base blocks and the text embedding in `bits`,
+    the VACE blocks in `vbits`. Time embeddings, patch embeddings and the head stay as they are."""
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'wan'))
+    from onnxg import quantize_blocks
+    n = 0
+    for name, mod in tr.named_modules():
+        if not isinstance(mod, torch.nn.Linear):
+            continue
+        b = vbits if name.startswith('vace_blocks.') else bits if name.startswith(('blocks.', 'condition_embedder.text_embedder.')) else None
+        if b is None:
+            continue
+        mod.weight.data = torch.from_numpy(quantize_blocks(mod.weight.data.float().numpy(), bits=b, block=32)[3])
+        n += 1
+    print(f'fake-quantized {n} linear layers: base {bits} bits, VACE {vbits} bits', flush=True)
 
 
 def vae():

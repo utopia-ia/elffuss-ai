@@ -11,8 +11,8 @@
   {
    "prompt": "the chubby toy astronaut standing on top of the cream egg-shaped moon rock, one arm raised high waving, head turned toward the camera",
    "from": 0,
-   "strength": 0.6,
-   "seed": 21
+   "seed": 21,
+   "t": 1.5708
   }
  ],
  "clips": [

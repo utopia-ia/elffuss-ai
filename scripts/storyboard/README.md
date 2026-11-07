@@ -19,7 +19,17 @@ into the next one, stitched, and the colour pulled back to the keyframes.
 | `colormatch.py` | per-frame mean and spread in YCbCr moved toward the keyframes |
 | `decode_check.py` | the same latents through the full VAE and the tiny decoder |
 | `wan_keyframe.py` | keyframes with Wan itself (one-frame video); tried and set aside |
+| `keyframe_times.py`, `compare_bits.py`, `control_fixture.py` | the SDEdit times, VACE in 8 vs 4 bits, the control fixture |
 | `plans/` | the three test requests |
+
+Keyframes from an earlier one are SDEdit from start time `t` (`"t"` in a plan; π/2 = 1.5708 is the
+text alone with the same seed). diffusers' `strength` with 2 steps only has two settings (below 0.5 it
+starts at 1.3, from 0.5 up at π/2, where the image is ignored), so the first plans' "strength" 0.6-0.85
+were text alone: the plans now say the `t` that ran. `keyframe_times.py` shows t 1.1 / 1.3 / 1.45:
+1.45 keeps subject, place and light and lets the pose change.
+
+`compare_bits.py` runs the three plans with the browser's quantised weights (SB_FAKEQ, SB_DTYPE=fp16);
+`control_fixture.py` writes tests/fixtures/video-gen/control.json.
 
 Weights: Wan-AI/Wan2.1-VACE-1.3B-diffusers (transformer, vae, text_encoder, tokenizer),
 worstcoder/rcm-Wan `rCM_Wan2.1_T2V_1.3B_480p.pt`, lightx2v/Autoencoders `lighttaew2_1`,
