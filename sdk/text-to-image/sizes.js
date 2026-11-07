@@ -16,7 +16,7 @@ export const SIZES = Object.freeze({
       {
         "when": "shader-f16",
         "dtype": "q4f16",
-        "bytes": 3478894927
+        "bytes": 3172452977
       }
     ]
   }

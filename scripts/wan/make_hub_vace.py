@@ -134,7 +134,7 @@ def main():
         'sanaw': pick(sana['parts']['onnx'], {r.split(':', 1)[1] for r in sanaw_refs}),
     }
     refs = [r for r in refs if r.split(':', 1)[1] in parts[r.split(':', 1)[0]]['files']]
-    if 'sanaw:vae_encoder/model_fp16.onnx' not in refs:
+    if not any(r.endswith(':vae_encoder/model_fp16.onnx') for r in refs):
         raise SystemExit('the registry given has no SANA image encoder (run scripts/text-to-image/stage_encoder.py first)')
     bytes_ = sum(parts[r.split(':', 1)[0]]['files'][r.split(':', 1)[1]]['size'] for r in refs)
     model = {

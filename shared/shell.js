@@ -18,7 +18,7 @@
 
 import config from '../config.js';
 import { createStoreClient } from '../sdk/core/store-client.js';
-import { loadRegistry, getModel, variantFiles, resolveRef } from '../sdk/core/registry.js';
+import { loadRegistry, getModel, eagerFiles, resolveRef } from '../sdk/core/registry.js';
 import { probeWebGPU, chooseVariant } from '../sdk/core/device.js';
 import { AiError, isAiError, toAiError } from '../sdk/core/errors.js';
 import { createTaskRunner } from './runner.js';
@@ -100,7 +100,8 @@ export async function createShell({ config: cfg = config } = {}) {
     if (model) {
       try { choice = chooseVariant(model, requested, probe); } catch (err) { choiceError = toAiError(err); }
     }
-    files = choice ? variantFiles(model, choice.variant) : [];
+    // what the site downloads up front (a lazy file, read only when a feature needs it, is not counted)
+    files = choice ? eagerFiles(model, choice.variant) : [];
   };
   choose();
   let primaryLabels = null; // { run, download }

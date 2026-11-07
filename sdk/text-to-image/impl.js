@@ -33,7 +33,7 @@ export const FILES = Object.freeze({
   transformer: 'onnx:transformer/model_fp16.onnx',
   decoder: 'onnx:vae_decoder/model_fp16.onnx',
   // The DC-AE encoder, for a picture made from another (SDEdit); loaded only then.
-  imageEncoder: 'onnx:vae_encoder/model_fp16.onnx',
+  imageEncoder: 'onnxenc:vae_encoder/model_fp16.onnx',
 });
 
 /** Create one session from bytes the store gave, without another copy of them. */

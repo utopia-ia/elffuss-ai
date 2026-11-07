@@ -982,7 +982,7 @@
         },
         "onnx": {
           "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
-          "revision": "131c0f31f7607f8e92e7209dfeb968e8b7f44374",
+          "revision": "762399d3a10e6ec06afeffbdf7dd425c83004fb3",
           "license": "Apache-2.0",
           "author": "UtopiaIA",
           "files": {
@@ -995,8 +995,8 @@
               "gitOid": "ac1eeeabe1ada66ab5d624d7f58c82d9826ff09f"
             },
             "README.md": {
-              "size": 2392,
-              "gitOid": "ac176ba29c9dde212d22f191ea3193c4d0860614"
+              "size": 1958,
+              "gitOid": "4dbf134c4c9e22ebf855879d547b4f1358ff5cbf"
             },
             "text_encoder/embed_tokens_q4_scales.bin": {
               "size": 36864000,
@@ -1017,7 +1017,15 @@
             "vae_decoder/model_fp16.onnx": {
               "size": 318818869,
               "sha256": "a1c88900bbbdc80f876ca8f7dc2735829fe16615d7acccafc4ba8eff3e6b0591"
-            },
+            }
+          }
+        },
+        "onnxenc": {
+          "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
+          "revision": "131c0f31f7607f8e92e7209dfeb968e8b7f44374",
+          "license": "Apache-2.0",
+          "author": "UtopiaIA",
+          "files": {
             "vae_encoder/model_fp16.onnx": {
               "size": 306441950,
               "sha256": "32ce0774a4a1d3eb2a41783f0062609822d05f66538e939b1c96db83e527d191"
@@ -1041,9 +1049,12 @@
               "onnx:text_encoder/embed_tokens_q4_scales.bin",
               "onnx:transformer/model_fp16.onnx",
               "onnx:vae_decoder/model_fp16.onnx",
-              "onnx:vae_encoder/model_fp16.onnx"
+              "onnxenc:vae_encoder/model_fp16.onnx"
             ],
-            "bytes": 3478894927
+            "lazy": [
+              "onnxenc:vae_encoder/model_fp16.onnx"
+            ],
+            "bytes": 3172452977
           }
         ]
       },
@@ -1757,7 +1768,7 @@
         },
         "sanaw": {
           "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
-          "revision": "131c0f31f7607f8e92e7209dfeb968e8b7f44374",
+          "revision": "762399d3a10e6ec06afeffbdf7dd425c83004fb3",
           "license": "Apache-2.0",
           "author": "UtopiaIA",
           "files": {
@@ -1770,8 +1781,8 @@
               "gitOid": "ac1eeeabe1ada66ab5d624d7f58c82d9826ff09f"
             },
             "README.md": {
-              "size": 2392,
-              "gitOid": "ac176ba29c9dde212d22f191ea3193c4d0860614"
+              "size": 1958,
+              "gitOid": "4dbf134c4c9e22ebf855879d547b4f1358ff5cbf"
             },
             "text_encoder/embed_tokens_q4_scales.bin": {
               "size": 36864000,
@@ -1792,7 +1803,15 @@
             "vae_decoder/model_fp16.onnx": {
               "size": 318818869,
               "sha256": "a1c88900bbbdc80f876ca8f7dc2735829fe16615d7acccafc4ba8eff3e6b0591"
-            },
+            }
+          }
+        },
+        "sanaenc": {
+          "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
+          "revision": "131c0f31f7607f8e92e7209dfeb968e8b7f44374",
+          "license": "Apache-2.0",
+          "author": "UtopiaIA",
+          "files": {
             "vae_encoder/model_fp16.onnx": {
               "size": 306441950,
               "sha256": "32ce0774a4a1d3eb2a41783f0062609822d05f66538e939b1c96db83e527d191"
@@ -1832,7 +1851,7 @@
               "sanaw:text_encoder/embed_tokens_q4_scales.bin",
               "sanaw:transformer/model_fp16.onnx",
               "sanaw:vae_decoder/model_fp16.onnx",
-              "sanaw:vae_encoder/model_fp16.onnx",
+              "sanaenc:vae_encoder/model_fp16.onnx",
               "web:t5/encoder_0.onnx_data",
               "web:t5/encoder_1.onnx_data",
               "web:t5/encoder_2.onnx_data",

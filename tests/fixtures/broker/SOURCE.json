@@ -2,7 +2,7 @@
  "what": "The model-store page the browser tests serve at http://localhost:8789/: the broker page that models.elffuss.com serves (sha256 baseSha256, served on 2026-11-07) with the read-only permission for the tool sites brought to this registry: the hosts of deploy/sites.mjs and the files of the variants of registry/tasks.json, the two blocks copied in tools-permission.js (as node scripts/broker-repos.mjs prints them).",
  "file": "server/broker/index.html of the broker repository",
  "cachePath": "$ELFFUSS_AI_CACHE/broker/index.html",
- "baseSha256": "a5b50b234db798cd59885491807f4f8888c4051b7258a0fe4066dc73680fe63a",
- "sha256": "edf229f52a81fec92f60ef719e3bf1e5b18893b1bed6b7d895f8289dec0614f2",
+ "baseSha256": "edf229f52a81fec92f60ef719e3bf1e5b18893b1bed6b7d895f8289dec0614f2",
+ "sha256": "914b37baa18b55fb6b07c31849e4e45231baaffc382406e3a189e2d18a5cc287",
  "make": "node scripts/make-broker-fixture.mjs --base <server/broker/index.html as served today (baseSha256)> --patch <the broker patch for the commit being tested>"
 }

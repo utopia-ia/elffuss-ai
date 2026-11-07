@@ -8,7 +8,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { normalizeRequest, strengthTime, sizeFromImage, DEFAULT_STRENGTH } from '../../sdk/text-to-image/request.js';
-import { pixelsOf, canStartFromImage } from '../../sdk/text-to-image/index.js';
+import { pixelsOf, canStartFromImage, IMAGE_ENCODER } from '../../sdk/text-to-image/index.js';
+import { variantFiles, eagerFiles } from '../../sdk/core/registry.js';
 import { sdeditTimes, timesteps, MAX_TIME } from '../../sdk/text-to-image/schedule.js';
 import { generate } from '../../sdk/text-to-image/pipeline.js';
 import { FILES } from '../../sdk/text-to-image/impl.js';
@@ -58,7 +59,7 @@ test('pixels: a picture given as pixels is copied for the Worker (the caller kee
 
 test('model: only a variant with the image encoder can start from a picture', () => {
   const m = registry.models['text-to-image/sana-sprint-0.6b'];
-  assert.equal(FILES.imageEncoder, 'onnx:vae_encoder/model_fp16.onnx');
+  assert.equal(FILES.imageEncoder, 'onnxenc:vae_encoder/model_fp16.onnx');
   const has = canStartFromImage(m);
   assert.equal(has, m.devices.webgpu.some(v => v.files.includes(FILES.imageEncoder)), 'as the registry says');
   const withEncoder = { ...m, devices: { webgpu: m.devices.webgpu.map(v => ({ ...v, files: [...v.files, FILES.imageEncoder] })) } };
@@ -92,4 +93,24 @@ test('SDEdit: the two-step schedule scaled to start at t; the picture noised the
   await generate(m, { ...req, init: { latents: init, t: MAX_TIME } });
   assert.ok(far[0].some((v, i) => Math.abs(v - init[i]) > 0.3), 'at π/2 the picture is all noise');
   await assert.rejects(generate(m, { ...req, init: { latents: new Float32Array(3), t: 1 } }), /latents have 3 values/);
+});
+
+test('an existing SANA cache (762399 URLs) needs only the encoder\'s bytes to make a picture from a picture', () => {
+  const m = registry.models['text-to-image/sana-sprint-0.6b'];
+  const v = m.devices.webgpu[0];
+  // what a browser stored before pictures from pictures: the variant as it was published, at 762399d3
+  const PUBLISHED = '762399d3a10e6ec06afeffbdf7dd425c83004fb3';
+  const cached = new Set(eagerFiles(m, v).map(f => f.url));
+  for (const f of eagerFiles(m, v)) {
+    if (f.part === 'onnx') assert.ok(f.url.includes(`/resolve/${PUBLISHED}/`), `${f.path} keeps its URL at the published commit`);
+  }
+  // the first download (the button's size) has nothing new
+  assert.equal(eagerFiles(m, v).filter(f => !cached.has(f.url)).length, 0, 'a picture from a text: nothing to download');
+  assert.ok(v.bytes < 3.2e9, `the first download is SANA's ${v.bytes} bytes, without the encoder`);
+  // a picture from a picture reads the encoder too: that file only
+  const needed = variantFiles(m, v).filter(f => !cached.has(f.url));
+  assert.deepEqual(needed.map(f => f.ref), [IMAGE_ENCODER], 'only the encoder is missing');
+  assert.equal(needed[0].lazy, true, 'and it is a lazy file of the variant');
+  assert.equal(needed.reduce((s, f) => s + f.size, 0), 306441950, 'its bytes, and nothing else');
+  assert.ok(needed[0].url.includes('/resolve/131c0f31f7607f8e92e7209dfeb968e8b7f44374/vae_encoder/'), 'read from the commit that added it');
 });

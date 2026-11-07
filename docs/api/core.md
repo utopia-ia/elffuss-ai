@@ -475,8 +475,10 @@ Reading registry/tasks.json: which model a task uses, which files a variant need
 ### Type `RegistryVariant`
 
 ```ts
-{ when?: 'shader-f16', dtype: string, files: string[], bytes: number }
+{ when?: 'shader-f16', dtype: string, files: string[], lazy?: string[], bytes: number }
 ```
+
+`lazy`: files of `files` read only when a feature needs them (SANA's image encoder, for a picture from a picture): the store may serve them, but `bytes` and the first download leave them out.
 
 ### Type `RegistryBase`
 
@@ -503,7 +505,7 @@ A task's `module` is the directory of its module under sdk/ (the task's own name
 ### Type `ResolvedFile`
 
 ```ts
-{ ref: string, part: string, path: string, url: string, size: number, sha256?: string, gitOid?: string }
+{ ref: string, part: string, path: string, url: string, size: number, sha256?: string, gitOid?: string, lazy?: boolean }
 ```
 
 ### `loadRegistry(url = new URL('../../registry/tasks.json', import.meta.url))`
@@ -572,6 +574,10 @@ Files of one variant, resolved.
 | `variant` | `RegistryVariant` |  |
 
 Returns `ResolvedFile[]`.
+
+### `eagerFiles(model, variant)`
+
+The files a variant downloads up front: all but the lazy ones.
 
 ### `findFile(model, repo, revision, path)`
 

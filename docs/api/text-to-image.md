@@ -61,6 +61,10 @@ or `{ width, height, rgba }` already. Larger than 2048 px on its long side, it i
 
 Returns `Promise<{ width: number, height: number, rgba: ArrayBuffer }>`.
 
+### `IMAGE_ENCODER`
+
+The image encoder's file (impl.js FILES.imageEncoder): its own part, so SANA's other files keep their URLs.
+
 ### `canStartFromImage(model)`
 
 Whether a model of this task can start from a picture (its variant has the image encoder).

@@ -14,7 +14,7 @@
 //   await image.dispose();
 
 import { Task, oneShot } from '../core/task.js';
-import { loadRegistry, getModel, defaultModelId, variantFiles } from '../core/registry.js';
+import { loadRegistry, getModel, defaultModelId, eagerFiles } from '../core/registry.js';
 import { probeWebGPU, chooseVariant } from '../core/device.js';
 import { toAiError, AiError } from '../core/errors.js';
 import { normalizeRequest } from './request.js';
@@ -106,12 +106,15 @@ export async function pixelsOf(src) {
   } finally { if (bmp !== src) bmp.close?.(); }
 }
 
+/** The image encoder's file (impl.js FILES.imageEncoder): its own part, so SANA's other files keep their URLs. */
+export const IMAGE_ENCODER = 'onnxenc:vae_encoder/model_fp16.onnx';
+
 /**
  * Whether a model of this task can start from a picture (its variant has the image encoder).
  * @param {object} model a registry model
  */
 export function canStartFromImage(model) {
-  return Object.values(model?.devices || {}).flat().some(v => v.files.includes('onnx:vae_encoder/model_fp16.onnx'));
+  return Object.values(model?.devices || {}).flat().some(v => v.files.includes(IMAGE_ENCODER));
 }
 
 /**
@@ -133,7 +136,7 @@ export async function estimate({ store, registry, model, probe, mobile } = {}, d
   }
   const isMobile = mobile ?? Boolean(globalThis.navigator?.userAgentData?.mobile || /iPhone|iPad|Android/i.test(globalThis.navigator?.userAgent || ''));
   if (!reason && isMobile) reason = 'memory';
-  const files = choice ? variantFiles(m, choice.variant) : [];
+  const files = choice ? eagerFiles(m, choice.variant) : []; // the image encoder is lazy: not part of the first download
   const downloadBytes = choice ? choice.variant.bytes : bytes;
   let missingBytes = null;
   if (store && files.length) {

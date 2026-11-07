@@ -281,11 +281,14 @@ export default {
       // states exists on the Hub. Published by UtopiaIA at the pinned commit.
       parts: {
         main: { repo: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers', revision: 'aa76e7f4f4928f378716b6716a2130fba3caf5b1' },
-        onnx: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '131c0f31f7607f8e92e7209dfeb968e8b7f44374' },
+        onnx: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '762399d3a10e6ec06afeffbdf7dd425c83004fb3' },
+        // The image encoder came in a later commit of the same repo: only that file is read from
+        // it, so the other files keep their URLs (and what the store already holds).
+        onnxenc: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '131c0f31f7607f8e92e7209dfeb968e8b7f44374', only: 'used' },
       },
       // WebGPU only, with float16 shaders: the transformer and the decoder are float16,
       // and the 4-bit text model needs WebGPU's speed for its prompt. The DC-AE encoder
-      // (a picture made from another) is read only when a picture is given.
+      // (a picture made from another) is lazy: read only when a picture is given.
       devices: {
         webgpu: [
           {
@@ -295,8 +298,9 @@ export default {
               'main:tokenizer/tokenizer.json', 'main:tokenizer/tokenizer_config.json', 'main:transformer/config.json',
               'main:vae/config.json', 'main:scheduler/scheduler_config.json',
               'onnx:text_encoder/model_q4.onnx', 'onnx:text_encoder/embed_tokens_q4.bin', 'onnx:text_encoder/embed_tokens_q4_scales.bin',
-              'onnx:transformer/model_fp16.onnx', 'onnx:vae_decoder/model_fp16.onnx', 'onnx:vae_encoder/model_fp16.onnx',
+              'onnx:transformer/model_fp16.onnx', 'onnx:vae_decoder/model_fp16.onnx', 'onnxenc:vae_encoder/model_fp16.onnx',
             ],
+            lazy: ['onnxenc:vae_encoder/model_fp16.onnx'],
           },
         ],
       },
@@ -409,7 +413,8 @@ export default {
         web: { repo: 'UtopiaIA/Wan2.1-T2V-1.3B-web', revision: '3dbd66ddf838b03a751576500ed6b5e72c53a972' },
         vace: { repo: 'UtopiaIA/Wan2.1-VACE-1.3B-web', revision: 'caac656e0e828334e0dc55a66457a33d46568fee' },
         sana: { repo: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers', revision: 'aa76e7f4f4928f378716b6716a2130fba3caf5b1' },
-        sanaw: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '131c0f31f7607f8e92e7209dfeb968e8b7f44374' },
+        sanaw: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '762399d3a10e6ec06afeffbdf7dd425c83004fb3' },
+        sanaenc: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '131c0f31f7607f8e92e7209dfeb968e8b7f44374', only: 'used' },
       },
       devices: {
         webgpu: [
@@ -424,7 +429,7 @@ export default {
               'sana:tokenizer/tokenizer.json', 'sana:tokenizer/tokenizer_config.json', 'sana:transformer/config.json',
               'sana:vae/config.json', 'sana:scheduler/scheduler_config.json',
               'sanaw:text_encoder/model_q4.onnx', 'sanaw:text_encoder/embed_tokens_q4.bin', 'sanaw:text_encoder/embed_tokens_q4_scales.bin',
-              'sanaw:transformer/model_fp16.onnx', 'sanaw:vae_decoder/model_fp16.onnx', 'sanaw:vae_encoder/model_fp16.onnx',
+              'sanaw:transformer/model_fp16.onnx', 'sanaw:vae_decoder/model_fp16.onnx', 'sanaenc:vae_encoder/model_fp16.onnx',
             ],
           },
         ],

@@ -50,15 +50,17 @@ export async function loadTask(impl, opts, { store, onProgress, memo = createVer
   const probe = await probeWebGPU();
   const choice = chooseVariant(model, opts.device || 'auto', probe);
   const files = variantFiles(model, choice.variant);
-  const progress = createProgress({ files, onProgress });
+  // the download of a load is the variant's eager files; a lazy one is read when a feature asks for it
+  const eager = files.filter(f => !f.lazy);
+  const progress = createProgress({ files: eager, onProgress });
   progress.status('checking');
   let cached;
   try {
-    cached = new Map(await Promise.all(files.map(async f => [f.url, await store.has(f.url, f.size)])));
+    cached = new Map(await Promise.all(eager.map(async f => [f.url, await store.has(f.url, f.size)])));
   } catch (err) {
     throw toAiError(err, 'store-unavailable');
   }
-  const missing = files.filter(f => !cached.get(f.url)).reduce((s, f) => s + f.size, 0);
+  const missing = eager.filter(f => !cached.get(f.url)).reduce((s, f) => s + f.size, 0);
   progress.status(missing ? 'downloading' : 'loading', { missing });
   const pins = { ...PINS, ...(opts.test?.pins || {}) };
   const ctx = new TaskContext({ registry, modelId, model, choice, files, store, progress, memo, cached, runtime: opts.runtime, pins, test: opts.test || null, log });

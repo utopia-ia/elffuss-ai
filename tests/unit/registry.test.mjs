@@ -49,7 +49,9 @@ test('every variant file exists in its part and the variant bytes add up', () =>
       assert.ok(['webgpu', 'wasm'].includes(dev), `${id}: unknown device ${dev}`);
       for (const v of variants) {
         const files = variantFiles(m, v);
-        assert.equal(files.reduce((s, f) => s + f.size, 0), v.bytes, `${id}/${dev}/${v.dtype}`);
+        // a lazy file (read only when a feature needs it) is one of the variant's files, not of its first download
+        for (const ref of v.lazy || []) assert.ok(v.files.includes(ref), `${id}: lazy ${ref} is a file of the variant`);
+        assert.equal(files.filter(f => !f.lazy).reduce((s, f) => s + f.size, 0), v.bytes, `${id}/${dev}/${v.dtype}`);
         if (v.when) assert.equal(v.when, 'shader-f16');
       }
     }

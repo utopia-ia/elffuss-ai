@@ -25,6 +25,8 @@
 // `license_name`): a decision taken for that model, never a general exception.
 // A base model's page may be gated when the source says so (`gatedPage`): only
 // its licence is read from it, its files are never downloaded. A part with
+// A variant's `lazy` files are among its `files` but read only when a feature needs them:
+// they are left out of its `bytes` (what the first download is).
 // `only: 'used'` pins only the files its variants use (repos with many large
 // files for other runtimes). A task may say which SDK module it belongs to
 // (`module`); sizes.js is written once per module.
@@ -206,11 +208,14 @@ export async function generate(source) {
             if (extra.startsWith(path + '_data') && !files.includes(`${pn}:${extra}`)) files.push(`${pn}:${extra}`);
           }
         }
-        const bytes = files.reduce((s, ref) => {
+        // Lazy files (read only when a feature asks for them) are in `files` but not in `bytes`.
+        const lazy = v.lazy || [];
+        for (const ref of lazy) if (!v.files.includes(ref)) problems.push(`${id}: lazy ${ref} is not one of the variant's files`);
+        const bytes = files.filter(ref => !lazy.includes(ref)).reduce((s, ref) => {
           const pn = ref.slice(0, ref.indexOf(':')), path = ref.slice(ref.indexOf(':') + 1);
           return s + (parts[pn]?.files[path]?.size || 0);
         }, 0);
-        return { ...(v.when ? { when: v.when } : {}), dtype: v.dtype, files, bytes };
+        return { ...(v.when ? { when: v.when } : {}), dtype: v.dtype, files, ...(lazy.length ? { lazy: [...lazy] } : {}), bytes };
       });
     }
     const bases = [];
