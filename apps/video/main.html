@@ -4,7 +4,26 @@
     <legend class="visually-hidden">{{t:mode.legend}}</legend>
     <label><input type="radio" name="mode" value="image" data-input="mode" checked> {{t:mode.image}}</label>
     <label><input type="radio" name="mode" value="text" data-input="mode"> {{t:mode.text}}</label>
+    <label data-role="mode-story" hidden><input type="radio" name="mode" value="story" data-input="mode"> {{t:mode.story}}</label>
   </fieldset>
+  <fieldset class="settings" data-role="story-settings" hidden>
+    <legend>{{t:story.title}}</legend>
+    <label class="wide">{{t:story.prompt}}
+      <textarea rows="3" maxlength="2000" data-input="story-prompt" placeholder="{{t:story.placeholder}}"></textarea>
+    </label>
+    <label>{{t:story.seconds}} <select data-input="story-seconds">
+      <option value="3">3 s</option><option value="6">6 s</option><option value="9" selected>9 s</option>
+    </select></label>
+    <label>{{t:story.size}} <select data-input="story-size">
+      <option value="832x480">{{t:aspect.wide}}</option><option value="480x832">{{t:aspect.tall}}</option><option value="624x624">{{t:aspect.square}}</option>
+    </select></label>
+    <label>{{t:story.start}} <input type="file" accept="image/*" data-input="story-start"></label>
+    <label>{{t:story.end}} <input type="file" accept="image/*" data-input="story-end"></label>
+    <label>{{t:text.seed}} <input type="number" min="0" max="4294967295" step="1" inputmode="numeric" data-input="story-seed"></label>
+    <p class="muted" data-role="story-photos"></p>
+    <p class="muted" data-role="story-gate"></p>
+  </fieldset>
+  <section data-role="story" hidden></section>
   <fieldset class="settings" data-role="text-settings" hidden>
     <legend>{{t:text.title}}</legend>
     <label class="wide">{{t:text.prompt}}
@@ -67,6 +86,7 @@
   </fieldset>
   <p data-role="model">{{html:modelLine}}</p>
   <p data-role="model-text" hidden>{{html:modelLine2}}</p>
+  <p data-role="model-story" hidden>{{html:modelLine3}}</p>
   <p class="actions">
     <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
     <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>

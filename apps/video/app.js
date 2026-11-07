@@ -13,7 +13,8 @@
 import { createShell, AiError, formatSize } from './shared/shell.js';
 import { Video, PRESETS, ASPECTS, LOOPS, planCamera, cameraAt, createRenderer, pageQuality, decodeSoundtrack } from './sdk/video/index.js';
 import { sniffImageType, DECODABLE, previewImage } from './sdk/core/image-input.js';
-import { integration, blobOf } from './hooks.js';
+import { integration, blobOf, shipped } from './hooks.js';
+import { createStoryView } from './story-view.js';
 
 const PREVIEW_SIDE = 1600;
 
@@ -30,12 +31,18 @@ const ui = {
   settings: $('main [data-role="settings"]'), modelImage: $('main [data-role="model"]'), modelText: $('main [data-role="model-text"]'),
   textSettings: $('main [data-role="text-settings"]'), prompt: $('main [data-input="prompt"]'), size: $('main [data-input="size"]'),
   genSeconds: $('main [data-input="gen-seconds"]'), steps: $('main [data-input="steps"]'), seed: $('main [data-input="seed"]'), textGate: $('main [data-role="text-gate"]'),
+  modeStory: $('main [data-role="mode-story"]'), storySettings: $('main [data-role="story-settings"]'), storyPrompt: $('main [data-input="story-prompt"]'),
+  storySeconds: $('main [data-input="story-seconds"]'), storySize: $('main [data-input="story-size"]'), storyStart: $('main [data-input="story-start"]'),
+  storyEnd: $('main [data-input="story-end"]'), storySeed: $('main [data-input="story-seed"]'), storyPhotos: $('main [data-role="story-photos"]'),
+  storyGate: $('main [data-role="story-gate"]'), story: $('main [data-role="story"]'), modelStory: $('main [data-role="model-story"]'),
 };
-// The two modes of the page: a photo animated (the site's own model) and, where the
-// module video-gen ships and this browser has WebGPU, a video made from a text (the
-// site's second model, config.models[1]).
+// The modes of the page: a photo animated (the site's own model); where the module
+// video-gen ships and this browser has WebGPU, a video made from a text (the site's
+// second model, config.models[1]); and, where text-to-image ships too, a video with a
+// storyboard that does what it is asked (the third, config.models[2]).
 const imageModel = shell.modelId;
 const textModel = (shell.config.models || [])[1] || null;
+const storyModel = (shell.config.models || [])[2] || null;
 const quality = pageQuality();
 const runner = shell.taskRunner(o => new Video({ ...o, onProgress: p => { shell.onProgress(p); stage(p); } }));
 const probe = shell.config.testHooks ? (shell.diagnostics.video = { runs: 0, scenes: 0, frames: 0 }) : null;
@@ -52,6 +59,10 @@ let gen = null; // the module video-gen, once the text mode is offered
 let fit = null; // what estimate() said of the text mode's current settings
 let textChecks = 0;
 let imageHook = false; // the "make an image" integration is on
+let storyFit = null; // what estimateStory() said
+let storyChecks = 0;
+const storyPics = { start: null, end: null }; // { picture, size, name } of the photos given
+let view = null; // the storyboard's progress view
 
 function el(tag, attrs = {}, ...children) {
   const n = document.createElement(tag);
@@ -222,21 +233,24 @@ async function checkText() {
 
 /** Switch between the photo and the text. Nothing runs; a result on screen goes. */
 async function setMode(next) {
-  if (next === mode || (next === 'text' && !gen)) return;
+  if (next === mode || ((next === 'text' || next === 'story') && !gen) || (next === 'story' && ui.modeStory.hidden)) return;
   if (shell.busy) { for (const r of document.querySelectorAll('main [data-input="mode"]')) r.checked = r.value === mode; return; }
   mode = next;
-  const text = mode === 'text';
+  const text = mode === 'text', story = mode === 'story', image = mode === 'image';
   forgetResult();
-  if (text) stopPreview();
+  if (!image) stopPreview();
   ui.textSettings.hidden = !text; ui.modelText.hidden = !text;
-  ui.settings.hidden = text; ui.modelImage.hidden = text;
-  if (shell.els.drop) shell.els.drop.hidden = text;
-  ui.makeImage.hidden = text || !imageHook;
-  ui.preview.hidden = text || !current;
+  ui.storySettings.hidden = !story; ui.modelStory.hidden = !story; ui.story.hidden = !story || !view;
+  ui.settings.hidden = !image; ui.modelImage.hidden = !image;
+  if (shell.els.drop) shell.els.drop.hidden = !image;
+  ui.makeImage.hidden = !image || !imageHook;
+  ui.preview.hidden = !image || !current;
   for (const r of document.querySelectorAll('main [data-input="mode"]')) r.checked = r.value === mode;
-  shell.useModel(text ? textModel : imageModel, { sizeEl: $(text ? '[data-role="model-size-2"]' : '[data-role="model-size"]') });
+  const n = story ? 3 : text ? 2 : 1;
+  shell.useModel(story ? storyModel : text ? textModel : imageModel, { sizeEl: $(n > 1 ? `[data-role="model-size-${n}"]` : '[data-role="model-size"]') });
   if (probe) probe.mode = mode;
   if (text) await checkText();
+  else if (story) await checkStory();
   else {
     if (current && scene?.forFile === current.file) startPreview(scene.value);
     shell.setReady(Boolean(current) && !shell.busy);
@@ -277,8 +291,113 @@ function showText(r, opts) {
   if (probe) probe.text = { runs: (probe.text?.runs || 0) + 1, width: r.width, height: r.height, frames: r.frames, seed: r.seed, steps: r.steps, mime: r.mime, bytes: r.blob.size, prompt: opts.prompt };
 }
 
+/** The storyboard's size: the start photo's shape (or the end photo's), else the one chosen. */
+function storySize() {
+  return (storyPics.start || storyPics.end)?.size || ui.storySize.value;
+}
+
+/** The primary button of the storyboard: on when the device can make it and there is a description or two photos. */
+function storyReady() {
+  if (mode === 'story' && !shell.busy) shell.setReady(Boolean(storyFit?.fits) && (Boolean(ui.storyPrompt.value.trim()) || Boolean(storyPics.start && storyPics.end)));
+}
+
+async function checkStory() {
+  const ask = ++storyChecks;
+  storyFit = null;
+  ui.storyGate.textContent = t('text.checking');
+  shell.setReady(false);
+  let est;
+  try { est = await gen.estimateStory({ seconds: Number(ui.storySeconds.value), size: storySize() }, { registry: shell.registry, model: storyModel, store: shell.store }); }
+  catch (err) { if (ask === storyChecks && mode === 'story') { ui.storyGate.textContent = ''; shell.showError(err); } return; }
+  if (ask !== storyChecks || mode !== 'story') return;
+  storyFit = est;
+  const memory = formatSize(est.memoryBytes || 0, shell.lang);
+  ui.storyGate.textContent = est.fits ? t('story.fits', { memory, clips: est.clips }) : t('text.reason.' + est.reason, { memory });
+  if (probe) probe.storyEstimate = { fits: est.fits, reason: est.reason, missingBytes: est.missingBytes, downloadBytes: est.downloadBytes, size: `${est.width}x${est.height}` };
+  storyReady();
+}
+
+/** A start or end photo chosen: read it small; its shape sets the video's. */
+async function storyPhoto(which, input) {
+  const f = input.files?.[0];
+  storyPics[which] = null;
+  if (f) {
+    try { storyPics[which] = { ...(await gen.readPhoto(f)), name: f.name }; }
+    catch { input.value = ''; shell.setStatus(t('story.badPhoto')); }
+  }
+  const sz = storySize();
+  ui.storySize.disabled = Boolean(storyPics.start || storyPics.end);
+  ui.storySize.value = sz;
+  const names = ['start', 'end'].filter(k => storyPics[k]).map(k => t(`story.${k}Named`, { name: storyPics[k].name }));
+  ui.storyPhotos.textContent = names.length ? `${names.join(' · ')} ${t('story.photoSize', { size: sz.replace('x', ' × ') })}` : '';
+  await checkStory();
+}
+
+/** The storyboard's run: the keyframes, a look at them (continue or change), then the clips. */
+async function runStory(signal) {
+  const lang = shell.lang;
+  const seed = ui.storySeed.value.trim() ? Number(ui.storySeed.value) : (crypto.getRandomValues(new Uint32Array(1))[0] >>> 1);
+  const plan = gen.planStory({ prompt: ui.storyPrompt.value, seconds: Number(ui.storySeconds.value), start: Boolean(storyPics.start), end: Boolean(storyPics.end), seed, lang });
+  const size = storySize();
+  const photos = { ...(storyPics.start ? { start: storyPics.start.picture } : {}), ...(storyPics.end ? { end: storyPics.end.picture } : {}) };
+  forgetResult();
+  view?.dispose();
+  view = createStoryView(ui.story, { t, reduced });
+  ui.story.hidden = false;
+  view.setPlan(plan, { size });
+  ui.cancel.hidden = false;
+  const onProgress = p => {
+    shell.onProgress(p);
+    if (p.stage === 'keyframe') {
+      view.keyframe(p.index, p);
+      shell.setStatus(t('story.stage.keyframe', { n: p.index + 1, count: p.count }));
+    } else if (p.stage === 'clip') {
+      if (p.done) view.clipDone(p.clip, p); else view.clipStep(p.clip, p);
+      shell.setStatus(t('story.stage.clip', { n: p.clip + 1, count: p.clips, step: Math.min(p.count, p.index + 1), steps: p.count }));
+    } else if (p.stage) stage(p);
+    if (probe && p.stage) probe.stages = [...(probe.stages || []), p.stage];
+  };
+  const task = new gen.StoryVideo(shell.taskOptions({ device: 'webgpu', model: storyModel, onProgress }));
+  try {
+    let kf = await task.keyframes({ plan, size, ...photos, signal });
+    if (probe) probe.story = { keyframes: kf.keyframes.length, size: kf.size };
+    shell.setStatus(t('story.look'));
+    if (await view.askContinue() === 'change') {
+      view.editable(true, async (k, text) => {
+        plan.shots[k].prompt = text;
+        kf = await task.keyframes({ plan, size, ...photos, keyframes: kf.keyframes, only: k, signal });
+      });
+      await view.askAfterChange();
+      view.editable(false);
+    }
+    const audio = soundtrack?.pcm || (soundtrack?.blob ? await decodeSoundtrack(soundtrack.blob).catch(() => null) : null);
+    const r = await task.clips({ plan, size, keyframes: kf.keyframes, ...photos, signal, ...(audio ? { audio } : {}) });
+    if (mode === 'story') showStory(r);
+  } finally {
+    ui.cancel.hidden = true;
+    await task.dispose().catch(() => {});
+  }
+}
+
+function showStory(r) {
+  const section = shell.showResult();
+  const url = URL.createObjectURL(r.blob);
+  shown = { url };
+  const ext = /webm/.test(r.mime) ? 'webm' : 'mp4';
+  const name = `${t('story.file')}-${r.seed}.${ext}`;
+  const download = el('button', { class: 'ghost', type: 'button', 'data-action': 'download' }, t('download.video'));
+  download.addEventListener('click', () => shell.download(r.blob, name));
+  section.append(el('article', { class: 'card', 'data-role': 'video' },
+    el('h3', {}, name), el('p', { class: 'actions' }, download),
+    el('video', { src: url, controls: true, loop: true, playsinline: true, muted: true, 'data-role': 'player' }),
+    el('p', { class: 'muted', 'data-role': 'result-meta' }, t('text.meta', { width: r.width, height: r.height, seconds: Number(r.seconds).toFixed(1), container: ext.toUpperCase(), size: (r.blob.size / 1e6).toFixed(1), seed: r.seed }))));
+  download.scrollIntoView?.({ block: 'nearest' });
+  if (probe) probe.story = { ...(probe.story || {}), runs: (probe.story?.runs || 0) + 1, width: r.width, height: r.height, frames: r.frames, clips: r.clips, seed: r.seed, mime: r.mime, bytes: r.blob.size };
+}
+
 shell.onPrimary(async ({ signal }) => {
   if (mode === 'text') { await runText(signal); return; }
+  if (mode === 'story') { await runStory(signal); return; }
   if (!current) return;
   const job = { ...current, sound: soundtrack };
   forgetResult();
@@ -297,7 +416,7 @@ shell.onPrimary(async ({ signal }) => {
   } finally {
     ui.cancel.hidden = true;
   }
-}, { after: textReady });
+}, { after: () => { textReady(); storyReady(); } });
 
 // Settings: the preview follows them at once.
 for (const c of [ui.preset, ui.aspect, ui.strength, ui.dof]) c.addEventListener('input', replan);
@@ -360,6 +479,15 @@ integration('textToVideo').then(async fn => {
   for (const r of document.querySelectorAll('main [data-input="mode"]')) r.addEventListener('change', () => { if (r.checked) setMode(r.value).catch(err => shell.showError(err)); });
   ui.modes.hidden = false;
   if (probe) probe.modes = true;
+  // The storyboard: its model listed by the site and in the registry, and text-to-image shipped.
+  if (storyModel && gen.StoryVideo && shell.registry.models?.[storyModel] && shipped(shell.config).includes('text-to-image')) {
+    ui.modeStory.hidden = false;
+    for (const c of [ui.storySeconds, ui.storySize]) c.addEventListener('change', () => { if (mode === 'story') checkStory(); });
+    ui.storyPrompt.addEventListener('input', storyReady);
+    ui.storyStart.addEventListener('change', () => storyPhoto('start', ui.storyStart).catch(err => shell.showError(err)));
+    ui.storyEnd.addEventListener('change', () => storyPhoto('end', ui.storyEnd).catch(err => shell.showError(err)));
+    if (probe) probe.storyMode = true;
+  }
 });
 
 if (PRESETS.length !== ui.preset.options.length || LOOPS.some(p => !PRESETS.includes(p))) shell.setStatus(t('unsupported'));

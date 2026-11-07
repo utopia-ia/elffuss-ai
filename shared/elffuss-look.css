@@ -194,3 +194,26 @@ ol.thumbs button:hover img { transform: scale(1.04); }
   figure.frame[data-state="working"]::before, section.result article.card img { animation: none; }
 }
 ol.thumbs { list-style: none; }
+
+/* The storyboard video (the video site): a keyframe's step estimate shows soft and focusing, its picture fades in over
+   it; a clip's strip sharpens step by step; what is being made breathes. Reduced motion: none of it moves. */
+.story .board { list-style: none; }
+.story .card .frame, .story .slot .strip { border-radius: 12px; background: var(--bg2); }
+.story .slot video { border-radius: 12px; }
+.story .frame > canvas.soft { filter: blur(6px) saturate(.9); transform: scale(1.04); }
+.story .frame > canvas.sharp { opacity: 0; transition: opacity .9s var(--ease); }
+.story .card.ready .frame > canvas.sharp { opacity: 1; }
+.story .card.pending .frame, .story .timeline .seg.running { animation: story-breathe 2.4s ease-in-out infinite; }
+.story .card.painting .frame > canvas.soft { animation: story-focus 1.6s ease-in-out infinite alternate; }
+.story .card .when { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent); }
+.story .card .text, .story .slot .text { font-size: .875rem; line-height: 1.35; color: var(--muted); }
+.story .slot .strip > canvas { transition: filter .6s var(--ease); }
+.story .slot.pending .strip > canvas { filter: blur(4px); opacity: .4; }
+.story .timeline .seg { font-variant-numeric: tabular-nums; border-radius: 8px; }
+.story .timeline .seg.pending { opacity: .45; }
+@keyframes story-breathe { 50% { opacity: .55; } }
+@keyframes story-focus { from { filter: blur(8px) saturate(.8); } to { filter: blur(3px) saturate(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .story *, .story *::before, .story *::after { animation: none !important; transition: none !important; }
+}
+.story.reduced *, .story.reduced *::before, .story.reduced *::after { animation: none !important; transition: none !important; }

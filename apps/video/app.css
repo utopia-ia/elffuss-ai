@@ -12,3 +12,24 @@ main > figure.stage > img, main > figure.stage > canvas { width: auto; max-width
 .actions > label.grow { display: flex; align-items: center; gap: 0.5rem; flex: 1 1 12rem; }
 .actions > label.grow > input { flex: 1; }
 .result .card > video { display: block; width: 100%; max-height: 75vh; }
+
+/* The storyboard video: keyframe cards and clip slots in one grid that wraps (one column on a phone), a timeline
+   under them. Its look (fades, blur, the breathing of what is being made) is in shared/elffuss-look.css. */
+.story { display: flex; flex-direction: column; gap: 0.75rem; }
+.story .board { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.75rem; align-items: start; }
+.story .card, .story .slot { display: flex; flex-direction: column; gap: 0.35rem; margin: 0; }
+.story .card .frame { position: relative; display: grid; overflow: hidden; }
+.story .board[data-shape="wide"] .frame, .story .board[data-shape="wide"] .strip, .story .board[data-shape="wide"] video { aspect-ratio: 832 / 480; }
+.story .board[data-shape="tall"] .frame, .story .board[data-shape="tall"] .strip, .story .board[data-shape="tall"] video { aspect-ratio: 480 / 832; }
+.story .board[data-shape="square"] .frame, .story .board[data-shape="square"] .strip, .story .board[data-shape="square"] video { aspect-ratio: 1; }
+.story .frame > canvas { grid-area: 1 / 1; position: relative; width: 100%; height: 100%; object-fit: cover; } /* positioned: the sharp one, later, stays on top of the soft one's transform */
+.story .card .when, .story .card .text, .story .slot .text, .story .ask p { margin: 0; }
+.story .card .text textarea, .story .slot progress, .story .ask progress { width: 100%; }
+.story .slot .strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; overflow: hidden; }
+.story .slot .strip > canvas { width: 100%; height: 100%; object-fit: cover; }
+.story .slot video { display: block; width: 100%; object-fit: cover; }
+.story .ask { display: flex; flex-direction: column; gap: 0.35rem; }
+.story .timeline { display: grid; gap: 2px; }
+.story .timeline[data-count="1"] { grid-template-columns: 1fr; }
+.story .timeline[data-count="2"] { grid-template-columns: repeat(2, 1fr); }
+.story .timeline[data-count="3"] { grid-template-columns: repeat(3, 1fr); }

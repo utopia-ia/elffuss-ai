@@ -312,6 +312,8 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
       // lists every model (`modelLines`) shows the one of the chosen mode.
       const model = models[0];
       const lines = Object.fromEntries(models.map((m, i) => [i ? `modelLine${i + 1}` : 'modelLine', modelLine(m, t, lang, i ? `model-size-${i + 1}` : 'model-size')]));
+      // A mode whose model the site does not list gets an empty line (the page keeps it hidden).
+      for (let i = models.length; i < 3; i++) lines[`modelLine${i + 1}`] = '';
       const modelLines = models.map((m, i) => `  <p data-role="model" data-model="${esc(m.id)}"${i ? ' hidden' : ''}>${modelLine(m, t, lang)}</p>`).join('\n');
       main = render(templates.main, { t, v, html: { ...lines, modelLines, storage: storagePanel(models, t, lang) } });
       footer = appFooter({ model, models, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
