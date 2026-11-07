@@ -12,6 +12,9 @@
     },
     "ocr": {
       "default": "ocr/pp-ocrv6-small"
+    },
+    "text-to-image": {
+      "default": "text-to-image/sana-sprint-0.6b"
     }
   },
   "models": {
@@ -331,6 +334,164 @@
       "notes": {
         "es": "El diccionario del modelo no tiene el signo «¡»: el resto de letras y signos del español sí están.",
         "en": "The model dictionary has no «¡» (inverted exclamation mark); every other Spanish letter and sign is in it."
+      }
+    },
+    "text-to-image/sana-sprint-0.6b": {
+      "task": "text-to-image",
+      "name": {
+        "es": "SANA-Sprint 0.6B",
+        "en": "SANA-Sprint 0.6B"
+      },
+      "license": "Apache-2.0",
+      "author": "Efficient-Large-Model",
+      "base": {
+        "name": "SANA-Sprint 0.6B",
+        "author": "NVlabs",
+        "url": "https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px",
+        "license": "Apache-2.0"
+      },
+      "flag": "gemma-terms",
+      "redistributes": true,
+      "runtime": "onnxruntime-web",
+      "pipeline": null,
+      "parts": {
+        "main": {
+          "repo": "Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers",
+          "revision": "aa76e7f4f4928f378716b6716a2130fba3caf5b1",
+          "license": "Apache-2.0",
+          "author": "Efficient-Large-Model",
+          "files": {
+            "LICENSE": {
+              "size": 11358,
+              "gitOid": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+            },
+            "model_index.json": {
+              "size": 392,
+              "gitOid": "795d41a9eaf524bb0d84fbac6a325609d4f737d1"
+            },
+            "README.md": {
+              "size": 6543,
+              "gitOid": "ca75553ce2d02bed329c94e8eeaf36634e70dba8"
+            },
+            "scheduler/scheduler_config.json": {
+              "size": 160,
+              "gitOid": "6d3081b117d2ea1c4db209edf5914a80c9ed754e"
+            },
+            "text_encoder/config.json": {
+              "size": 890,
+              "gitOid": "b9834570dc12b608f336a00e3f81658d17a85b6c"
+            },
+            "text_encoder/model-00001-of-00002.safetensors": {
+              "size": 4988024144,
+              "sha256": "e909230aabafad02d097c7dc02f2ae062b4e6b0593477c1f07679d277e09ce71"
+            },
+            "text_encoder/model-00002-of-00002.safetensors": {
+              "size": 240691624,
+              "sha256": "48e14f6b7a917e54cabc4ff2047ac2bfe0dae663e771eed3a8acf4ea27dcac18"
+            },
+            "text_encoder/model.safetensors.index.json": {
+              "size": 22495,
+              "gitOid": "36d550130eb056ee9c28e438c0e3d1b28fddab84"
+            },
+            "tokenizer/special_tokens_map.json": {
+              "size": 636,
+              "gitOid": "8d6368f7e735fbe4781bf6e956b7c6ad0586df80"
+            },
+            "tokenizer/tokenizer_config.json": {
+              "size": 46996,
+              "gitOid": "36ba12877e7efaba5252f7b17ab337a59d953563"
+            },
+            "tokenizer/tokenizer.json": {
+              "size": 34362873,
+              "sha256": "5f7eee611703c5ce5d1eee32d9cdcfe465647b8aff0c1dfb3bed7ad7dbb05060"
+            },
+            "tokenizer/tokenizer.model": {
+              "size": 4241003,
+              "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2"
+            },
+            "transformer/config.json": {
+              "size": 648,
+              "gitOid": "e0d55e9165c1992b9c98e16afeb397548e705f57"
+            },
+            "transformer/diffusion_pytorch_model.safetensors": {
+              "size": 1187078584,
+              "sha256": "9069dd697395b96a59d1f74837461f7aeb3d95e55b67fa85c9f31c9106b65e87"
+            },
+            "vae/config.json": {
+              "size": 1280,
+              "gitOid": "e265030c18bc640fa24267beb2a92c3a187cba5b"
+            },
+            "vae/diffusion_pytorch_model.safetensors": {
+              "size": 1249044836,
+              "sha256": "dfd991d1b54ffabf22745c5885589d8f2a7bc59930d95d92bd741c4fc64454bb"
+            }
+          }
+        },
+        "onnx": {
+          "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
+          "revision": "762399d3a10e6ec06afeffbdf7dd425c83004fb3",
+          "license": "Apache-2.0",
+          "author": "UtopiaIA",
+          "files": {
+            "LICENSE": {
+              "size": 11358,
+              "gitOid": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+            },
+            "NOTICE": {
+              "size": 552,
+              "gitOid": "ac1eeeabe1ada66ab5d624d7f58c82d9826ff09f"
+            },
+            "README.md": {
+              "size": 1958,
+              "gitOid": "4dbf134c4c9e22ebf855879d547b4f1358ff5cbf"
+            },
+            "text_encoder/embed_tokens_q4_scales.bin": {
+              "size": 36864000,
+              "sha256": "383dbe086c9e40c573ac7289939889b95c43134f53e47776511203a6747faaf6"
+            },
+            "text_encoder/embed_tokens_q4.bin": {
+              "size": 294912000,
+              "sha256": "d35527833b24b6f06b81f7823cdd6c820ccd329b270e021e6d0862b6621eb6a2"
+            },
+            "text_encoder/model_q4.onnx": {
+              "size": 1298421504,
+              "sha256": "3f39b9db293dbaa0c504811fb4164956eddc4cb8eee09a1a22496fca6ceea90e"
+            },
+            "transformer/model_fp16.onnx": {
+              "size": 1189024647,
+              "sha256": "bfc4993efd67fd5164a8cfb981284c340a74a6b5e36deb23baea986cf0085d83"
+            },
+            "vae_decoder/model_fp16.onnx": {
+              "size": 318818869,
+              "sha256": "a1c88900bbbdc80f876ca8f7dc2735829fe16615d7acccafc4ba8eff3e6b0591"
+            }
+          }
+        }
+      },
+      "devices": {
+        "webgpu": [
+          {
+            "when": "shader-f16",
+            "dtype": "q4f16",
+            "files": [
+              "main:tokenizer/tokenizer.json",
+              "main:tokenizer/tokenizer_config.json",
+              "main:transformer/config.json",
+              "main:vae/config.json",
+              "main:scheduler/scheduler_config.json",
+              "onnx:text_encoder/model_q4.onnx",
+              "onnx:text_encoder/embed_tokens_q4.bin",
+              "onnx:text_encoder/embed_tokens_q4_scales.bin",
+              "onnx:transformer/model_fp16.onnx",
+              "onnx:vae_decoder/model_fp16.onnx"
+            ],
+            "bytes": 3172452977
+          }
+        ]
+      },
+      "notes": {
+        "es": "Entiende mejor las descripciones en inglés.",
+        "en": "It understands descriptions in English best."
       }
     }
   }

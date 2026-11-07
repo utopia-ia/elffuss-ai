@@ -32,7 +32,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { sites as readSites } from '../deploy/sites.mjs';
 import { STORE_ORIGIN, csp } from '../deploy/headers.mjs';
-import { sitePages, configSource, siteOrtVariant, siteModels } from './lib/pages.mjs';
+import { sitePages, configSource, siteOrtVariant, siteUsesTransformers } from './lib/pages.mjs';
 import { rewriteTransformers } from './lib/rewrite-transformers.mjs';
 import { ORT_VARIANTS, transformersDir, ortSpecifierFromTransformers } from '../sdk/core/runtimes.js';
 import { VENDOR_DIRS } from '../sdk/core/runtime-pins.js';
@@ -40,7 +40,8 @@ import { ensure as ensureVendor } from './vendor.mjs';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const GIT = '/usr/bin/git';
-export const TEST_STORE_URL = 'http://localhost:8789/';
+/** The model store of the test channel (ELFFUSS_AI_STORE_PORT moves it, as it moves the harness's). */
+export const TEST_STORE_URL = `http://localhost:${process.env.ELFFUSS_AI_STORE_PORT || 8789}/`;
 /** Strings that must never reach a built site: the tools never empty, fill or list the store. */
 export const FORBIDDEN_IN_BUILD = ['elffuss-model-clear', 'elffuss-model-put', 'elffuss-broker-diag'];
 
@@ -124,7 +125,7 @@ export function buildSite({ root, site, sites, channel, buildId, outDir, vendorD
     const ort = manifest.packages[ortId];
     for (const f of Object.values(ORT_VARIANTS[variant])) w(`vendor/${ortId}/${f}`, { from: join(vendorDir, ortId, f) });
     for (const f of Object.keys(ort.licenses)) w(`vendor/${ortId}/${f}`, { from: join(vendorDir, ortId, f) });
-    if (siteModels(site, registry).some(m => m.runtime === 'transformers.js')) {
+    if (siteUsesTransformers(site, registry)) {
       const tfId = VENDOR_DIRS.transformers;
       const src = readFileSync(join(vendorDir, tfId, 'dist', 'transformers.web.min.js'), 'utf8');
       w(`vendor/${transformersDir(variant)}/transformers.web.min.js`, rewriteTransformers(src, ortSpecifierFromTransformers(variant)));

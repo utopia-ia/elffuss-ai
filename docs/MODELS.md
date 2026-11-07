@@ -2,7 +2,7 @@
 
 # Models
 
-Every model a site downloads, from its original Hugging Face repository, pinned to a commit. Nothing here is hosted or redistributed by Elffuss: the model store of the sites downloads each file the first time it is needed and keeps it in that browser, and the site checks its hash. Generated from `registry/tasks.json`.
+Every model a site downloads, from a Hugging Face repository pinned to a commit: its original one, or, where no conversion for the browser exists, one UtopiaIA publishes on the Hub with its licence and notice (marked below). Elffuss serves no weights from its own servers: the model store of the sites downloads each file the first time it is needed and keeps it in that browser, and the site checks its hash. Generated from `registry/tasks.json`.
 
 | Task | Model | Base model | Licence | Backend · variant · download |
 |---|---|---|---|---|
@@ -10,6 +10,7 @@ Every model a site downloads, from its original Hugging Face repository, pinned 
 | depth | `depth/depth-anything-v2-small` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything | Apache-2.0 (base: Apache-2.0) | WebGPU fp16 (with shader-f16) · 50 MB<br>WebGPU fp32 · 99 MB<br>WASM q8 · 27 MB |
 | detect | `detect/rfdetr-nano` | [RF-DETR Nano](https://github.com/roboflow/rf-detr), by Roboflow | Apache-2.0 (base: Apache-2.0) | WASM q8 · 29 MB |
 | ocr | `ocr/pp-ocrv6-small` | [PP-OCRv6](https://github.com/PaddlePaddle/PaddleOCR), by PaddlePaddle | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 31 MB<br>WASM fp32 · 31 MB |
+| text-to-image | `text-to-image/sana-sprint-0.6b` | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0) | WebGPU q4f16 (with shader-f16) · 3172 MB |
 
 ## `remove-bg/ben2`
 
@@ -51,3 +52,16 @@ Every model a site downloads, from its original Hugging Face repository, pinned 
 |---|---|---|---|
 | WebGPU | fp32 | `det:inference.onnx`, `det:inference.yml`, `rec:inference.onnx`, `rec:inference.yml` | 31 MB |
 | WASM | fp32 | `det:inference.onnx`, `det:inference.yml`, `rec:inference.onnx`, `rec:inference.yml` | 31 MB |
+
+## `text-to-image/sana-sprint-0.6b`
+
+- Base model: [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs, Apache-2.0.
+- Part `main`: [Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/tree/aa76e7f4f4928f378716b6716a2130fba3caf5b1) at `aa76e7f4f4928f378716b6716a2130fba3caf5b1`, Apache-2.0.
+- Part `onnx`: [UtopiaIA/sana-sprint-0.6b-1024px-onnx-web](https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/tree/762399d3a10e6ec06afeffbdf7dd425c83004fb3) at `762399d3a10e6ec06afeffbdf7dd425c83004fb3`, Apache-2.0.
+- Redistributed: a conversion of the original weights published by UtopiaIA, with the original licence and a NOTICE.
+- Licence note: the text encoder is Gemma 2 2B IT, by Google, provided under and subject to the Gemma Terms of Use (ai.google.dev/gemma/terms) and the Gemma Prohibited Use Policy, as in the original repository.
+- Note: It understands descriptions in English best.
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | q4f16 (shader-f16) | `main:tokenizer/tokenizer.json`, `main:tokenizer/tokenizer_config.json`, `main:transformer/config.json`, `main:vae/config.json`, `main:scheduler/scheduler_config.json`, `onnx:text_encoder/model_q4.onnx`, `onnx:text_encoder/embed_tokens_q4.bin`, `onnx:text_encoder/embed_tokens_q4_scales.bin`, `onnx:transformer/model_fp16.onnx`, `onnx:vae_decoder/model_fp16.onnx` | 3172 MB |

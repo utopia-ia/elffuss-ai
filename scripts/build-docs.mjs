@@ -147,17 +147,22 @@ export function moduleTable(root = ROOT) {
   rows.push('| `@elffuss/ai/core` | Model store client, backend choice, pinned runtimes, registry, Worker host, errors, progress | every site | in use |');
   for (const task of Object.keys(reg.tasks)) {
     const site = apps.find(s => s.task === task);
-    const what = { 'remove-bg': 'Remove the background of an image (transparent PNG)', depth: 'Depth map of a photo', detect: 'Object detection, 80 COCO classes', ocr: 'Text from images and PDFs' }[task] || task;
+    const what = { 'remove-bg': 'Remove the background of an image (transparent PNG)', depth: 'Depth map of a photo', detect: 'Object detection, 80 COCO classes', ocr: 'Text from images and PDFs', 'text-to-image': 'Pictures from a text description (PNG)' }[task] || task;
     const has = existsSync(join(root, 'sdk', task, 'index.js')) && pkg.exports[`./${task}`];
     rows.push(`| \`@elffuss/ai/${task}\` | ${what} | ${site ? `[${site.host}](https://${site.host}/)` : ''} | ${has ? 'in use' : 'to be written (`./' + task + '/sizes` exists)'} |`);
   }
   return rows.join('\n');
 }
 
+/** What a registry `flag` means, in words. */
+export const FLAGS = Object.freeze({
+  'gemma-terms': 'the text encoder is Gemma 2 2B IT, by Google, provided under and subject to the Gemma Terms of Use (ai.google.dev/gemma/terms) and the Gemma Prohibited Use Policy, as in the original repository.',
+});
+
 /** docs/MODELS.md from the registry. */
 export function modelsDoc(root = ROOT) {
   const reg = JSON.parse(readFileSync(join(root, 'registry', 'tasks.json'), 'utf8'));
-  const out = [GEN, '# Models', '', 'Every model a site downloads, from its original Hugging Face repository, pinned to a commit. Nothing here is hosted or redistributed by Elffuss: the model store of the sites downloads each file the first time it is needed and keeps it in that browser, and the site checks its hash. Generated from `registry/tasks.json`.', ''];
+  const out = [GEN, '# Models', '', 'Every model a site downloads, from a Hugging Face repository pinned to a commit: its original one, or, where no conversion for the browser exists, one UtopiaIA publishes on the Hub with its licence and notice (marked below). Elffuss serves no weights from its own servers: the model store of the sites downloads each file the first time it is needed and keeps it in that browser, and the site checks its hash. Generated from `registry/tasks.json`.', ''];
   out.push('| Task | Model | Base model | Licence | Backend · variant · download |', '|---|---|---|---|---|');
   for (const [id, m] of Object.entries(reg.models)) {
     const variants = Object.entries(m.devices).flatMap(([dev, vs]) => vs.map(v => `${dev === 'webgpu' ? 'WebGPU' : 'WASM'} ${v.dtype}${v.when ? ' (with ' + v.when + ')' : ''} · ${formatMB(v.bytes, 'en')} MB`));
@@ -168,6 +173,8 @@ export function modelsDoc(root = ROOT) {
     out.push(`## \`${id}\``, '');
     out.push(`- Base model: [${m.base.name}](${m.base.url}), by ${m.base.author}, ${m.base.license}.`);
     for (const [pn, p] of Object.entries(m.parts)) out.push(`- ${Object.keys(m.parts).length > 1 ? `Part \`${pn}\`: ` : 'Weights: '}[${p.repo}](${repoPage(p.repo, p.revision)}) at \`${p.revision}\`, ${p.license}.`);
+    if (m.redistributes) out.push('- Redistributed: a conversion of the original weights published by UtopiaIA, with the original licence and a NOTICE.');
+    if (m.flag) out.push(`- Licence note: ${FLAGS[m.flag] || m.flag}`);
     if (m.notes?.en) out.push(`- Note: ${m.notes.en}`);
     out.push('', '| Backend | Variant | Files | Download |', '|---|---|---|---|');
     for (const [dev, vs] of Object.entries(m.devices)) for (const v of vs) out.push(`| ${dev === 'webgpu' ? 'WebGPU' : 'WASM'} | ${v.dtype}${v.when ? ' (' + v.when + ')' : ''} | ${v.files.map(f => '`' + f + '`').join(', ')} | ${formatMB(v.bytes, 'en')} MB |`);
@@ -180,7 +187,7 @@ export function modelsDoc(root = ROOT) {
 export function llmsTxt(root = ROOT) {
   const reg = JSON.parse(readFileSync(join(root, 'registry', 'tasks.json'), 'utf8'));
   const sites = readSites(root);
-  const lines = ['# Elffuss tools', '', '> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, and make depth maps. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from its original Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool\'s own site. Files the user opens never leave the device.', ''];
+  const lines = ['# Elffuss tools', '', '> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, make depth maps, and create images from a text. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from a Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool\'s own site. Files the user opens never leave the device.', ''];
   lines.push('## Tools', '');
   for (const s of sites.filter(x => !x.catalog)) {
     const t = mergeStrings(root, s.dir).en;
@@ -193,7 +200,7 @@ export function llmsTxt(root = ROOT) {
   lines.push(`- [Every tool](${siteUrl(cat, 'pro')}en/): the catalog.`, '');
   lines.push('## Modules', '', '- `@elffuss/ai/core`: the pieces the tools share (model store client, backend choice, pinned runtimes, model registry, errors with codes).');
   for (const task of Object.keys(reg.tasks)) lines.push(`- \`@elffuss/ai/${task}\` and \`@elffuss/ai/${task}/sizes\`: the ${task} task and the download size of each of its variants.`);
-  lines.push('', '## Notes', '', '- The weights are not hosted by Elffuss: each tool names its model, author and licence on its page.', '- Without the Elffuss model store (models.elffuss.com) a tool downloads nothing and says so.', '');
+  lines.push('', '## Notes', '', '- The weights are not served by Elffuss: each tool names its model, author and licence on its page.', '- Without the Elffuss model store (models.elffuss.com) a tool downloads nothing and says so.', '');
   return lines.join('\n');
 }
 

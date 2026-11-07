@@ -37,6 +37,13 @@ export function fill(s, vars = {}) {
   return String(s).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
 }
 
+/** A size with its unit: "31 MB", or "3.2 GB" / "3,2 GB" from a thousand megabytes up. */
+export function formatSize(bytes, lang = 'es') {
+  if (bytes < 1e9) return `${formatMB(bytes, lang)} MB`;
+  const n = String(Math.round(bytes / 1e8) / 10);
+  return `${lang === 'es' ? n.replace('.', ',') : n} GB`;
+}
+
 /** Format a byte count as the pages do ("31 MB", "4.2 MB" / "4,2 MB"). */
 export function formatMB(bytes, lang = 'es') {
   const n = mb(bytes);
@@ -118,7 +125,7 @@ export async function createShell({ config: cfg = config } = {}) {
     errorText(err) {
       const e = toAiError(err);
       const missing = files.reduce((s, f) => s + f.size, 0);
-      return t('error.' + e.code, { size: `${formatMB(missing, lang)} MB` });
+      return t('error.' + e.code, { size: formatSize(missing, lang) });
     },
     showError(err) {
       const e = toAiError(err);
@@ -191,7 +198,7 @@ export async function createShell({ config: cfg = config } = {}) {
         const s = $('[data-role="storage-summary"]', els.storage || document);
         if (s) s.textContent = t('storage.unknown');
         if (!busy) shell.showError(err);
-        if (primaryLabels && els.primary) els.primary.textContent = fill(primaryLabels.download, { size: `${formatMB(files.reduce((x, f) => x + f.size, 0), lang)} MB` });
+        if (primaryLabels && els.primary) els.primary.textContent = fill(primaryLabels.download, { size: formatSize(files.reduce((x, f) => x + f.size, 0), lang) });
         return null;
       }
       storageKnown = true;
@@ -205,9 +212,9 @@ export async function createShell({ config: cfg = config } = {}) {
       const have = files.filter(f => has.get(f.url)).length;
       stored = files.length > 0 && missing === 0;
       const summary = $('[data-role="storage-summary"]', els.storage || document);
-      if (summary) summary.textContent = missing ? t('storage.summary', { have, count: files.length, size: `${formatMB(missing, lang)} MB` }) : t('storage.complete');
-      if (els.modelSize && files.length) els.modelSize.textContent = t('size.mb', { n: formatMB(files.reduce((s, f) => s + f.size, 0), lang) });
-      if (primaryLabels && els.primary) els.primary.textContent = missing ? fill(primaryLabels.download, { size: `${formatMB(missing, lang)} MB` }) : primaryLabels.run;
+      if (summary) summary.textContent = missing ? t('storage.summary', { have, count: files.length, size: formatSize(missing, lang) }) : t('storage.complete');
+      if (els.modelSize && files.length) els.modelSize.textContent = formatSize(files.reduce((s, f) => s + f.size, 0), lang);
+      if (primaryLabels && els.primary) els.primary.textContent = missing ? fill(primaryLabels.download, { size: formatSize(missing, lang) }) : primaryLabels.run;
       return { have, missing };
     },
 
@@ -327,7 +334,7 @@ export async function createShell({ config: cfg = config } = {}) {
   // the most it can do; the answer may shorten that.
   if (els.primary && els.primary.dataset.labelRun) {
     primaryLabels = { run: els.primary.dataset.labelRun, download: els.primary.dataset.labelDownload || els.primary.dataset.labelRun };
-    if (files.length) els.primary.textContent = fill(primaryLabels.download, { size: `${formatMB(files.reduce((x, f) => x + f.size, 0), lang)} MB` });
+    if (files.length) els.primary.textContent = fill(primaryLabels.download, { size: formatSize(files.reduce((x, f) => x + f.size, 0), lang) });
   }
   shell.storageChecked = shell.refreshStorage().catch(() => null);
   lastCheck = shell.storageChecked;

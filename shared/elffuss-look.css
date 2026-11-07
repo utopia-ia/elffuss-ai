@@ -141,3 +141,56 @@ th { color: var(--muted); font-weight: 600; }
   body::before { animation: none; }
   button.primary:hover:not(:disabled), button.ghost:hover:not(:disabled), button:active:not(:disabled) { transform: none; }
 }
+
+/* Form fields with their label above (the image site): the label in the heading face, a hint under it. */
+.field > span:first-child, fieldset.choices legend { font-weight: 600; font-size: .95rem; color: var(--fg); }
+textarea { resize: vertical; line-height: 1.5; }
+textarea::placeholder, input::placeholder { color: var(--muted); opacity: .75; }
+textarea:focus-visible, input:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; border-color: transparent; }
+
+/* A set of choices drawn as pills: the radio is hidden, its label is the button, the chosen one in brass. */
+fieldset.choices { border: 0; }
+fieldset.choices label span {
+  border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, .05); color: var(--fg); cursor: pointer;
+  font-variant-numeric: tabular-nums; transition: background-color .15s, border-color .15s, color .15s;
+}
+fieldset.choices label:hover span { border-color: var(--accent); }
+fieldset.choices input:checked + span { background: linear-gradient(180deg, #f0d2a4, #d3a96e); color: #1b1408; border-color: transparent; }
+fieldset.choices input:focus-visible + span { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+/* The frame where a picture is coming: a quiet dashed outline with the stage in it, and, while the model works, a
+   slow sweep of light; at each step the frame fills a little more. */
+figure.frame {
+  border: 1px dashed var(--line); border-radius: 16px; background: rgba(38, 44, 68, .55); color: var(--muted);
+  text-align: center; overflow: hidden; isolation: isolate;
+}
+figure.frame[data-state="working"] { border-style: solid; color: var(--fg); }
+figure.frame[data-state="working"]::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(84, 220, 198, .10) 45%, rgba(130, 114, 255, .14) 55%, transparent 70%);
+  background-size: 250% 100%; animation: frame-sweep 2.4s var(--ease) infinite;
+}
+figure.frame[data-progress]::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; transform-origin: left;
+  background: linear-gradient(90deg, var(--teal), var(--accent2), var(--accent)); transition: transform .5s var(--ease); transform: scaleX(0);
+}
+figure.frame[data-progress="25"]::after { transform: scaleX(.25); }
+figure.frame[data-progress="33"]::after { transform: scaleX(.33); }
+figure.frame[data-progress="50"]::after { transform: scaleX(.5); }
+figure.frame[data-progress="67"]::after { transform: scaleX(.67); }
+figure.frame[data-progress="75"]::after { transform: scaleX(.75); }
+figure.frame[data-progress="100"]::after { transform: scaleX(1); }
+@keyframes frame-sweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.notice { margin: 0; padding: .75rem 1rem; border: 1px solid var(--accent); border-radius: 12px; background: rgba(217, 178, 122, .1); color: var(--fg); }
+section.result article.card img { animation: picture-in .6s var(--ease) both; }
+@keyframes picture-in { from { opacity: 0; filter: blur(12px); transform: scale(.985); } to { opacity: 1; filter: none; transform: none; } }
+
+/* The history: small previews as buttons, lifted on hover. */
+ol.thumbs button { border-radius: 12px; }
+ol.thumbs button img { border-radius: 11px; transition: transform .25s var(--ease); }
+ol.thumbs button:hover img { transform: scale(1.04); }
+
+@media (prefers-reduced-motion: reduce) {
+  figure.frame[data-state="working"]::before, section.result article.card img { animation: none; }
+}
+ol.thumbs { list-style: none; }

@@ -19,7 +19,7 @@ import { readFileSync, readdirSync, statfsSync, existsSync, writeFileSync, mkdir
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
-import { sites as readSites } from '../../deploy/sites.mjs';
+import { sites as readSites, testPortOf } from '../../deploy/sites.mjs';
 import { registryUrls } from '../../sdk/core/registry.js';
 import { startSiteServer, startStoreServer, stopAll } from './server.mjs';
 import { startHub, cacheHas } from './hf-route.mjs';
@@ -105,7 +105,7 @@ async function main(argv) {
   const hub = await startHub({ cache, registry, port: HUB_PORT });
   servers.push(hub.server);
   servers.push(await startStoreServer({ file: broker, port: STORE_PORT }));
-  for (const s of all) servers.push(await startSiteServer({ site: s, root: join(dist, s.site), port: s.testPort, storeOrigin: STORE_ORIGIN }));
+  for (const s of all) servers.push(await startSiteServer({ site: s, root: join(dist, s.site), port: testPortOf(s), storeOrigin: STORE_ORIGIN }));
 
   const specs = (await loadSpecs()).filter(s => !opts.only || s.name.includes(opts.only) || s.file.includes(opts.only));
   const browsers = opts.browser === 'both' ? ['chrome', 'chromium'] : [opts.browser];
