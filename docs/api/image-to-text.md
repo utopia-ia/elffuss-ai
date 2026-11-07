@@ -10,7 +10,7 @@ The image-to-text task where the model runs (a Worker, or the page with worker: 
 ### `run(state, input, opts = {}, ctx)`
 
 `opts.want`: 'all' (default: caption and text), 'caption' or 'text'.
-Resolves to { caption, text, lines, width, height, device, dtype }.
+Resolves to { value: { caption, text, lines, width, height, device, dtype } }, as every task's run does.
 
 ## `sdk/image-to-text/index.js`
 
