@@ -16,5 +16,6 @@
   "pdfjs": false,
   "media": true,
   "accept": "image/*",
-  "status": "ready"
+  "status": "ready",
+  "transformers": true
 }

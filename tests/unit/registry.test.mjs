@@ -147,8 +147,8 @@ test('a licence outside the allowed list passes only for a model that names it',
   assert.deepEqual(cardLicense({ license: 'mit' }), { license: 'MIT', ok: true, accepted: false });
 });
 
-test('the registry pins sixteen repos', () => {
-  assert.equal(registryRepos(reg).length, 16);
+test('the registry pins seventeen repos', () => {
+  assert.equal(registryRepos(reg).length, 17);
 });
 
 test('a model that joins several works credits each, and each names a part it has', () => {

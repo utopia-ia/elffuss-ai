@@ -39,6 +39,7 @@ export default [
     name: 'a story: offered with WebGPU, says what it downloads, keyframes, a pause to look, then the clip and the video',
     sites: ['video'],
     configs: ['A'],
+    timeout: 45 * 60 * 1000,
     async run(t, site) {
       if (!t.registry.models[MODEL] || !listed(t, site)) { t.note(`${MODEL} is not published and listed by the site yet: nothing to test`); return; }
       const ctx = await t.newContext();
@@ -63,14 +64,15 @@ export default [
       await page.fill('main [data-input="story-seed"]', '7');
       await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });
       await page.click('main button.primary');
-      // the keyframes: two cards, each with its step preview, then the question
-      await page.waitForSelector('main [data-action="story-continue"]', { timeout: 1800000 });
+      // the keyframes: two cards, each with its step preview, then the question (or an error: then stop)
+      await page.waitForFunction(() => document.querySelector('main [data-action="story-continue"]') || globalThis.__elffuss.errors.length > 0, null, { timeout: 20 * 60000, polling: 1000 });
       const look = await state(page);
+      if (look.errors.length) { t.equal(look.errors, [], `no error before the keyframes are shown (${look.status})`); return; }
       t.equal(look.cards, ['card ready', 'card ready'], 'both keyframes painted');
       t.equal(look.slots.length, 1, 'one clip slot between them');
       t.ok((look.probe.stages || []).includes('keyframe'), 'keyframe progress reported');
       await page.click('main [data-action="story-continue"]');
-      await page.waitForFunction(() => globalThis.__elffuss.video.story?.runs >= 1 || globalThis.__elffuss.errors.length > 0, null, { timeout: 3600000, polling: 1000 });
+      await page.waitForFunction(() => globalThis.__elffuss.video.story?.runs >= 1 || globalThis.__elffuss.errors.length > 0, null, { timeout: 30 * 60000, polling: 1000 });
       await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 120000 });
       const st = await state(page);
       t.equal(st.errors, [], `no error (${st.status})`);
