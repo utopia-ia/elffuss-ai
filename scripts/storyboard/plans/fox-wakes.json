@@ -1,0 +1,17 @@
+{
+ "name": "a-fox-wakes",
+ "request": "un zorro que despierta en el bosque al amanecer, se estira y sale corriendo (9 s)",
+ "size": "832x480", "seed": 7,
+ "style": "a red fox with a white chest and black-tipped ears, in a misty pine forest at dawn, golden sunrise light through the trees, cinematic wildlife photography, photorealistic",
+ "shots": [
+  {"prompt": "a red fox curled up asleep on the mossy forest floor, eyes closed, tail wrapped around its body"},
+  {"prompt": "a red fox lying on the mossy forest floor waking up, head raised, eyes open, ears up", "from": 0, "strength": 0.75},
+  {"prompt": "a red fox standing on the mossy forest floor stretching, front legs stretched forward, back arched, yawning", "from": 1, "strength": 0.8},
+  {"prompt": "a red fox running fast across the forest floor, side view, legs extended mid-stride", "from": 2, "strength": 0.85}
+ ],
+ "clips": [
+  "a sleeping red fox slowly wakes up, opens its eyes and lifts its head",
+  "the red fox gets up and stretches its front legs, arching its back and yawning",
+  "the red fox starts running and dashes off through the forest"
+ ]
+}

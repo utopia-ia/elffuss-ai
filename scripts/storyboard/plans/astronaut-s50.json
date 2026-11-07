@@ -1,0 +1,21 @@
+{
+ "name": "c-astronaut-s50",
+ "request": "foto inicial y foto final del astronauta (3 s)",
+ "size": "624x624",
+ "seed": 5,
+ "style": "a chubby cream-white toy astronaut figurine with a big round black glossy visor, sitting on a cracked cream-coloured egg-shaped moon rock, grey lunar dust, dark background with tiny specks, macro photography, photorealistic",
+ "shots": [
+  {
+   "image": "inputs/web-astronaut.png"
+  },
+  {
+   "prompt": "the chubby toy astronaut standing on top of the cream egg-shaped moon rock, one arm raised high waving, head turned toward the camera",
+   "from": 0,
+   "strength": 0.5,
+   "seed": 21
+  }
+ ],
+ "clips": [
+  "the tiny astronaut climbs up, stands on top of the moon egg and raises one arm to wave"
+ ]
+}

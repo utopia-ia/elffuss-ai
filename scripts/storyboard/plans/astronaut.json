@@ -1,0 +1,13 @@
+{
+ "name": "c-astronaut",
+ "request": "foto inicial y foto final del astronauta (3 s)",
+ "size": "624x624", "seed": 5,
+ "style": "a tiny white toy astronaut figure on a cratered moon egg, on grey lunar dust, dark starry background, macro photography, photorealistic",
+ "shots": [
+  {"image": "inputs/web-astronaut.png"},
+  {"prompt": "the tiny astronaut standing upright on top of the moon egg, one arm raised high waving", "from": 0, "strength": 0.7, "seed": 21}
+ ],
+ "clips": [
+  "the tiny astronaut climbs up, stands on top of the moon egg and raises one arm to wave"
+ ]
+}

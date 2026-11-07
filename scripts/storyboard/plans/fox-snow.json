@@ -1,0 +1,15 @@
+{
+ "name": "b-fox-snow",
+ "request": "foto inicial del zorro + «haz que nieve y que el zorro mire a cámara» (6 s)",
+ "size": "624x624", "seed": 11,
+ "style": "a red fox sitting among autumn leaves in a forest, warm backlight, photorealistic",
+ "shots": [
+  {"image": "inputs/web-fox-2.png"},
+  {"prompt": "snowflakes falling all around, light snow beginning to cover the leaves, the fox sitting and looking to the side", "from": 0, "strength": 0.5},
+  {"prompt": "snow falling, snow on the ground and on the fox's fur, the fox facing the camera and looking straight at the viewer", "from": 1, "strength": 0.65}
+ ],
+ "clips": [
+  "snow starts to fall gently around the sitting fox, snowflakes drifting down",
+  "snow keeps falling as the fox turns its head and looks straight at the camera"
+ ]
+}
