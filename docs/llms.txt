@@ -24,6 +24,7 @@
 - `@elffuss/ai/text-to-image` and `@elffuss/ai/text-to-image/sizes`: the text-to-image task and the download size of each of its variants.
 - `@elffuss/ai/video` and `@elffuss/ai/video/sizes`: the  and image-to-video tasks and the download size of each of their variants.
 - `@elffuss/ai/video-gen` and `@elffuss/ai/video-gen/sizes`: the  and text-to-video tasks and the download size of each of their variants.
+- `@elffuss/ai/image-to-text` and `@elffuss/ai/image-to-text/sizes`: the image-to-text task and the download size of each of its variants.
 
 ## Notes
 

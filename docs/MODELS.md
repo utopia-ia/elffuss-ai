@@ -9,6 +9,7 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | remove-bg | `remove-bg/ben2` | [BEN2](https://huggingface.co/PramaLLC/BEN2), by PramaLLC | MIT (base: MIT) | WASM fp16 · 219 MB |
 | depth | `depth/depth-anything-v2-small` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything | Apache-2.0 (base: Apache-2.0) | WebGPU fp16 (with shader-f16) · 50 MB<br>WebGPU fp32 · 99 MB<br>WASM q8 · 27 MB |
 | detect | `detect/rfdetr-nano` | [RF-DETR Nano](https://github.com/roboflow/rf-detr), by Roboflow | Apache-2.0 (base: Apache-2.0) | WASM q8 · 29 MB |
+| image-to-text | `image-to-text/florence-2-base-ft` | [Florence-2 base (fine-tuned)](https://huggingface.co/microsoft/Florence-2-base-ft), by microsoft | MIT (base: MIT) | WebGPU fp16+q4 (with shader-f16) · 360 MB<br>WebGPU q4 · 336 MB<br>WASM q8 · 277 MB |
 | ocr | `ocr/pp-ocrv6-small` | [PP-OCRv6](https://github.com/PaddlePaddle/PaddleOCR), by PaddlePaddle | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 31 MB<br>WASM fp32 · 31 MB |
 | text-to-music | `text-to-music/stable-audio-3-small-music` | [Stable Audio 3 Small Music](https://huggingface.co/stabilityai/stable-audio-3-small-music), by Stability AI | Stability AI Community License (base: Stability AI Community License) | WebGPU fp16 (with shader-f16) · 1764 MB |
 | text-to-sfx | `text-to-sfx/stable-audio-3-small-sfx` | [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx), by Stability AI | Stability AI Community License (base: Stability AI Community License) | WebGPU fp16 (with shader-f16) · 1764 MB |
@@ -46,6 +47,17 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | Backend | Variant | Files | Download |
 |---|---|---|---|
 | WASM | q8 | `main:config.json`, `main:preprocessor_config.json`, `main:onnx/model_quantized.onnx` | 29 MB |
+
+## `image-to-text/florence-2-base-ft`
+
+- Base model: [Florence-2 base (fine-tuned)](https://huggingface.co/microsoft/Florence-2-base-ft), by microsoft, MIT.
+- Weights: [onnx-community/Florence-2-base-ft](https://huggingface.co/onnx-community/Florence-2-base-ft/tree/e88a44eaf3791a35eae0c5a47b3dbcd36e67eb6f) at `e88a44eaf3791a35eae0c5a47b3dbcd36e67eb6f`, MIT.
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | fp16+q4 (shader-f16) | `main:config.json`, `main:generation_config.json`, `main:preprocessor_config.json`, `main:tokenizer.json`, `main:tokenizer_config.json`, `main:onnx/vision_encoder_fp16.onnx`, `main:onnx/embed_tokens_fp16.onnx`, `main:onnx/encoder_model_q4.onnx`, `main:onnx/decoder_model_merged_q4.onnx` | 360 MB |
+| WebGPU | q4 | `main:config.json`, `main:generation_config.json`, `main:preprocessor_config.json`, `main:tokenizer.json`, `main:tokenizer_config.json`, `main:onnx/vision_encoder_q4.onnx`, `main:onnx/embed_tokens_q4.onnx`, `main:onnx/encoder_model_q4.onnx`, `main:onnx/decoder_model_merged_q4.onnx` | 336 MB |
+| WASM | q8 | `main:config.json`, `main:generation_config.json`, `main:preprocessor_config.json`, `main:tokenizer.json`, `main:tokenizer_config.json`, `main:onnx/vision_encoder_quantized.onnx`, `main:onnx/embed_tokens_quantized.onnx`, `main:onnx/encoder_model_quantized.onnx`, `main:onnx/decoder_model_merged_quantized.onnx` | 277 MB |
 
 ## `ocr/pp-ocrv6-small`
 

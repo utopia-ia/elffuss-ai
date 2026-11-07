@@ -760,6 +760,7 @@ What a task implementation may use. One per load.
 - `.report(status, extra)`: Report a status of the run (`running`, `done`).
 - `.transformers()`: Transformers.js, pinned and set up.
 - `.pipeline()`: The Transformers.js pipeline of this model and variant, fed by the store.
+- `.modelFetch()`: Transformers.js with its fetch going to the store at this variant's pinned files, for a task that loads its model by class (`from_pretrained`) rather than as a pipeline.
 - `.ort()`: ONNX Runtime Web, pinned and set up (direct use).
 - `.bytes(ref)`: The bytes of one file of the variant, from the store, checked against the registry.
 - `.text(ref)`: Text of one small file of the variant (UTF-8).

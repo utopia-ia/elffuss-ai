@@ -14,6 +14,7 @@
 | `@elffuss/ai/text-to-image` | Pictures from a text description (PNG) | [image.elffuss.com](https://image.elffuss.com/) | in use |
 | `@elffuss/ai/video` | A video from a photo: a 3D camera move over its depth, as MP4 | [video.elffuss.com](https://video.elffuss.com/) | in use |
 | `@elffuss/ai/video-gen` | A video from a text description, as MP4 (WebGPU) |  | in use |
+| `@elffuss/ai/image-to-text` | image-to-text |  | in use |
 
 ## API reference
 
@@ -23,6 +24,7 @@ Generated from the JSDoc of `sdk/`.
 - [`core`](api/core.md)
 - [`depth`](api/depth.md)
 - [`detect`](api/detect.md)
+- [`image-to-text`](api/image-to-text.md)
 - [`ocr`](api/ocr.md)
 - [`remove-bg`](api/remove-bg.md)
 - [`text-to-image`](api/text-to-image.md)

@@ -25,6 +25,8 @@
     "./video/render": "./sdk/video/render.js",
     "./video-gen": "./sdk/video-gen/index.js",
     "./video-gen/sizes": "./sdk/video-gen/sizes.js",
+    "./image-to-text": "./sdk/image-to-text/index.js",
+    "./image-to-text/sizes": "./sdk/image-to-text/sizes.js",
     "./package.json": "./package.json"
   },
   "sideEffects": false,

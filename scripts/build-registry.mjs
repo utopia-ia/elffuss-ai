@@ -46,7 +46,7 @@ export const ALLOWED_LICENSES = ['Apache-2.0', 'MIT', 'BSD-2-Clause', 'BSD-3-Cla
  */
 export const ACCEPTED_LICENSES = Object.freeze({ 'stable-audio-community': 'Stability AI Community License' });
 /** Task names of the registry. */
-export const TASKS = Object.freeze(['remove-bg', 'depth', 'detect', 'ocr', 'text-to-image', 'image-to-video', 'text-to-video', 'text-to-music', 'text-to-sfx', 'text-to-speech']);
+export const TASKS = Object.freeze(['remove-bg', 'depth', 'detect', 'ocr', 'text-to-image', 'image-to-video', 'text-to-video', 'text-to-music', 'text-to-sfx', 'text-to-speech', 'image-to-text']);
 export const DENY_REPOS = [/Depth-Anything-V2-(Base|Large|Giant)/i, /RMBG/i];
 export const DENY_LICENSES = [/^cc-by-nc/i, /^openrail/i, /^lfm/i, /^gemma/i, /^llama/i, /^other$/i];
 const SPDX = { 'apache-2.0': 'Apache-2.0', mit: 'MIT', 'bsd-2-clause': 'BSD-2-Clause', 'bsd-3-clause': 'BSD-3-Clause' };

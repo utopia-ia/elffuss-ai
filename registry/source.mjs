@@ -34,6 +34,7 @@ export default {
     'text-to-image': { default: 'text-to-image/sana-sprint-0.6b' },
     'image-to-video': { default: 'image-to-video/depth-parallax', module: 'video' },
     'text-to-video': { default: 'text-to-video/wan2.1-t2v-1.3b-rcm', module: 'video-gen' },
+    'image-to-text': { default: 'image-to-text/florence-2-base-ft' },
   },
   models: {
     'remove-bg/ben2': {
@@ -91,6 +92,32 @@ export default {
       devices: {
         wasm: [
           { dtype: 'q8', files: ['main:config.json', 'main:preprocessor_config.json', 'main:onnx/model_quantized.onnx'] },
+        ],
+      },
+      notes: { es: null, en: null },
+      flag: null,
+      redistributes: false,
+    },
+    // A detailed caption and the visible text of a photo (Florence-2 base, fine-tuned; MIT), for the assistants to
+    // «see» an attached or made picture. Chosen over SmolVLM-256M on six real photos (people, street, a menu board,
+    // food, a screenshot, a landscape): its captions named what is there without inventing it, and its OCR task reads
+    // signs and screens. The dtype names the variant's mix (vision and embeddings, then encoder and decoder): sdk/image-to-text/impl.js.
+    'image-to-text/florence-2-base-ft': {
+      task: 'image-to-text',
+      name: { es: 'Florence-2 base', en: 'Florence-2 base' },
+      base: { name: 'Florence-2 base (fine-tuned)', author: 'microsoft', source: { hf: 'microsoft/Florence-2-base-ft' } },
+      runtime: 'transformers.js',
+      pipeline: null,
+      parts: {
+        main: { repo: 'onnx-community/Florence-2-base-ft', revision: 'e88a44eaf3791a35eae0c5a47b3dbcd36e67eb6f', only: 'used' },
+      },
+      devices: {
+        webgpu: [
+          { when: 'shader-f16', dtype: 'fp16+q4', files: ['main:config.json', 'main:generation_config.json', 'main:preprocessor_config.json', 'main:tokenizer.json', 'main:tokenizer_config.json', 'main:onnx/vision_encoder_fp16.onnx', 'main:onnx/embed_tokens_fp16.onnx', 'main:onnx/encoder_model_q4.onnx', 'main:onnx/decoder_model_merged_q4.onnx'] },
+          { dtype: 'q4', files: ['main:config.json', 'main:generation_config.json', 'main:preprocessor_config.json', 'main:tokenizer.json', 'main:tokenizer_config.json', 'main:onnx/vision_encoder_q4.onnx', 'main:onnx/embed_tokens_q4.onnx', 'main:onnx/encoder_model_q4.onnx', 'main:onnx/decoder_model_merged_q4.onnx'] },
+        ],
+        wasm: [
+          { dtype: 'q8', files: ['main:config.json', 'main:generation_config.json', 'main:preprocessor_config.json', 'main:tokenizer.json', 'main:tokenizer_config.json', 'main:onnx/vision_encoder_quantized.onnx', 'main:onnx/embed_tokens_quantized.onnx', 'main:onnx/encoder_model_quantized.onnx', 'main:onnx/decoder_model_merged_quantized.onnx'] },
         ],
       },
       notes: { es: null, en: null },
