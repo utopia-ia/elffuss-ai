@@ -4,8 +4,9 @@
 // The audio task's pure helpers: seeded noise, the sampler's schedule and step,
 // WAV in and out, waveform and joins, the SentencePiece tokenizer of T5Gemma, the
 // numbers, the Spanish phonemiser against eSpeak NG, the English one over a small
-// word list, sentence splitting and chunking, Kokoro's ids and styles, and the
-// options of every task. With ELFFUSS_AI_CACHE set and the weights cached, the
+// word list, sentence splitting and chunking, Kokoro's ids and styles, MOSS-TTS-Nano's
+// rows, frame inputs and chunks against its official runtime, and the options of
+// every task. With ELFFUSS_AI_CACHE set and the weights cached, the
 // tokenizer is also checked with the real tokenizer.model.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,7 +16,7 @@ import { createRng, isSeed, MAX_SEED, randomSeed } from '../../sdk/audio/rng.js'
 import { latentLength, decoderLength, schedule, logsnrShift, pingpongStep, pcmToChannels, SAMPLE_RATE } from '../../sdk/audio/sampler.js';
 import { encodeWav, decodeWav } from '../../sdk/audio/wav.js';
 import { peaks, fadeIn, fadeOut, measure, soundBounds, joinSpeech } from '../../sdk/audio/signal.js';
-import { parseModel, createTokenizer, encodeFixed } from '../../sdk/audio/spm.js';
+import { parseModel, createTokenizer, encodeFixed, nmtNfkc } from '../../sdk/audio/spm.js';
 import { spanishNumber, englishNumber, englishOrdinal, englishYear, spellNumbers, parseNumber } from '../../sdk/audio/numbers.js';
 import { spanishToPhonemes } from '../../sdk/audio/g2p-es.js';
 import { createEnglish, englishToPhonemes, applyStress } from '../../sdk/audio/g2p-en.js';
@@ -24,11 +25,15 @@ import { VOICES, DEFAULT_VOICE, readVocab, phonemeIds, styleFor, voiceInfo } fro
 import { normalizeInput, DURATION } from '../../sdk/audio/stable-audio.js';
 import { normalizeSpeech } from '../../sdk/audio/speech.impl.js';
 import * as api from '../../sdk/audio/index.js';
+import * as moss from '../../sdk/audio/moss.js';
+import * as mossImpl from '../../sdk/audio/speech-moss.impl.js';
+import { createHash } from 'node:crypto';
 import { doubleScalarsToInt64 } from '../../sdk/audio/graph-patch.js';
 import { hashFile } from '../../scripts/fetch-weights.mjs';
 
 const fixture = name => JSON.parse(readFileSync(new URL(`../fixtures/audio/${name}`, import.meta.url), 'utf8'));
 const reg = JSON.parse(readFileSync(new URL('../../registry/tasks.json', import.meta.url), 'utf8'));
+const MOSS_MANIFEST = fixture('moss-frames.json').manifest;
 
 test('seeded noise: the same seed gives the same numbers, another seed others; normals look normal', () => {
   const a = createRng(42).fillNormal(new Float32Array(50000)), b = createRng(42).fillNormal(new Float32Array(50000));
@@ -276,21 +281,116 @@ test('options of the tasks: defaults, ranges, and refusals with codes', () => {
   assert.throws(() => normalizeSpeech({ text: 'x', speed: 3 }), { code: 'unsupported-format' });
 });
 
-test('the public API: three task classes on core Task, their tool calls and estimates', async () => {
+test('the public API: three task classes, their tool calls and estimates', async () => {
   for (const C of [api.Music, api.Sfx, api.Speech]) assert.equal(typeof C.estimate, 'function');
   assert.deepEqual(Object.keys(api.audio), ['music', 'sfx', 'speak']);
   const t = new api.Speech({ worker: false });
   assert.equal(t.device, null);
   await t.dispose();
+  await assert.rejects(t.run({ text: 'hola' }), e => e.code === 'disposed');
   // Without WebGPU (Node), music cannot run, speech runs on WebAssembly.
   const store = { has: async () => false };
   const m = await api.Music.estimate({ registry: reg, store });
   assert.equal(m.fits, false);
   assert.equal(m.reason, 'webgpu-unavailable');
-  const s = await api.Speech.estimate({ registry: reg, store: { has: async url => url.endsWith('.bin') } });
-  assert.equal(s.fits, true);
-  assert.equal(s.device, 'wasm');
-  assert.ok(s.missingBytes < s.downloadBytes && s.downloadBytes === reg.models['text-to-speech/kokoro-82m'].devices.wasm[0].bytes);
+  // Spanish by default: Elffuss's own voice (MOSS-TTS-Nano); English: Kokoro.
+  const es = await api.Speech.estimate({ registry: reg, store: { has: async url => url.endsWith('.json') } });
+  assert.equal(es.fits, true);
+  assert.equal(es.device, 'wasm');
+  assert.equal(es.downloadBytes, reg.models['text-to-speech/moss-tts-nano'].devices.wasm[0].bytes);
+  assert.ok(es.missingBytes < es.downloadBytes);
+  const en = await api.Speech.estimate({ registry: reg, lang: 'en', store: { has: async url => url.endsWith('.bin') } });
+  assert.equal(en.device, 'wasm');
+  assert.ok(en.missingBytes < en.downloadBytes && en.downloadBytes === reg.models['text-to-speech/kokoro-82m'].devices.wasm[0].bytes);
+  const dora = await api.Speech.estimate({ registry: reg, voice: 'ef_dora', store });
+  assert.equal(dora.downloadBytes, reg.models['text-to-speech/kokoro-82m'].devices.wasm[0].bytes);
+});
+
+test('speech: the voice picks the model, Spanish without a voice is Elffuss\'s own', () => {
+  const { speechModelFor, SPEECH_MODELS, VOICES, DEFAULT_VOICE } = api;
+  assert.equal(speechModelFor({}), SPEECH_MODELS.moss);
+  assert.equal(speechModelFor({ lang: 'es' }), SPEECH_MODELS.moss);
+  assert.equal(speechModelFor({ lang: 'en' }), SPEECH_MODELS.kokoro);
+  assert.equal(speechModelFor({ voice: 'es_elffuss' }, SPEECH_MODELS.kokoro), SPEECH_MODELS.moss, 'the voice wins over the model option');
+  assert.equal(speechModelFor({ voice: 'ef_dora' }, SPEECH_MODELS.moss), SPEECH_MODELS.kokoro);
+  assert.equal(speechModelFor({ lang: 'es' }, SPEECH_MODELS.kokoro), SPEECH_MODELS.kokoro, 'an explicit model stands when no voice says otherwise');
+  assert.deepEqual(DEFAULT_VOICE, { es: 'es_elffuss', en: 'af_heart' });
+  for (const v of VOICES) assert.ok(SPEECH_MODELS[v.model], v.id);
+  assert.equal(new Set(VOICES.map(v => v.id)).size, VOICES.length);
+  for (const id of Object.values(SPEECH_MODELS)) assert.ok(reg.models[id], id);
+});
+
+test('MOSS-TTS-Nano: the tokenizer gives the ids of SentencePiece (NFKC, dummy prefix, byte fallback)', async t => {
+  assert.equal(nmtNfkc('  ﬁ  dos\tlíneas\n '), ' fi dos líneas');
+  assert.equal(nmtNfkc(' \u200b '), '');
+  const cache = process.env.ELFFUSS_AI_CACHE;
+  const m = reg.models['text-to-speech/moss-tts-nano'].parts.tts;
+  const file = cache && join(cache, 'hf', ...m.repo.split('/'), m.revision, 'tokenizer.model');
+  if (!file || !existsSync(file)) { t.skip('no weight cache'); return; }
+  assert.equal(await hashFile(file, m.files['tokenizer.model']), m.files['tokenizer.model'].sha256);
+  const tok = createTokenizer(parseModel(readFileSync(file)), { normalize: nmtNfkc });
+  const { cases } = fixture('moss-spm-ids.json');
+  for (const c of cases) assert.deepEqual(tok.encode(c.text), c.ids, JSON.stringify(c.text));
+});
+
+test('MOSS-TTS-Nano: the request rows are the official runtime\'s', async () => {
+  const fx = fixture('moss-frames.json');
+  const voice = await import('../../sdk/audio/moss-voice-es.js');
+  assert.equal(voice.CODES.length, voice.FRAMES * 16);
+  assert.ok(voice.CODES.every(c => Number.isInteger(c) && c >= 0 && c < 1024));
+  const { data, rows } = moss.cloneRows(MOSS_MANIFEST, voice.CODES, fx.ids);
+  assert.equal(rows, fx.rows);
+  assert.equal(createHash('sha256').update(Buffer.from(data.buffer)).digest('hex'), fx.rowsSha256);
+  const row = moss.frameRow(MOSS_MANIFEST, fx.frames[0]);
+  assert.equal(row[0], MOSS_MANIFEST.tts_config.audio_assistant_slot_token_id);
+  assert.deepEqual([...row.subarray(1)], fx.frames[0]);
+});
+
+test('MOSS-TTS-Nano: the inputs of a frame draw one number for the assistant, then one per codebook', () => {
+  const seen = Array.from({ length: 16 }, () => new Uint8Array(1024));
+  seen[2][5] = 1;
+  let n = 0;
+  const { mask, assistant, audio } = moss.frameInputs(seen, () => (++n) / 100, 1024);
+  assert.equal(mask.length, 16 * 1024);
+  assert.equal(mask[2 * 1024 + 5], 1);
+  assert.equal(mask.reduce((a, b) => a + b, 0), 1);
+  assert.ok(Math.abs(assistant[0] - 0.01) < 1e-7);
+  assert.ok(Math.abs(audio[0] - 0.02) < 1e-7 && Math.abs(audio[15] - 0.17) < 1e-7);
+  const one = moss.frameInputs(seen, () => 1, 1024);
+  assert.ok(one.assistant[0] < 1, 'a draw of 1 is kept under 1');
+});
+
+test('MOSS-TTS-Nano: text cleaning and chunks of at most 75 tokens', () => {
+  assert.equal(moss.cleanText('  Hola\n\nqué tal  '), 'Hola. qué tal.');
+  assert.equal(moss.cleanText('¡¡Vamos!! ¿¿Sí?? ...'), '¡Vamos! ¿Sí? …');
+  assert.equal(moss.cleanText('Ya está.'), 'Ya está.');
+  const count = s => s.split(/\s+/).filter(Boolean).length; // a word a token, for the test
+  const one = moss.chunkText('Uno dos. Tres cuatro.', count, 75);
+  assert.deepEqual(one.map(c => c.text), ['Uno dos. Tres cuatro.']);
+  const long = Array.from({ length: 200 }, (_, i) => `palabra${i}`).join(' ') + '.';
+  const parts = moss.chunkText(long, count, 75);
+  assert.ok(parts.length >= 3 && parts.every(p => count(p.text) <= 75));
+  assert.equal(parts.map(p => p.text).join(' '), long);
+  const clauses = moss.chunkText(Array.from({ length: 10 }, () => 'una frase de diez palabras bastante larga para cortar aquí').join(', ') + '.', count, 30);
+  assert.ok(clauses.every(p => count(p.text) <= 30) && clauses.length > 1);
+  assert.ok(clauses.slice(0, -1).every(p => /,$/.test(p.text)), 'cut at commas');
+});
+
+test('MOSS-TTS-Nano: the run options', () => {
+  const { normalizeMossSpeech } = mossImpl;
+  const o = normalizeMossSpeech({ text: ' Hola ', seed: 3 });
+  assert.deepEqual(o, { text: 'Hola', lang: 'es', voice: 'es_elffuss', seed: 3 });
+  assert.ok(Number.isInteger(normalizeMossSpeech({ text: 'x' }).seed));
+  assert.throws(() => normalizeMossSpeech({ text: '' }), e => e.code === 'unsupported-format');
+  assert.throws(() => normalizeMossSpeech({ text: 'x', lang: 'en' }), e => e.code === 'unsupported-format');
+  assert.throws(() => normalizeMossSpeech({ text: 'x', voice: 'af_heart' }), e => e.code === 'unsupported-format');
+  assert.throws(() => normalizeMossSpeech({ text: 'x', seed: -1 }), e => e.code === 'unsupported-format');
+  assert.throws(() => normalizeMossSpeech({ text: 'x'.repeat(20001) }), e => e.code === 'too-large');
+});
+
+test('MOSS-TTS-Nano: stereo to mono', () => {
+  const data = Float32Array.from([1, 1, 0.5, 9, 0, 0, -0.5, 9]);
+  assert.deepEqual([...moss.toMono(data, 2, 4, 3)], [0.5, 0.5, 0]);
 });
 
 test('decoder patch: integral double scalars become int64 in place, nothing else moves', () => {

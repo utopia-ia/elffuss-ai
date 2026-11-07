@@ -59,7 +59,7 @@ from Wikimedia Commons and on an invoice drawn by `scripts/make-fixtures.mjs`
 | [depth.elffuss.com](https://depth.elffuss.com/en/) | Work out what is near and what is far, with a colour map, a 3D view and 16-bit PNG | Depth Anything V2 Small by depth-anything (Apache-2.0) | WebGPU or WebAssembly |
 | [image.elffuss.com](https://image.elffuss.com/en/) | Create a picture from a description, with shapes, a seed to repeat it and PNG download | SANA-Sprint 0.6B by NVlabs (Apache-2.0), its text encoder Gemma 2 2B IT (Gemma Terms of Use) | WebGPU |
 | [video.elffuss.com](https://video.elffuss.com/en/) | Turn a photo into a video (a 3D camera move through its layers, a live preview, MP4 with an optional soundtrack), or make one from a text | Depth Anything V2 Small by depth-anything (Apache-2.0) and MI-GAN by Picsart AI Research (MIT); from a text, Wan 2.1 T2V 1.3B by Wan-AI with the rCM student and the TAEHV decoder (Apache-2.0) | WebGPU or WebAssembly (photo), WebGPU with float16 shaders (text); WebGL2 and WebCodecs (video) |
-| [audio.elffuss.com](https://audio.elffuss.com/en/) | Make music, sound effects and speech from text, with a waveform player, a local history and WAV or OGG downloads | Stable Audio 3 Small Music and SFX by Stability AI (Stability AI Community License); Kokoro 82M by hexgrad (Apache-2.0) | Music and effects: WebGPU with shader-f16. Speech: WebGPU or WebAssembly |
+| [audio.elffuss.com](https://audio.elffuss.com/en/) | Make music, sound effects and speech from text, with a waveform player, a local history and WAV or OGG downloads | Stable Audio 3 Small Music and SFX by Stability AI (Stability AI Community License); MOSS-TTS-Nano by OpenMOSS (Apache-2.0); Kokoro 82M by hexgrad (Apache-2.0) | Music and effects: WebGPU with shader-f16. Speech: WebAssembly (Spanish), WebGPU or WebAssembly (English) |
 | [tools.elffuss.com](https://tools.elffuss.com/en/) | The catalog of every Elffuss tool | none | none |
 
 Every site is in Spanish at its root and in English under `/en/`.
@@ -224,14 +224,16 @@ the files under `sdk/` as shown above.
 | depth | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small) | depth-anything | Apache-2.0 | 50 or 99 MB (WebGPU, fp16 or fp32), 27 MB (WebAssembly, q8) |
 | text-to-music | [Stable Audio 3 Small Music](https://huggingface.co/stabilityai/stable-audio-3-small-music) | Stability AI | Stability AI Community License (text encoder: also Gemma Terms of Use) | 1764 MB (WebGPU, fp16) |
 | text-to-sfx | [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx) | Stability AI | Stability AI Community License (text encoder: also Gemma Terms of Use) | 1764 MB (WebGPU, fp16; 921 MB more when music is already there) |
-| text-to-speech | [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M) | hexgrad | Apache-2.0 | 339 MB (WebGPU, fp32), 106 MB (WebAssembly, q8) |
+| text-to-speech | [MOSS-TTS-Nano](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-Nano) (Spanish, Elffuss's own voice) | OpenMOSS | Apache-2.0 | 717 MB (WebAssembly, fp32) |
+| text-to-speech | [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M) (English, and Kokoro's Spanish voices) | hexgrad | Apache-2.0 | 339 MB (WebGPU, fp32), 106 MB (WebAssembly, q8) |
 | text-to-image | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px) | NVlabs | Apache-2.0 (text encoder: Gemma Terms of Use) | 3.2 GB (WebGPU with float16 shaders: 4-bit text encoder, float16 transformer and decoder) |
 | image-to-video | Depth Anything V2 Small (the same files) and [MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN) | depth-anything, Picsart AI Research | Apache-2.0, MIT | 79 or 129 MB (WebGPU), 57 MB (WebAssembly); 30 MB when the depth model is already in the browser |
 | text-to-video | [Wan 2.1 T2V 1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), the [rCM](https://huggingface.co/worstcoder/rcm-Wan) student and the [TAEHV](https://huggingface.co/lightx2v/Autoencoders) decoder | Wan-AI, worstcoder, lightx2v / madebyollin | Apache-2.0 | 5.2 GB (WebGPU with float16 shaders: 4-bit text encoder, 8-bit transformer) |
 
 The weights are ONNX exports from `onnx-community`, `PaddlePaddle`,
-`andraniksargsyan` (an author of MI-GAN) and Stability AI
-(`stabilityai/stable-audio-3-optimized`) on Hugging Face and, for SANA-Sprint and Wan 2.1, conversions published by UtopiaIA (made with
+`andraniksargsyan` (an author of MI-GAN), Stability AI
+(`stabilityai/stable-audio-3-optimized`) and OpenMOSS (MOSS-TTS-Nano) on Hugging Face
+and, for SANA-Sprint and Wan 2.1, conversions published by UtopiaIA (made with
 `scripts/text-to-image/` and `scripts/wan/`), with the tokenizer and configuration
 read from the original repository. The English phonemiser of Kokoro is misaki's word
 lists and fallback network as packaged in `nekwo/misaki-en-us-g2p-onnx`. Stable Audio 3

@@ -53,10 +53,26 @@ export function parseModel(bytes) {
 }
 
 /**
+ * The normaliser of a model with SentencePiece's `nmt_nfkc` rule, `remove_extra_whitespaces`
+ * and `add_dummy_prefix` (MOSS-TTS-Nano): Unicode NFKC, control characters dropped, every
+ * kind of space and line break as one space, the ends trimmed, and one space in front.
+ * @param {string} text
+ */
+export function nmtNfkc(text) {
+  const s = String(text).normalize('NFKC')
+    .replace(/[\u0000-\u0008\u000e-\u001f\u007f\u200b-\u200d\ufeff]/g, '')
+    .replace(/[\s\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+/g, ' ')
+    .trim();
+  return s ? ' ' + s : '';
+}
+
+/**
  * A tokenizer from a model's pieces.
  * @param {{ piece: string, score: number, type: number }[]} pieces
+ * @param {{ normalize?: (text: string) => string }} [o] `normalize`: the model's normaliser
+ *   (none for T5Gemma; `nmtNfkc` for MOSS-TTS-Nano)
  */
-export function createTokenizer(pieces) {
+export function createTokenizer(pieces, { normalize = null } = {}) {
   const normal = new Map(), user = new Map(), bytes = new Map();
   let unk = 0;
   pieces.forEach((x, id) => {
@@ -72,7 +88,7 @@ export function createTokenizer(pieces) {
 
   /** @param {string} text @returns {number[]} */
   function encode(text) {
-    const s = String(text).replace(/ /g, '▁');
+    const s = (normalize ? normalize(String(text)) : String(text)).replace(/ /g, '▁');
     const syms = [];
     for (let i = 0; i < s.length;) {
       if (firstChars.has(s[i])) {

@@ -7,7 +7,7 @@
 export const DEFAULT_MODELS = Object.freeze({
   "text-to-music": "text-to-music/stable-audio-3-small-music",
   "text-to-sfx": "text-to-sfx/stable-audio-3-small-sfx",
-  "text-to-speech": "text-to-speech/kokoro-82m"
+  "text-to-speech": "text-to-speech/moss-tts-nano"
 });
 
 /**
@@ -44,6 +44,14 @@ export const SIZES = Object.freeze({
       {
         "dtype": "q8",
         "bytes": 106227874
+      }
+    ]
+  },
+  "text-to-speech/moss-tts-nano": {
+    "wasm": [
+      {
+        "dtype": "fp32",
+        "bytes": 717414286
       }
     ]
   }

@@ -121,6 +121,13 @@ function checkSound(t, label, wav, { rate, channels, seconds, band }) {
   return m;
 }
 
+/** The Spanish sentences of the voice's reference listening set: [name, text, shortest s, longest s]. */
+export const MOSS_SENTENCES = [
+  ['A', 'Hola, soy Elffuss. Hoy hace un día estupendo en Zaragoza: vamos a cocinar una paella con cebolla, ajo y azafrán. ¿Te apetece probarla?', 5, 16],
+  ['B', 'Cuando quieras, te cuento un cuento antes de dormir. Había una vez una ciudad pequeña junto al mar, donde las gaviotas cantaban al amanecer.', 6, 16],
+  ['C', 'Gracias por venir. ¿Te hace un zumo de naranja o prefieres un café con azúcar? Cerca de aquí hay una plaza preciosa.', 5, 15],
+];
+
 /** Prompts of the opt-in quality set (ELFFUSS_AI_AUDIO_QUALITY=1): [mode, name, prompt, seconds, steps]. */
 export const QUALITY_SET = [
   ['music', 'lofi', 'Lo-fi hip hop beat with mellow Rhodes chords, soft vinyl crackle, brushed drums and a warm upright bass, 80 BPM', 30, 8],
@@ -190,7 +197,32 @@ export default [
     },
   },
   {
-    name: 'speech in Spanish and English: long text read in chunks, joined without clicks',
+    name: 'speech in Spanish with Elffuss\'s own voice (MOSS-TTS-Nano, WebAssembly): sentences A, B and C, sound and of a plausible length',
+    sites: ['audio'],
+    async run(t, site) {
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/');
+      await setMode(page, 'speech');
+      t.equal(await page.inputValue('[data-input="voice"]'), 'es_elffuss', 'the Spanish page offers Elffuss\'s own voice first');
+      t.ok(await page.isDisabled('[data-input="speed"]'), 'speed is Kokoro\'s: off for this voice');
+      const label = await page.textContent('main button.primary');
+      t.ok(/\(7[01]\d MB\)/.test(label), `first label names MOSS-TTS-Nano's download: ${label}`);
+      for (const [k, text, min, max] of MOSS_SENTENCES) {
+        await page.fill('[data-input="text"]', text);
+        const c = await generate(t, page);
+        save(`browser-mossnano-design-${k}-${t.config}.wav`, c.buf);
+        t.equal(c.last.device, 'wasm', `${k}: backend`);
+        const m = checkSound(t, `speech es ${k}`, c.wav, { rate: 48000, channels: 1, band: [80, 8000] });
+        t.ok(m.seconds > min && m.seconds < max, `speech es ${k}: ${m.seconds} s`);
+      }
+      t.equal(t.hubFull().filter(u => /Kokoro|misaki|stable-audio|moss_audio_tokenizer_encode/.test(u)).length, 0, 'only MOSS-TTS-Nano\'s files were asked for (no encoder: the voice is shipped as codes)');
+      t.noPageErrors();
+      await t.noCsp(page);
+      t.networkClean(site);
+    },
+  },
+  {
+    name: 'speech with Kokoro\'s voices in Spanish and English: long text read in chunks, joined without clicks',
     sites: ['audio'],
     async run(t, site) {
       const ctx = await t.newContext();
@@ -198,6 +230,7 @@ export default [
       await setMode(page, 'speech');
       await page.fill('[data-input="text"]', 'Hola. Esta voz se genera en tu navegador, sin enviar nada a ningún servidor. El modelo se descarga una vez y se guarda aquí; después funciona aunque no tengas conexión. ¿A que suena natural?');
       await page.selectOption('[data-input="voice"]', 'ef_dora');
+      t.ok(!(await page.isDisabled('[data-input="speed"]')), 'speed on for a Kokoro voice');
       const es = await generate(t, page);
       save(`speech-es-dora-${t.config}.wav`, es.buf);
       t.equal(es.last.device, t.config === 'A' ? 'webgpu' : 'wasm', 'backend');

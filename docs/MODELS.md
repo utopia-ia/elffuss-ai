@@ -13,6 +13,7 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | text-to-music | `text-to-music/stable-audio-3-small-music` | [Stable Audio 3 Small Music](https://huggingface.co/stabilityai/stable-audio-3-small-music), by Stability AI | Stability AI Community License (base: Stability AI Community License) | WebGPU fp16 (with shader-f16) · 1764 MB |
 | text-to-sfx | `text-to-sfx/stable-audio-3-small-sfx` | [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx), by Stability AI | Stability AI Community License (base: Stability AI Community License) | WebGPU fp16 (with shader-f16) · 1764 MB |
 | text-to-speech | `text-to-speech/kokoro-82m` | [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M), by hexgrad | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 339 MB<br>WASM q8 · 106 MB |
+| text-to-speech | `text-to-speech/moss-tts-nano` | [MOSS-TTS-Nano](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-Nano), by OpenMOSS | Apache-2.0 (base: Apache-2.0) | WASM fp32 · 717 MB |
 | text-to-image | `text-to-image/sana-sprint-0.6b` | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0) | WebGPU q4f16 (with shader-f16) · 3172 MB |
 | image-to-video | `image-to-video/depth-parallax` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything<br>[MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN), by Picsart AI Research | Apache-2.0 AND MIT (base: Apache-2.0, MIT) | WebGPU fp16 (with shader-f16) · 79 MB<br>WebGPU fp32 · 129 MB<br>WASM q8 · 57 MB |
 | text-to-video | `text-to-video/wan2.1-t2v-1.3b-rcm` | [Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), by Wan-AI<br>[rCM Wan2.1 T2V 1.3B 480p](https://huggingface.co/worstcoder/rcm-Wan), by worstcoder (rCM, NVlabs/Tsinghua)<br>[lighttaew2_1 (TAEHV)](https://huggingface.co/lightx2v/Autoencoders), by lightx2v / madebyollin | Apache-2.0 (base: Apache-2.0, Apache-2.0, Apache-2.0) | WebGPU q8f16 (with shader-f16) · 5236 MB |
@@ -88,6 +89,17 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 |---|---|---|---|
 | WebGPU | fp32 | `main:onnx/model.onnx`, `main:tokenizer.json`, `main:voices/ef_dora.bin`, `main:voices/em_alex.bin`, `main:voices/em_santa.bin`, `main:voices/af_heart.bin`, `main:voices/af_bella.bin`, `main:voices/af_nicole.bin`, `main:voices/am_michael.bin`, `main:voices/am_fenrir.bin`, `main:voices/am_puck.bin`, `g2p:misaki-en_us-g2p.json`, `g2p:misaki-en_us-g2p.onnx` | 339 MB |
 | WASM | q8 | `main:onnx/model_quantized.onnx`, `main:tokenizer.json`, `main:voices/ef_dora.bin`, `main:voices/em_alex.bin`, `main:voices/em_santa.bin`, `main:voices/af_heart.bin`, `main:voices/af_bella.bin`, `main:voices/af_nicole.bin`, `main:voices/am_michael.bin`, `main:voices/am_fenrir.bin`, `main:voices/am_puck.bin`, `g2p:misaki-en_us-g2p.json`, `g2p:misaki-en_us-g2p.onnx` | 106 MB |
+
+## `text-to-speech/moss-tts-nano`
+
+- Base model: [MOSS-TTS-Nano](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-Nano), by OpenMOSS, Apache-2.0.
+- Part `tts`: [OpenMOSS-Team/MOSS-TTS-Nano-100M-ONNX](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-Nano-100M-ONNX/tree/f52645cb467506d8e18e746ddd59482685b74e58) at `f52645cb467506d8e18e746ddd59482685b74e58`, Apache-2.0.
+- Part `codec`: [OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX](https://huggingface.co/OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX/tree/ceff0d0749bfb3fa2d61149794ec6feef0d1e1ae) at `ceff0d0749bfb3fa2d61149794ec6feef0d1e1ae`, Apache-2.0.
+- Note: It speaks Spanish in Elffuss's own voice, made from a description (it is not the voice of any person).
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WASM | fp32 | `tts:browser_poc_manifest.json`, `tts:tts_browser_onnx_meta.json`, `tts:tokenizer.model`, `tts:moss_tts_prefill.onnx`, `tts:moss_tts_decode_step.onnx`, `tts:moss_tts_local_fixed_sampled_frame.onnx`, `tts:moss_tts_global_shared.data`, `tts:moss_tts_local_shared.data`, `codec:codec_browser_onnx_meta.json`, `codec:moss_audio_tokenizer_decode_full.onnx`, `codec:moss_audio_tokenizer_decode_shared.data` | 717 MB |
 
 ## `text-to-image/sana-sprint-0.6b`
 

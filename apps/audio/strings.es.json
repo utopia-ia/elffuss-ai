@@ -60,7 +60,7 @@
   "need.f16": "La tarjeta gráfica de este navegador no tiene números de 16 bits (shader-f16), que necesitan la música y los efectos. La voz sí funciona aquí.",
   "need.memory": "Este dispositivo tiene poca memoria para la música y los efectos (el modelo ocupa unos 1,8 GB). La voz sí funciona aquí.",
   "result.meta.music": "{device} · {seconds} s · 44,1 kHz estéreo · semilla {seed}",
-  "result.meta.speech": "{device} · {seconds} s · 24 kHz · voz {voice}",
+  "result.meta.speech": "{device} · {seconds} s · {rate} kHz · voz {voice}",
   "result.title.music": "Música",
   "result.title.sfx": "Efecto",
   "result.title.speech": "Voz",

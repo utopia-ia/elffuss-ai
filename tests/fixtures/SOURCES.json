@@ -641,6 +641,26 @@
         "how": "Token ids that Wan 2.1's own tokenizer wrapper (wan/modules/tokenizers.py, clean=whitespace) gives with google/umt5-xxl/tokenizer.json of Wan-AI/Wan2.1-T2V-1.3B at 37ec512624d61f7aa208f7ea8140a131f93afc9a, for 23 texts written for the test."
       },
       "purpose": "video-gen: the JavaScript tokenizer must give the same ids for every text."
+    },
+    {
+      "path": "tests/fixtures/audio/moss-spm-ids.json",
+      "sha256": "f79a3dfe5e652d9a769dda8c6c7c5e988fdf905a8fd23a5f76d7dd3cc9a53373",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/audio/moss_fixtures.py",
+        "made": "Strings written for the test; their ids as sentencepiece gives them with tokenizer.model of OpenMOSS-Team/MOSS-TTS-Nano-100M-ONNX at f52645cb467506d8e18e746ddd59482685b74e58 (the official runtime's encode_text)."
+      },
+      "purpose": "audio: the MOSS-TTS-Nano tokenizer (sdk/audio/spm.js with nmtNfkc) against SentencePiece."
+    },
+    {
+      "path": "tests/fixtures/audio/moss-frames.json",
+      "sha256": "e996d666bca8393f33daac6696f24231741369640f60cbd621e64aa715351809",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/audio/moss_fixtures.py",
+        "made": "The prompt template and codes of the MOSS-TTS-Nano voice prompt, the rows of one sentence and the first 24 frames that the official ONNX runtime (onnx_tts_runtime.py of OpenMOSS/MOSS-TTS-Nano, onnxruntime on the CPU) samples at the pinned revisions with the uniform numbers of sdk/audio/rng.js (seed 7)."
+      },
+      "purpose": "audio: the request rows of sdk/audio/moss.js, and in the browser test the frames the page samples, against the official runtime."
     }
   ]
 }

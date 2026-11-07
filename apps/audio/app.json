@@ -4,6 +4,7 @@
   "testPort": 8796,
   "task": "audio",
   "models": [
+    "text-to-speech/moss-tts-nano",
     "text-to-speech/kokoro-82m",
     "text-to-music/stable-audio-3-small-music",
     "text-to-sfx/stable-audio-3-small-sfx"

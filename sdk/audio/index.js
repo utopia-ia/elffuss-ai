@@ -3,8 +3,9 @@
 //
 // Audio from text in the browser: music and sound effects with Stable Audio 3
 // Small (Stability AI, Stability AI Community License; its text encoder T5Gemma
-// is also under the Gemma Terms of Use) on WebGPU, and speech in Spanish and
-// English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The
+// is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with
+// MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebAssembly, in Spanish and English
+// with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The
 // models come from their Hugging Face repositories at pinned revisions, through
 // the Elffuss model store. Each task class runs its model in a module Worker of
 // this module (its URL is relative to this file, so the module can be served
@@ -20,22 +21,52 @@ import { loadRegistry, getModel, defaultModelId, variantFiles } from '../core/re
 import { probeWebGPU, chooseVariant } from '../core/device.js';
 import { DURATION, STEPS, MAX_PROMPT } from './stable-audio.js';
 import { MAX_TEXT } from './speech.impl.js';
-import { VOICES, DEFAULT_VOICE, SPEED } from './kokoro.js';
+import { VOICES as KOKORO_VOICES, SPEED } from './kokoro.js';
+import { MOSS_VOICES } from './moss.js';
 
 export { encodeWav, decodeWav } from './wav.js';
 export { peaks, measure, fadeIn, fadeOut } from './signal.js';
 export { MAX_SEED, randomSeed } from './rng.js';
-export { VOICES, DEFAULT_VOICE, SPEED, DURATION, STEPS, MAX_PROMPT, MAX_TEXT };
+export { SPEED, DURATION, STEPS, MAX_PROMPT, MAX_TEXT };
+
+/** The speech model of each family of voices. */
+export const SPEECH_MODELS = Object.freeze({ moss: 'text-to-speech/moss-tts-nano', kokoro: 'text-to-speech/kokoro-82m' });
+/**
+ * The voices offered, Spanish first: `model` is the family that speaks it (`moss`:
+ * MOSS-TTS-Nano, Elffuss's own voice; `kokoro`: Kokoro 82M).
+ */
+export const VOICES = Object.freeze([
+  ...MOSS_VOICES.map(v => Object.freeze({ id: v.id, name: v.name, lang: v.lang, gender: v.gender, model: 'moss' })),
+  ...KOKORO_VOICES.map(v => Object.freeze({ ...v, model: 'kokoro' })),
+]);
+/** Default voice of each language: Elffuss's own in Spanish, Kokoro's Heart in English. */
+export const DEFAULT_VOICE = Object.freeze({ es: 'es_elffuss', en: 'af_heart' });
+
+/**
+ * The model that reads a run: the voice's family; without a voice, Kokoro for
+ * English, else `model` (the task's `model` option) or MOSS-TTS-Nano.
+ * @param {{ voice?: string, lang?: string }} input
+ * @param {string} [model]
+ */
+export function speechModelFor(input = {}, model) {
+  const v = input.voice != null ? VOICES.find(x => x.id === input.voice) : null;
+  if (v) return SPEECH_MODELS[v.model];
+  if (input.voice != null) return model || SPEECH_MODELS.moss; // its impl names the voices it has
+  if (input.lang === 'en') return SPEECH_MODELS.kokoro;
+  return model || SPEECH_MODELS.moss;
+}
 
 /**
  * @typedef {{ blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number,
  *   model: string, device: 'webgpu'|'wasm', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>} AudioResult
  *   What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and
- *   sound effects, 24 000 Hz mono for speech); `seed` reproduces a music or sound clip; `stats` measures it.
- * @typedef {{ status: string, stage?: 'download'|'load'|'encode'|'step'|'decode'|'phonemes'|'chunk', step?: number, steps?: number,
- *   chunk?: number, chunks?: number, loaded?: number, total?: number }} AudioProgress
+ *   sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces
+ *   a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it.
+ * @typedef {{ status: string, stage?: 'download'|'load'|'encode'|'step'|'decode'|'phonemes'|'text'|'chunk'|'frame', step?: number, steps?: number,
+ *   chunk?: number, chunks?: number, frames?: number, loaded?: number, total?: number }} AudioProgress
  *   Progress events: `download` (loaded/total bytes), `load`, then for music and sound `encode`, `step` (step of steps)
- *   and `decode`; for speech `phonemes` and `chunk` (chunk of chunks); finally status `done`.
+ *   and `decode`; for speech with Kokoro `phonemes` and `chunk` (chunk of chunks); for speech with Elffuss's own
+ *   voice `text`, then per chunk `chunk`, `frame` (every 5 frames of audio, 12.5 a second) and `decode`; finally status `done`.
  * @typedef {{ fits: boolean, reason: string|null, device: 'webgpu'|'wasm'|null, downloadBytes: number, missingBytes: number }} AudioEstimate
  *   What a run would need here, without downloading anything: `reason` is null when it fits, otherwise
  *   `webgpu-unavailable`, `no-shader-f16`, `gpu-limits`, `memory` or `device-unsupported`.
@@ -139,20 +170,80 @@ export class Sfx extends Task {
 }
 
 /**
- * Speech from text in Spanish or English, with Kokoro 82M, on WebGPU or WebAssembly.
+ * Speech from text, in Spanish with Elffuss's own voice (MOSS-TTS-Nano, about 720 MB,
+ * WebAssembly) or in English (and Kokoro's Spanish voices) with Kokoro 82M (WebGPU or
+ * WebAssembly). The voice picks the model; each is loaded the first time a run needs it.
  * Long texts are read sentence by sentence and joined with natural pauses.
  *
- * `run({ text, voice, lang, speed }, { signal })`: `voice` one of `VOICES` (by
- * default `ef_dora` in Spanish, `af_heart` in English), `lang` 'es' or 'en' (by
- * default the voice's), `speed` 0.5 to 2 (1). Resolves to an `AudioResult`
- * (24 000 Hz mono WAV) with the voice, language and chunks read.
- * @extends Task
+ * ```js
+ * import { Speech } from '@elffuss/ai/audio';
+ * const speech = new Speech({ onProgress: p => console.log(p.stage, p.chunk, p.chunks) });
+ * const { blob, seconds } = await speech.run({ text: '¿Te apetece un café?', lang: 'es' });
+ * await speech.dispose();
+ * ```
+ *
+ * `run({ text, voice, lang, speed, seed }, { signal })`: `voice` one of `VOICES` (by
+ * default `es_elffuss` in Spanish, `af_heart` in English), `lang` 'es' or 'en' (by
+ * default the voice's), `speed` 0.5 to 2 (Kokoro's voices; 1), `seed` (Elffuss's
+ * voice: the same seed reads a text the same way; random when left out, and given
+ * back). Resolves to an `AudioResult`: 48 000 Hz mono WAV with MOSS-TTS-Nano,
+ * 24 000 Hz with Kokoro, with the voice, language and chunks read.
  */
-export class Speech extends Task {
+export class Speech {
+  #opts; #tasks = new Map(); #last = null; #disposed = false;
   /** @param {import('../core/task.js').TaskOptions} [options] */
-  constructor(options) { super(spec('text-to-speech', 'speech'), withStages(options)); }
-  /** What a run would need here; see `estimateTask`. */
-  static estimate(opts, device) { return estimateTask('text-to-speech', opts, device); }
+  constructor(options = {}) { this.#opts = withStages(options); }
+
+  #task(modelId) {
+    if (this.#disposed) throw new AiError('disposed', 'this task was disposed');
+    if (!this.#tasks.has(modelId)) {
+      const name = modelId === SPEECH_MODELS.kokoro ? 'speech' : 'speech-moss';
+      this.#tasks.set(modelId, new Task(spec('text-to-speech', name), { ...this.#opts, model: modelId }));
+    }
+    return (this.#last = this.#tasks.get(modelId));
+  }
+
+  /** Backend of the last model used, after load() or run(). */
+  get device() { return this.#last?.device ?? null; }
+  /** Variant dtype of the last model used. */
+  get dtype() { return this.#last?.dtype ?? null; }
+  /** What load() of the last model used returned, or null. */
+  get info() { return this.#last?.info ?? null; }
+
+  /**
+   * Load the model of a language or voice (Spanish by default) without running it.
+   * @param {{ signal?: AbortSignal, lang?: 'es'|'en', voice?: string }} [o]
+   */
+  load({ signal, lang, voice } = {}) {
+    try { return this.#task(speechModelFor({ lang, voice }, this.#opts.model)).load({ signal }); } catch (err) { return Promise.reject(err); }
+  }
+
+  /**
+   * Read a text aloud.
+   * @param {{ text: string, voice?: string, lang?: 'es'|'en', speed?: number, seed?: number }} input
+   * @param {{ signal?: AbortSignal }} [opts]
+   * @returns {Promise<AudioResult>}
+   */
+  run(input, opts) {
+    try { return this.#task(speechModelFor(input || {}, this.#opts.model)).run(input, opts); } catch (err) { return Promise.reject(err); }
+  }
+
+  /** Release every model loaded and their Workers. Idempotent. */
+  async dispose() {
+    this.#disposed = true;
+    const all = [...this.#tasks.values()];
+    this.#tasks.clear();
+    this.#last = null;
+    await Promise.all(all.map(t => t.dispose()));
+  }
+
+  /**
+   * What a run would need here; see `estimateTask`. `opts.lang` or `opts.voice` picks
+   * the model (Spanish by default).
+   */
+  static estimate(opts = {}, device) {
+    return estimateTask('text-to-speech', { ...opts, model: opts.model || speechModelFor(opts) }, device);
+  }
 }
 
 /**

@@ -79,8 +79,31 @@ Returns `number`: how many were rewritten
 
 ## `sdk/audio/index.js`
 
-Audio from text in the browser: music and sound effects with Stable Audio 3 Small (Stability AI, Stability AI Community License; its text encoder T5Gemma is also under the Gemma Terms of Use) on WebGPU, and speech in Spanish and English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The models come from their Hugging Face repositories at pinned revisions, through the Elffuss model store. Each task class runs its model in a module Worker of this module (its URL is relative to this file, so the module can be served from any origin together with the core and the runtimes).
+Audio from text in the browser: music and sound effects with Stable Audio 3 Small (Stability AI, Stability AI Community License; its text encoder T5Gemma is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebAssembly, in Spanish and English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The models come from their Hugging Face repositories at pinned revisions, through the Elffuss model store. Each task class runs its model in a module Worker of this module (its URL is relative to this file, so the module can be served from any origin together with the core and the runtimes).
  The options of run() are plain JSON, so a chat or an agent can pass a tool call straight through: { prompt, seconds, seed } for music and sound effects, { text, voice, lang, speed } for speech. A run gives a WAV Blob and what it is.
+
+### `SPEECH_MODELS`
+
+The speech model of each family of voices.
+
+### `VOICES`
+
+The voices offered, Spanish first: `model` is the family that speaks it (`moss`:
+MOSS-TTS-Nano, Elffuss's own voice; `kokoro`: Kokoro 82M).
+
+### `DEFAULT_VOICE`
+
+Default voice of each language: Elffuss's own in Spanish, Kokoro's Heart in English.
+
+### `speechModelFor(input = {}, model)`
+
+The model that reads a run: the voice's family; without a voice, Kokoro for
+English, else `model` (the task's `model` option) or MOSS-TTS-Nano.
+
+| Parameter | Type | |
+|---|---|---|
+| `input` | `{ voice?: string, lang?: string }` |  |
+| `[model]` | `string` |  |
 
 ### Type `AudioResult`
 
@@ -88,15 +111,15 @@ Audio from text in the browser: music and sound effects with Stable Audio 3 Smal
 { blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number, model: string, device: 'webgpu'|'wasm', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>
 ```
 
-What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and sound effects, 24 000 Hz mono for speech); `seed` reproduces a music or sound clip; `stats` measures it.
+What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it.
 
 ### Type `AudioProgress`
 
 ```ts
-{ status: string, stage?: 'download'|'load'|'encode'|'step'|'decode'|'phonemes'|'chunk', step?: number, steps?: number, chunk?: number, chunks?: number, loaded?: number, total?: number }
+{ status: string, stage?: 'download'|'load'|'encode'|'step'|'decode'|'phonemes'|'text'|'chunk'|'frame', step?: number, steps?: number, chunk?: number, chunks?: number, frames?: number, loaded?: number, total?: number }
 ```
 
-Progress events: `download` (loaded/total bytes), `load`, then for music and sound `encode`, `step` (step of steps) and `decode`; for speech `phonemes` and `chunk` (chunk of chunks); finally status `done`.
+Progress events: `download` (loaded/total bytes), `load`, then for music and sound `encode`, `step` (step of steps) and `decode`; for speech with Kokoro `phonemes` and `chunk` (chunk of chunks); for speech with Elffuss's own voice `text`, then per chunk `chunk`, `frame` (every 5 frames of audio, 12.5 a second) and `decode`; finally status `done`.
 
 ### Type `AudioEstimate`
 
@@ -150,16 +173,33 @@ with shader-f16. Same options and result as `Music`; `seconds` 0.5 to 30 (5).
 
 ### `class Speech`
 
-Speech from text in Spanish or English, with Kokoro 82M, on WebGPU or WebAssembly.
+Speech from text, in Spanish with Elffuss's own voice (MOSS-TTS-Nano, about 720 MB,
+WebAssembly) or in English (and Kokoro's Spanish voices) with Kokoro 82M (WebGPU or
+WebAssembly). The voice picks the model; each is loaded the first time a run needs it.
 Long texts are read sentence by sentence and joined with natural pauses.
 
-`run({ text, voice, lang, speed }, { signal })`: `voice` one of `VOICES` (by
-default `ef_dora` in Spanish, `af_heart` in English), `lang` 'es' or 'en' (by
-default the voice's), `speed` 0.5 to 2 (1). Resolves to an `AudioResult`
-(24 000 Hz mono WAV) with the voice, language and chunks read.
+```js
+import { Speech } from '@elffuss/ai/audio';
+const speech = new Speech({ onProgress: p => console.log(p.stage, p.chunk, p.chunks) });
+const { blob, seconds } = await speech.run({ text: '¿Te apetece un café?', lang: 'es' });
+await speech.dispose();
+```
 
-- `.constructor(options)`
-- `.estimate(opts, device)`: What a run would need here; see `estimateTask`.
+`run({ text, voice, lang, speed, seed }, { signal })`: `voice` one of `VOICES` (by
+default `es_elffuss` in Spanish, `af_heart` in English), `lang` 'es' or 'en' (by
+default the voice's), `speed` 0.5 to 2 (Kokoro's voices; 1), `seed` (Elffuss's
+voice: the same seed reads a text the same way; random when left out, and given
+back). Resolves to an `AudioResult`: 48 000 Hz mono WAV with MOSS-TTS-Nano,
+24 000 Hz with Kokoro, with the voice, language and chunks read.
+
+- `.constructor(options = {})`
+- `.device`: Backend of the last model used, after load() or run().
+- `.dtype`: Variant dtype of the last model used.
+- `.info`: What load() of the last model used returned, or null.
+- `.load({ signal, lang, voice } = {})`: Load the model of a language or voice (Spanish by default) without running it.
+- `.run(input, opts)`: Read a text aloud.
+- `.dispose()`: Release every model loaded and their Workers. Idempotent.
+- `.estimate(opts = {}, device)`: What a run would need here; see `estimateTask`. `opts.lang` or `opts.voice` picks the model (Spanish by default).
 
 ### `music`
 
@@ -231,6 +271,104 @@ The style vector of a voice for `count` phonemes.
 |---|---|---|
 | `voice` | `Float32Array` | 510 × 256 values |
 | `count` | `number` |  |
+
+## `sdk/audio/moss-voice-es.js`
+
+GENERATED by scripts/audio/moss_fixtures.py. Do not edit.
+ The voice prompt of MOSS-TTS-Nano for the voice "es": the codes that MOSS-Audio-Tokenizer-Nano (moss_audio_tokenizer_encode.onnx) gives for its reference recording (sha256 9b565e38f72b8278371df7c52f7923eab7da265289a464e08cc319927a3bc795), 141 frames of 16 codes (12.5 frames a second). The recording is a synthetic voice (see NOTICE), not the voice of a person.
+
+### `CODES`
+
+Frame-major codes: FRAMES × 16.
+
+## `sdk/audio/moss.js`
+
+The pieces of MOSS-TTS-Nano's voice cloning that are not the model: the text as the model takes it, the chunks a long text is read in, the rows of the request (the prompt template, the voice's codes, the text's ids) and the inputs of the sampling graph. They follow the official ONNX runtime of OpenMOSS (onnx_tts_runtime.py and ort_cpu_runtime.py of OpenMOSS/MOSS-TTS-Nano, Apache-2.0), written again from what it does; no code of it is copied. Pure.
+
+### `MOSS_SAMPLE_RATE`
+
+Sample rate of MOSS-Audio-Tokenizer-Nano (its output is stereo; speech is given mono).
+
+### `N_VQ`
+
+Codes per frame.
+
+### `CHUNK_TOKENS`
+
+Text tokens a chunk is read in at most (the official runtime's budget).
+
+### `MAX_FRAMES`
+
+Frames a chunk may take at most (30 s at 12.5 frames a second).
+
+### `MOSS_VOICES`
+
+The voices of MOSS-TTS-Nano: a voice prompt each, shipped as codes.
+
+### `mossVoice(id)`
+
+The voice entry of an id, or null.
+
+### `cleanText(text)`
+
+The text as the official runtime cleans it before the tokenizer (its robust
+pass, the part of it a Spanish or English text meets): control characters
+dropped, lines and spaces made one space, runs of the same mark made one,
+and a full stop at the end when there is no closing mark.
+
+| Parameter | Type | |
+|---|---|---|
+| `text` | `string` |  |
+
+### `chunkText(text, count, max = CHUNK_TOKENS)`
+
+Chunks of a text, each at most `max` tokens where a sentence allows, with the
+pause that follows each: sentences are packed together; a sentence over the
+budget is cut at a comma or a semicolon, else between words.
+
+| Parameter | Type | |
+|---|---|---|
+| `text` | `string` | cleaned |
+| `count` | `(s: string) => number` | tokens of a string |
+| `[max]` | `number` |  |
+
+Returns `{ text: string, pause: number }[]`.
+
+### `cloneRows(manifest, codes, ids)`
+
+The request rows of a voice-cloning chunk, flat (rows × (N_VQ + 1), int32): the
+user prefix and <|audio_start|>, one row per frame of the voice's codes, then
+<|audio_end|>, the instruction, the text's ids, the assistant prefix and
+<|audio_start|>. A text row is its id followed by the audio pad.
+
+| Parameter | Type | |
+|---|---|---|
+| `manifest` | `{ tts_config: object, prompt_templates: object }` | browser_poc_manifest.json |
+| `codes` | `ArrayLike<number>` | frame-major, frames × N_VQ |
+| `ids` | `number[]` | the text's token ids |
+
+Returns `{ data: Int32Array, rows: number }`.
+
+### `frameRow(manifest, frame)`
+
+The row fed back after a frame: the assistant's audio slot and the frame's codes.
+
+### `frameInputs(seen, uniform, codebook)`
+
+The inputs of moss_tts_local_fixed_sampled_frame besides the hidden state: which
+codes each codebook has already given (for its repetition penalty), and the
+uniform numbers of this frame, drawn as the official runtime draws them (one for
+the assistant's token, then one per codebook).
+
+| Parameter | Type | |
+|---|---|---|
+| `seen` | `Uint8Array[]` | per codebook, 1 where the code was given |
+| `uniform` | `() => number` | in [0, 1) |
+| `codebook` | `number` | size of each codebook |
+
+### `toMono(data, channels, samples, length = samples)`
+
+One channel of a [1, channels, samples] audio tensor's data, or their mean.
 
 ## `sdk/audio/numbers.js`
 
@@ -426,6 +564,27 @@ Default model of each task of this module.
 Download size in bytes of every variant of this module's models, by model id and
 backend, in the registry's order of preference.
 
+## `sdk/audio/speech-moss.impl.js`
+
+Speech in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0), from its official ONNX export: the global transformer (prefill, then one decode step per frame with its key/value cache), the local graph that samples a frame of 16 codes with the settings it was exported with, and the codec's decoder. The voice is a voice prompt shipped as codes (moss-voice-*.js), so no audio is encoded here.
+
+### `MAX_TEXT`
+
+Longest text accepted, in characters.
+
+### `normalizeMossSpeech(input)`
+
+Check and complete the options of a run.
+
+| Parameter | Type | |
+|---|---|---|
+| `input` | `{ text?: string, voice?: string, lang?: 'es', seed?: number }` |  |
+
+### `generateFrames(state, rows, uniform, onFrame, test, max = MAX_FRAMES)`
+
+The frames of one chunk: prefill, then a frame and a decode step at a time, until
+the model ends the chunk or `max` frames.
+
 ## `sdk/audio/speech.impl.js`
 
 The text-to-speech task where the model runs: Kokoro 82M on ONNX Runtime Web (WebGPU fp32 or WebAssembly q8). A run turns the text into phonemes (Spanish by the rules of g2p-es.js; English with misaki's word lists and, for a word they lack, misaki's small network, here on WebAssembly), reads it in chunks of whole sentences and joins them with the pause their punctuation asks for and a few milliseconds of fade at each edge, so no seam clicks. 24 kHz mono.
@@ -450,13 +609,24 @@ The SentencePiece tokenizer of T5Gemma (the text encoder of Stable Audio 3), rea
 
 Read the pieces of a SentencePiece ModelProto (field 1: piece, score, type).
 
-### `createTokenizer(pieces)`
+### `nmtNfkc(text)`
+
+The normaliser of a model with SentencePiece's `nmt_nfkc` rule, `remove_extra_whitespaces`
+and `add_dummy_prefix` (MOSS-TTS-Nano): Unicode NFKC, control characters dropped, every
+kind of space and line break as one space, the ends trimmed, and one space in front.
+
+| Parameter | Type | |
+|---|---|---|
+| `text` | `string` |  |
+
+### `createTokenizer(pieces, { normalize = null } = {})`
 
 A tokenizer from a model's pieces.
 
 | Parameter | Type | |
 |---|---|---|
 | `pieces` | `{ piece: string, score: number, type: number }[]` |  |
+| `[o]` | `{ normalize?: (text: string) => string }` | `normalize`: the model's normaliser (none for T5Gemma; `nmtNfkc` for MOSS-TTS-Nano) |
 
 ### `encodeFixed(tok, text, length)`
 

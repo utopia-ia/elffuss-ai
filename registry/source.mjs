@@ -30,7 +30,7 @@ export default {
     ocr: { default: 'ocr/pp-ocrv6-small' },
     'text-to-music': { default: 'text-to-music/stable-audio-3-small-music', module: 'audio' },
     'text-to-sfx': { default: 'text-to-sfx/stable-audio-3-small-sfx', module: 'audio' },
-    'text-to-speech': { default: 'text-to-speech/kokoro-82m', module: 'audio' },
+    'text-to-speech': { default: 'text-to-speech/moss-tts-nano', module: 'audio' },
     'text-to-image': { default: 'text-to-image/sana-sprint-0.6b' },
     'image-to-video': { default: 'image-to-video/depth-parallax', module: 'video' },
     'text-to-video': { default: 'text-to-video/wan2.1-t2v-1.3b-rcm', module: 'video-gen' },
@@ -203,6 +203,42 @@ export default {
         ],
       },
       notes: { es: null, en: null },
+      flag: null,
+      redistributes: false,
+    },
+    // MOSS-TTS-Nano (OpenMOSS) for Spanish, from its official ONNX export (the global
+    // transformer's prefill and decode step, the local graph that samples a frame with
+    // the settings it was exported with, two shared weight files) and the decoder of its
+    // codec, MOSS-Audio-Tokenizer-Nano. The voice is a voice prompt shipped as codes in
+    // sdk/audio/moss-voice-es.js, so the codec's encoder is never downloaded. fp32, as
+    // published; WebAssembly, as the official browser runtime.
+    'text-to-speech/moss-tts-nano': {
+      task: 'text-to-speech',
+      name: { es: 'MOSS-TTS-Nano', en: 'MOSS-TTS-Nano' },
+      base: { name: 'MOSS-TTS-Nano', author: 'OpenMOSS', source: { hf: 'OpenMOSS-Team/MOSS-TTS-Nano' } },
+      runtime: 'onnxruntime-web',
+      pipeline: null,
+      parts: {
+        tts: { repo: 'OpenMOSS-Team/MOSS-TTS-Nano-100M-ONNX', revision: 'f52645cb467506d8e18e746ddd59482685b74e58', only: 'used' },
+        codec: { repo: 'OpenMOSS-Team/MOSS-Audio-Tokenizer-Nano-ONNX', revision: 'ceff0d0749bfb3fa2d61149794ec6feef0d1e1ae', only: 'used' },
+      },
+      devices: {
+        wasm: [
+          {
+            dtype: 'fp32',
+            files: [
+              'tts:browser_poc_manifest.json', 'tts:tts_browser_onnx_meta.json', 'tts:tokenizer.model',
+              'tts:moss_tts_prefill.onnx', 'tts:moss_tts_decode_step.onnx', 'tts:moss_tts_local_fixed_sampled_frame.onnx',
+              'tts:moss_tts_global_shared.data', 'tts:moss_tts_local_shared.data',
+              'codec:codec_browser_onnx_meta.json', 'codec:moss_audio_tokenizer_decode_full.onnx', 'codec:moss_audio_tokenizer_decode_shared.data',
+            ],
+          },
+        ],
+      },
+      notes: {
+        es: 'Habla en español con una voz propia de Elffuss, hecha a partir de una descripción (no es la voz de ninguna persona).',
+        en: 'It speaks Spanish in Elffuss\'s own voice, made from a description (it is not the voice of any person).',
+      },
       flag: null,
       redistributes: false,
     },

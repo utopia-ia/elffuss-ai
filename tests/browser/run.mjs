@@ -89,7 +89,10 @@ async function main(argv) {
   const fs = statfsSync(cache);
   if (fs.bavail * fs.bsize < MIN_FREE) throw new Error('less than 5 GB free where ELFFUSS_AI_CACHE lives: free some space first');
   const registry = JSON.parse(readFileSync(join(ROOT, 'registry', 'tasks.json'), 'utf8'));
-  if (!cacheHas(cache, registryUrls(registry))) throw new Error('the weight cache is incomplete: run scripts/fetch-weights.mjs');
+  // The weights of the sites under test (all of them without --sites) must be in the cache.
+  const tested = opts.sites ? readSites(ROOT).filter(s => opts.sites.includes(s.site)).flatMap(s => s.models || []) : null;
+  const needed = tested ? registryUrls({ ...registry, models: Object.fromEntries(tested.map(id => [id, registry.models[id]])) }) : registryUrls(registry);
+  if (!cacheHas(cache, needed)) throw new Error('the weight cache is incomplete: run scripts/fetch-weights.mjs');
   const broker = brokerPath(cache);
   if (!existsSync(broker)) throw new Error('no model store page in the cache: run scripts/make-broker-fixture.mjs');
   const bp = checkBroker(readFileSync(broker));

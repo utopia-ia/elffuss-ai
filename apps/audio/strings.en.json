@@ -60,7 +60,7 @@
   "need.f16": "The graphics card of this browser lacks 16-bit numbers (shader-f16), which music and effects need. The voice works here.",
   "need.memory": "This device has little memory for music and effects (the model takes about 1.8 GB). The voice works here.",
   "result.meta.music": "{device} · {seconds} s · 44.1 kHz stereo · seed {seed}",
-  "result.meta.speech": "{device} · {seconds} s · 24 kHz · voice {voice}",
+  "result.meta.speech": "{device} · {seconds} s · {rate} kHz · voice {voice}",
   "result.title.music": "Music",
   "result.title.sfx": "Sound effect",
   "result.title.speech": "Voice",

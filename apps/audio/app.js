@@ -7,7 +7,7 @@
 // download; the result plays in a waveform player and downloads as WAV (and OGG
 // where the browser encodes Opus); the clips stay in this site's own history.
 import { createShell } from './shared/shell.js';
-import { Music, Sfx, Speech, VOICES, DEFAULT_VOICE, SPEED, DURATION, STEPS, MAX_SEED, decodeWav } from './sdk/audio/index.js';
+import { Music, Sfx, Speech, VOICES, DEFAULT_VOICE, SPEED, DURATION, STEPS, MAX_SEED, decodeWav, speechModelFor } from './sdk/audio/index.js';
 import { createPlayer } from './player.js';
 import { createHistory, LIMIT } from './history.js';
 import { canEncodeOgg, encodeOgg } from './ogg.js';
@@ -26,6 +26,8 @@ const MODES = {
   sfx: { model: modelOf('text-to-sfx'), Task: Sfx, task: 'text-to-sfx' },
   speech: { model: modelOf('text-to-speech'), Task: Speech, task: 'text-to-speech' },
 };
+// The speech mode's model is the one of the chosen voice (Elffuss's own voice, or Kokoro's).
+const speechModel = () => speechModelFor({ voice: els.voice.value }, modelOf('text-to-speech'));
 const IDEAS = {
   music: {
     lofi: 'Lo-fi hip hop beat with mellow Rhodes chords, soft vinyl crackle, brushed drums and a warm upright bass, 80 BPM',
@@ -92,6 +94,14 @@ const outputs = () => {
   els.textCount.textContent = t('text.count', { n: els.text.value.length });
 };
 for (const i of [els.seconds, els.steps, els.speed]) i.addEventListener('input', outputs);
+// Speed is Kokoro's; Elffuss's own voice reads at its pace. A voice of the other model
+// makes that model the active one (its download, its files in the storage panel).
+const voiceChanged = () => {
+  const kokoro = VOICES.find(v => v.id === els.voice.value)?.model === 'kokoro';
+  els.speed.disabled = !kokoro;
+  if (mode === 'speech' && !shell.busy && speechModel() !== shell.modelId) setModeNow('speech');
+};
+els.voice.addEventListener('change', voiceChanged);
 els.seconds.addEventListener('input', () => { if (mode !== 'speech') lengths[mode] = Number(els.seconds.value); });
 for (const i of [els.prompt, els.text]) i.addEventListener('input', () => { outputs(); readiness(); });
 $('[data-role="composer"]').addEventListener('submit', e => e.preventDefault());
@@ -131,7 +141,7 @@ async function setMode(next) {
   shell.els.primary.dataset.labelRun = labels.run;
   shell.els.primary.dataset.labelDownload = labels.download;
   // The variant is chosen at once; the store's answer (the download size) comes later.
-  const asked = shell.useModel(MODES[next].model, labels);
+  const asked = shell.useModel(next === 'speech' ? speechModel() : MODES[next].model, labels);
   const say = () => { const why = blockedText(); if (why) shell.setStatus(why); readiness(); };
   say();
   await asked.then(say, () => {});
@@ -167,7 +177,7 @@ async function showClip(clip, { fresh = false } = {}) {
   const player = createPlayer({ channels, sampleRate, t, name });
   shown = { player };
   const meta = clip.mode === 'speech'
-    ? t('result.meta.speech', { device: shell.deviceLabel(clip.device), seconds: num(clip.seconds.toFixed(1)), voice: VOICES.find(v => v.id === clip.voice)?.name || clip.voice })
+    ? t('result.meta.speech', { device: shell.deviceLabel(clip.device), seconds: num(clip.seconds.toFixed(1)), rate: num(clip.sampleRate / 1000), voice: VOICES.find(v => v.id === clip.voice)?.name || clip.voice })
     : t('result.meta.music', { device: shell.deviceLabel(clip.device), seconds: num(clip.seconds.toFixed(1)), seed: clip.seed });
   const base = slug(clip.mode === 'speech' ? clip.text || '' : clip.prompt || '');
   const actions = el('p', { class: 'actions' },
@@ -220,7 +230,7 @@ $('[data-action="clear-history"]').addEventListener('click', async e => {
 
 // ── the primary action ──────────────────────────────────────────────────────
 function inputOf(m) {
-  if (m === 'speech') return { text: els.text.value, voice: els.voice.value, speed: Number(els.speed.value) };
+  if (m === 'speech') return { text: els.text.value, voice: els.voice.value, ...(els.speed.disabled ? {} : { speed: Number(els.speed.value) }) };
   const seed = els.seed.value.trim() === '' ? undefined : Number(els.seed.value);
   return { prompt: els.prompt.value, seconds: Number(els.seconds.value), seed, steps: Number(els.steps.value) };
 }
@@ -256,6 +266,7 @@ shell.onPrimary(async ({ signal }) => {
   }
 }, { after: () => readiness() });
 
+voiceChanged();
 // Music first where it can run here; otherwise the voice, which runs everywhere.
 shell.useModel(MODES.music.model).catch(() => {});
 setModeNow(shell.choiceError ? 'speech' : 'music');
