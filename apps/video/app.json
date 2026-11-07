@@ -4,7 +4,11 @@
   "testPort": 8798,
   "task": "image-to-video",
   "models": [
-    "image-to-video/depth-parallax"
+    "image-to-video/depth-parallax",
+    "text-to-video/wan2.1-t2v-1.3b-rcm"
+  ],
+  "modules": [
+    "video-gen"
   ],
   "camera": false,
   "pdfjs": false,

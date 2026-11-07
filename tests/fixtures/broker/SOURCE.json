@@ -3,6 +3,6 @@
   "file": "server/broker/index.html of the broker repository",
   "cachePath": "$ELFFUSS_AI_CACHE/broker/index.html",
   "baseSha256": "4dc44b50ffac9e11a1b2279a73d8754b50efbdb098469b7417e9f12c2ca381a0",
-  "sha256": "08b571086e06bf74e45634922eae6bd8526e0dc7b6e564dbf40726493083551e",
+  "sha256": "424c169045915b8dab8cf17eef974f2e83f5430e49cb43f3a501cd618e9411dc",
   "make": "node scripts/make-broker-fixture.mjs --base <server/broker/index.html as served today, version 3> --patch <the broker patch for the commit being tested, without the hosts and files of sites not in it>"
 }

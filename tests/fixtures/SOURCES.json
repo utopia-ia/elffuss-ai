@@ -601,6 +601,26 @@
       "dtype": "q4f16",
       "checked": "The same reduction of the diffusers reference (SanaSprintPipeline, float32 weights on the CPU, the same prompt and seed) gives 25.3 dB against it: same composition, subject and light; the 4-bit text model moves small details. Another prompt gives 10.6 dB.",
       "purpose": "image: the reference picture. The page's picture, reduced the same way, must reach a PSNR of 30 dB against it."
+    },
+    {
+      "path": "tests/fixtures/video-gen/reference.json",
+      "sha256": "a5242db1b79bc04b050c4cbe5ca9191c19f41eb7250e9c44f926013592f4c8ab",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/wan/fixtures.py",
+        "how": "Values of the shared noise generator (seed 11 stream 0, seed 4294967295 stream 3), the bucket rows of the official Wan 2.1 T5RelativeEmbedding (wan/modules/t5.py) for 300 tokens, and the flow times of TurboDiffusion's Wan 2.1 inference script for 4 steps."
+      },
+      "purpose": "video-gen: the browser side must draw the same noise, the same T5 position buckets and the same sampler times as the reference."
+    },
+    {
+      "path": "tests/fixtures/video-gen/tokens.json",
+      "sha256": "50ca1dc3718ed423f57815f91c128c8e8aca4e761fb6cb2d2369451ef439b8f1",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/wan/fixtures.py",
+        "how": "Token ids that Wan 2.1's own tokenizer wrapper (wan/modules/tokenizers.py, clean=whitespace) gives with google/umt5-xxl/tokenizer.json of Wan-AI/Wan2.1-T2V-1.3B at 37ec512624d61f7aa208f7ea8140a131f93afc9a, for 23 texts written for the test."
+      },
+      "purpose": "video-gen: the JavaScript tokenizer must give the same ids for every text."
     }
   ]
 }

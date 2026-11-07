@@ -25,6 +25,7 @@ export default {
     ocr: { default: 'ocr/pp-ocrv6-small' },
     'text-to-image': { default: 'text-to-image/sana-sprint-0.6b' },
     'image-to-video': { default: 'image-to-video/depth-parallax', module: 'video' },
+    'text-to-video': { default: 'text-to-video/wan2.1-t2v-1.3b-rcm', module: 'video-gen' },
   },
   models: {
     'remove-bg/ben2': {
@@ -122,7 +123,7 @@ export default {
       // `main`, the original repository: the tokenizer and the configuration files.
       // `onnx`, the conversion of its weights for the browser (UtopiaIA): no ONNX
       // export of this model or of a 4-bit Gemma 2 encoder that gives its hidden
-      // states exists on the Hub. Prepared, not pushed yet: see deploy/DEPLOY.md.
+      // states exists on the Hub. Published by UtopiaIA at the pinned commit.
       parts: {
         main: { repo: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers', revision: 'aa76e7f4f4928f378716b6716a2130fba3caf5b1' },
         onnx: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '762399d3a10e6ec06afeffbdf7dd425c83004fb3' },
@@ -185,6 +186,48 @@ export default {
       },
       flag: null,
       redistributes: false,
+    },
+    // A video from a text: Wan 2.1 T2V 1.3B with the few-step rCM student and the
+    // light TAEHV decoder, converted by UtopiaIA for the browser (scripts/wan/): the
+    // text encoder (UMT5-XXL) in 4 bits and in four shards, the transformer in 8
+    // bits in three, and the decoder. No such conversion exists on the Hub. The
+    // tokenizer is read from the original repository. WebGPU with float16 shaders.
+    'text-to-video/wan2.1-t2v-1.3b-rcm': {
+      task: 'text-to-video',
+      name: { es: 'Wan 2.1 T2V 1.3B (rCM, 4 pasos)', en: 'Wan 2.1 T2V 1.3B (rCM, 4 steps)' },
+      base: [
+        { name: 'Wan2.1-T2V-1.3B', author: 'Wan-AI', source: { hf: 'Wan-AI/Wan2.1-T2V-1.3B' }, part: 'tok' },
+        { name: 'rCM Wan2.1 T2V 1.3B 480p', author: 'worstcoder (rCM, NVlabs/Tsinghua)', source: { hf: 'worstcoder/rcm-Wan' }, part: 'web' },
+        { name: 'lighttaew2_1 (TAEHV)', author: 'lightx2v / madebyollin', source: { hf: 'lightx2v/Autoencoders' }, part: 'web' },
+      ],
+      runtime: 'onnxruntime-web',
+      pipeline: null,
+      sampler: 'rcm',
+      parts: {
+        tok: { repo: 'Wan-AI/Wan2.1-T2V-1.3B', revision: '37ec512624d61f7aa208f7ea8140a131f93afc9a' },
+        web: { repo: 'UtopiaIA/Wan2.1-T2V-1.3B-web', revision: '3dbd66ddf838b03a751576500ed6b5e72c53a972' },
+      },
+      devices: {
+        webgpu: [
+          {
+            when: 'shader-f16',
+            dtype: 'q8f16',
+            files: [
+              'tok:google/umt5-xxl/tokenizer.json',
+              'web:dit/ctx.onnx', 'web:dit/part0.onnx', 'web:dit/part1.onnx', 'web:dit/part2.onnx',
+              'web:t5/embed_q4.bin',
+              'web:t5/encoder_0.onnx', 'web:t5/encoder_1.onnx', 'web:t5/encoder_2.onnx', 'web:t5/encoder_3.onnx',
+              'web:vae/taew2_1_light.onnx',
+            ],
+          },
+        ],
+      },
+      notes: {
+        es: 'El codificador de texto va en 4 bits y el transformador en 8 bits: el vídeo de una semilla no es el mismo que el del modelo original, pero sigue la descripción igual de bien.',
+        en: 'The text encoder runs in 4 bits and the transformer in 8 bits: the video of a seed is not the one of the original model, but it follows the prompt as well.',
+      },
+      flag: null,
+      redistributes: true,
     },
   },
 };

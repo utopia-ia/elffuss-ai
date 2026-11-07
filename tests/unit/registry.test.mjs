@@ -19,7 +19,7 @@ test('stable serialisation: the committed file is what the generator writes', ()
 });
 
 test('each task has a default model of that task', () => {
-  assert.deepEqual(Object.keys(reg.tasks).sort(), ['depth', 'detect', 'image-to-video', 'ocr', 'remove-bg', 'text-to-image']);
+  assert.deepEqual(Object.keys(reg.tasks).sort(), ['depth', 'detect', 'image-to-video', 'ocr', 'remove-bg', 'text-to-image', 'text-to-video']);
   for (const task of Object.keys(reg.tasks)) {
     const id = defaultModelId(reg, task);
     assert.equal(getModel(reg, id).task, task);
@@ -64,12 +64,15 @@ test('licences are allowed, nothing is on the deny list, nothing is redistribute
       assert.ok(!DENY_REPOS.some(re => re.test(p.repo)), p.repo);
       assert.ok(!DENY_LICENSES.some(re => re.test(p.license)), p.license);
     }
-    // One model is a conversion published for these sites (redistributed) whose text
-    // encoder is Gemma 2, under the Gemma Terms of Use: it says so with its flag.
-    if (id === 'text-to-image/sana-sprint-0.6b') {
+    // Two models are conversions published for these sites (redistributed), each in
+    // a part that carries its licence and notice. SANA-Sprint's text encoder is
+    // Gemma 2, under the Gemma Terms of Use: it says so with its flag.
+    const converted = { 'text-to-image/sana-sprint-0.6b': ['onnx', 'gemma-terms'], 'text-to-video/wan2.1-t2v-1.3b-rcm': ['web', null] }[id];
+    if (converted) {
       assert.equal(m.redistributes, true, id);
-      assert.equal(m.flag, 'gemma-terms', id);
-      assert.ok(Object.keys(m.parts.onnx.files).includes('NOTICE') && Object.keys(m.parts.onnx.files).includes('LICENSE'), 'a redistributed conversion carries its licence and notice');
+      assert.equal(m.flag, converted[1], id);
+      assert.equal(m.parts[converted[0]].author, 'UtopiaIA', id);
+      assert.ok(Object.keys(m.parts[converted[0]].files).includes('NOTICE') && Object.keys(m.parts[converted[0]].files).includes('LICENSE'), 'a redistributed conversion carries its licence and notice');
     } else {
       assert.equal(m.redistributes, false, id);
       assert.equal(m.flag, null, id);
@@ -118,8 +121,8 @@ test('sizes.js of each module is generated from tasks.json', () => {
   assert.equal(taskModule(reg, 'depth'), 'depth', 'a task without a module lives under its own name');
 });
 
-test('the registry pins eight repos', () => {
-  assert.equal(registryRepos(reg).length, 8);
+test('the registry pins ten repos', () => {
+  assert.equal(registryRepos(reg).length, 10);
 });
 
 test('a model that joins several works credits each, and each names a part it has', () => {

@@ -5,6 +5,17 @@
     <label><input type="radio" name="mode" value="image" data-input="mode" checked> {{t:mode.image}}</label>
     <label><input type="radio" name="mode" value="text" data-input="mode"> {{t:mode.text}}</label>
   </fieldset>
+  <fieldset class="settings" data-role="text-settings" hidden>
+    <legend>{{t:text.title}}</legend>
+    <label class="wide">{{t:text.prompt}}
+      <textarea rows="3" maxlength="2000" data-input="prompt" placeholder="{{t:text.placeholder}}"></textarea>
+    </label>
+    <label>{{t:text.size}} <select data-input="size"></select></label>
+    <label>{{t:text.seconds}} <select data-input="gen-seconds"></select></label>
+    <label>{{t:text.steps}} <select data-input="steps"></select></label>
+    <label>{{t:text.seed}} <input type="number" min="0" max="4294967295" step="1" inputmode="numeric" data-input="seed"></label>
+    <p class="muted" data-role="text-gate"></p>
+  </fieldset>
   <label class="drop">
     <span>{{t:drop}}</span>
     <input class="visually-hidden" type="file" accept="{{v:accept}}" data-input="files">
@@ -19,7 +30,7 @@
     <button class="ghost" type="button" data-action="play" aria-pressed="true">{{t:live.pause}}</button>
     <label class="grow">{{t:live.time}} <input type="range" min="0" max="1000" step="1" value="0" data-input="time"></label>
   </p>
-  <fieldset class="settings" data-role="settings">
+  <fieldset class="settings" data-role="settings" data-mode="image">
     <legend>{{t:settings.title}}</legend>
     <label>{{t:settings.preset}}
       <select data-input="preset">
@@ -55,6 +66,7 @@
     <p class="muted" data-role="sound-name"></p>
   </fieldset>
   <p data-role="model">{{html:modelLine}}</p>
+  <p data-role="model-text" hidden>{{html:modelLine2}}</p>
   <p class="actions">
     <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
     <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>

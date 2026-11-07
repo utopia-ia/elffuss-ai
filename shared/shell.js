@@ -87,8 +87,8 @@ export async function createShell({ config: cfg = config } = {}) {
   };
 
   const registry = await loadRegistry();
-  const modelId = cfg.model;
-  const model = modelId ? getModel(registry, modelId) : null;
+  let modelId = cfg.model;
+  let model = modelId ? getModel(registry, modelId) : null;
   const store = createStoreClient({ url: cfg.storeUrl });
   const probe = await probeWebGPU();
   let choice = null;
@@ -96,7 +96,7 @@ export async function createShell({ config: cfg = config } = {}) {
   if (model) {
     try { choice = chooseVariant(model, requested, probe); } catch (err) { choiceError = toAiError(err); }
   }
-  const files = choice ? variantFiles(model, choice.variant) : [];
+  let files = choice ? variantFiles(model, choice.variant) : [];
   let primaryLabels = null; // { run, download }
   let busy = null;
   let storageKnown = false; // the store answered the last time it was asked
@@ -120,6 +120,31 @@ export async function createShell({ config: cfg = config } = {}) {
     get choice() { return choice; },
     /** Files of that variant, resolved. */
     get files() { return files; },
+
+    /**
+     * Switch the page to another of its models (config.models: a page with modes).
+     * The variant, the files, the primary button's label and the storage summary
+     * follow it; `sizeEl` is the element that shows its download size. Returns the
+     * error when no variant of it runs in this browser (shown, as at start), else null.
+     * @param {string} id
+     * @param {{ sizeEl?: Element|null }} [o]
+     */
+    useModel(id, { sizeEl } = {}) {
+      if (!(cfg.models || [cfg.model]).includes(id)) throw new AiError('not-in-registry', `${id} is not a model of this site`);
+      modelId = id;
+      model = getModel(registry, id);
+      shell.modelId = modelId;
+      shell.model = model;
+      choice = null; choiceError = null;
+      try { choice = chooseVariant(model, requested, probe); } catch (err) { choiceError = toAiError(err); }
+      files = choice ? variantFiles(model, choice.variant) : [];
+      if (sizeEl !== undefined) els.modelSize = sizeEl;
+      if (primaryLabels && els.primary && files.length) els.primary.textContent = fill(primaryLabels.download, { size: formatSize(files.reduce((x, f) => x + f.size, 0), lang) });
+      if (choiceError) shell.showError(choiceError);
+      else if (!busy) setStatus('');
+      shell.refreshStorage().catch(() => {});
+      return choiceError;
+    },
 
     /** Message of an error, by its code. */
     errorText(err) {

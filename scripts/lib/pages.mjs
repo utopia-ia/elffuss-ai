@@ -126,20 +126,23 @@ export function basesText(model, t, itemKey = 'model.item') {
   return joinList(modelBases(model).map(b => fill(t[itemKey], { model: b.name, author: b.author, license: b.license })), t);
 }
 
-/** The model line of an app page, with its size in a span the shell refines. */
-export function modelLine(model, t, lang) {
+/**
+ * The model line of an app page, with its size in a span the shell refines
+ * (`sizeRole`: its data-role; a site with a second model names that one's apart).
+ */
+export function modelLine(model, t, lang, sizeRole = 'model-size') {
   const MARK = '\u0001SIZE\u0001';
   const many = modelBases(model).length > 1;
   const line = esc(many
     ? fill(t['model.lineMany'], { models: basesText(model, t), size: MARK })
     : fill(t['model.line'], { model: model.base.name, author: model.base.author, license: model.base.license, size: MARK }));
-  return line.replace(esc(MARK), `<span data-role="model-size">${esc(sizeText(model, t, lang))}</span>`) + ' ' + esc(t['privacy.download']);
+  return line.replace(esc(MARK), `<span data-role="${esc(sizeRole)}">${esc(sizeText(model, t, lang))}</span>`) + ' ' + esc(t['privacy.download']);
 }
 
-/** The read-only storage panel: every file of every variant, with its size. */
-export function storagePanel(model, t, lang) {
+/** The read-only storage panel: every file of every variant of the site's models (one or a list), with its size. */
+export function storagePanel(models, t, lang) {
   const seen = new Map();
-  for (const v of Object.values(model.devices).flat()) {
+  for (const model of [models].flat()) for (const v of Object.values(model.devices).flat()) {
     for (const ref of v.files) {
       const i = ref.indexOf(':');
       const part = model.parts[ref.slice(0, i)], path = ref.slice(i + 1);
@@ -158,9 +161,18 @@ ${items.join('\n')}
   </details>`;
 }
 
-/** The footer of an app page. */
-export function appFooter({ model, runtimes, t, lang, licUrl, catalogUrl }) {
+/** The footer of an app page: each of its models (`model`, or `models` when it has several) credited. */
+export function appFooter({ model, models = [model], runtimes, t, lang, licUrl, catalogUrl }) {
   const lines = [`  <p>${esc(t['footer.local'])}</p>`];
+  for (const model of models) lines.push(...modelCredits(model, t));
+  lines.push(`  <p>${esc(fill(t['footer.runtimes'], { runtimes: runtimeList(runtimes, lang) }))}</p>`);
+  lines.push(`  <p><a href="${esc(licUrl)}">${esc(t['footer.licenses'])}</a> · <a href="${esc(catalogUrl)}">${esc(t['footer.catalog'])}</a></p>`);
+  return lines.join('\n');
+}
+
+/** The footer lines that credit one model: its base models, then who converted its weights. */
+function modelCredits(model, t) {
+  const lines = [];
   const bases = modelBases(model);
   if (bases.length > 1) lines.push(`  <p>${esc(fill(t['footer.models'], { models: basesText(model, t, 'footer.modelItem') }))}</p>`);
   else lines.push(`  <p>${esc(fill(t['footer.model'], { model: model.base.name, author: model.base.author, license: model.base.license }))}</p>`);
@@ -171,9 +183,7 @@ export function appFooter({ model, runtimes, t, lang, licUrl, catalogUrl }) {
     const [author, license] = a.split('|');
     if (!bases.some(b => b.author === author)) lines.push(`  <p>${esc(fill(t['footer.conversion'], { author, license }))}</p>`);
   }
-  lines.push(`  <p>${esc(fill(t['footer.runtimes'], { runtimes: runtimeList(runtimes, lang) }))}</p>`);
-  lines.push(`  <p><a href="${esc(licUrl)}">${esc(t['footer.licenses'])}</a> · <a href="${esc(catalogUrl)}">${esc(t['footer.catalog'])}</a></p>`);
-  return lines.join('\n');
+  return lines;
 }
 
 /** Cards of the catalog: the tool sites, then the Elffuss apps. */
@@ -267,9 +277,11 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
       main = render(templates.main, { t, v, html: { toolCards: catalogCards({ sites, registry, t, lang, channel }), appCards: appCards({ apps, lang }) } });
       footer = `  <p><a href="${esc(lang === 'es' ? paths.licUrlEs : paths.licUrlEn)}">${esc(t['footer.licenses'])}</a> · <a href="https://elffuss.com/">elffuss.com</a></p>`;
     } else {
-      const model = models[0];
-      main = render(templates.main, { t, v, html: { modelLine: modelLine(model, t, lang), storage: storagePanel(model, t, lang) } });
-      footer = appFooter({ model, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
+      // The first model is the site's own; a second one (a mode of the page) gets
+      // its own line, `modelLine2`, with its size in `model-size-2`.
+      const lines = Object.fromEntries(models.map((m, i) => [i ? `modelLine${i + 1}` : 'modelLine', modelLine(m, t, lang, i ? `model-size-${i + 1}` : 'model-size')]));
+      main = render(templates.main, { t, v, html: { ...lines, storage: storagePanel(models, t, lang) } });
+      footer = appFooter({ models, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
     }
     const entry = installEntry(t, t.title);
     out.set(lang === 'es' ? paths.es : paths.en, render(templates.page, { t, v, html: { cspMeta, appHead: appHead(lang), script, main, footer, installEntry: entry } }));
@@ -354,5 +366,7 @@ export function configSource({ site, registry, channel, buildId, storeUrl, sites
   // Only where a site ships more than its own task's module (the integrations it offers).
   const modules = siteModules(site, registry);
   if (modules.length > 1) cfg.modules = modules;
+  // Only where a site has more than one model (a page with modes): all of them, its own first.
+  if ((site.models || []).length > 1) cfg.models = [...site.models];
   return `// GENERATED by scripts/build.mjs. Do not edit.\nexport default Object.freeze(${JSON.stringify(cfg, null, 2)});\n`;
 }

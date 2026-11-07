@@ -1,5 +1,6 @@
 /dist/
 /test-results/
+# Local scratch: Python venvs, exports and reference runs (never committed).
 /tmp/
 node_modules/
 *.log
@@ -9,3 +10,4 @@ node_modules/
 # node scripts/vendor.mjs --fetch downloads them and checks every byte.
 /vendor/*
 !/vendor/manifest.json
+__pycache__/

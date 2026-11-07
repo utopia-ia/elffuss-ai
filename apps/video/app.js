@@ -10,7 +10,7 @@
 // its video. Changing a setting changes the live preview at once; the button
 // makes the video again with it.
 
-import { createShell, AiError } from './shared/shell.js';
+import { createShell, AiError, formatSize } from './shared/shell.js';
 import { Video, PRESETS, ASPECTS, LOOPS, planCamera, cameraAt, createRenderer, pageQuality, decodeSoundtrack } from './sdk/video/index.js';
 import { sniffImageType, DECODABLE, previewImage } from './sdk/core/image-input.js';
 import { integration, blobOf } from './hooks.js';
@@ -27,7 +27,15 @@ const ui = {
   strength: $('main [data-input="strength"]'), dof: $('main [data-input="dof"]'), sound: $('main [data-input="sound"]'),
   soundFileRow: $('main [data-role="sound-file"]'), soundFile: $('main [data-input="sound-file"]'), soundName: $('main [data-role="sound-name"]'),
   cancel: $('main [data-action="cancel"]'), modes: $('main [data-role="modes"]'), makeImage: $('main [data-role="make-image"]'),
+  settings: $('main [data-role="settings"]'), modelImage: $('main [data-role="model"]'), modelText: $('main [data-role="model-text"]'),
+  textSettings: $('main [data-role="text-settings"]'), prompt: $('main [data-input="prompt"]'), size: $('main [data-input="size"]'),
+  genSeconds: $('main [data-input="gen-seconds"]'), steps: $('main [data-input="steps"]'), seed: $('main [data-input="seed"]'), textGate: $('main [data-role="text-gate"]'),
 };
+// The two modes of the page: a photo animated (the site's own model) and, where the
+// module video-gen ships and this browser has WebGPU, a video made from a text (the
+// site's second model, config.models[1]).
+const imageModel = shell.modelId;
+const textModel = (shell.config.models || [])[1] || null;
 const quality = pageQuality();
 const runner = shell.taskRunner(o => new Video({ ...o, onProgress: p => { shell.onProgress(p); stage(p); } }));
 const probe = shell.config.testHooks ? (shell.diagnostics.video = { runs: 0, scenes: 0, frames: 0 }) : null;
@@ -39,6 +47,11 @@ let preview = null; // { renderer, plan, raf, t0, playing }
 let shown = null; // { url }
 let soundtrack = null; // { blob, name } or a generated one
 let picks = 0;
+let mode = 'image';
+let gen = null; // the module video-gen, once the text mode is offered
+let fit = null; // what estimate() said of the text mode's current settings
+let textChecks = 0;
+let imageHook = false; // the "make an image" integration is on
 
 function el(tag, attrs = {}, ...children) {
   const n = document.createElement(tag);
@@ -60,12 +73,18 @@ function settings() {
 /** Progress of the task, by stage. */
 function stage(p) {
   if (p.status !== 'running' || !p.stage) return;
+  const bar = shell.els.progress;
   if (p.stage === 'render') {
     shell.setStatus(t('stage.render', { frame: p.frame || 0, frames: p.frames || 0 }));
-    const bar = shell.els.progress;
     if (bar && p.frames) { bar.hidden = false; bar.max = p.frames; bar.value = p.frame || 0; }
     if (probe) probe.frames = p.frame || 0;
-  } else if (t('stage.' + p.stage) !== 'stage.' + p.stage) shell.setStatus(t('stage.' + p.stage));
+  } else if (t('stage.' + p.stage) !== 'stage.' + p.stage) {
+    // The text mode's stages count their steps (index of count).
+    const n = (p.index ?? 0) + 1, count = p.count ?? 1;
+    shell.setStatus(t('stage.' + p.stage, { n, count }));
+    if (bar && p.count > 1) { bar.hidden = false; bar.max = count; bar.value = p.stage === 'step' ? n - 1 : n; }
+    if (probe && mode === 'text') probe.stages = [...(probe.stages || []), p.stage];
+  }
 }
 
 function forgetResult() {
@@ -173,7 +192,93 @@ async function show(job, result, device, fallback) {
   if (probe) Object.assign(probe, { runs: probe.runs + 1, device, fallback, width: result.width, height: result.height, container: result.container, videoCodec: result.videoCodec, audioCodec: result.audioCodec, bytes: result.bytes, layers: result.layers, preset: result.preset, aspect: result.aspect });
 }
 
+/** The text mode: the settings as the task takes them. */
+function textOptions() {
+  const seed = ui.seed.value.trim();
+  return { prompt: ui.prompt.value, size: ui.size.value, seconds: Number(ui.genSeconds.value), steps: Number(ui.steps.value), ...(seed ? { seed: Number(seed) } : {}) };
+}
+
+/** The primary button of the text mode: on when the device can make it and there is a description. */
+function textReady() {
+  if (mode === 'text' && !shell.busy) shell.setReady(Boolean(fit?.fits) && Boolean(ui.prompt.value.trim()));
+}
+
+/** Can this device make the video the text mode's settings ask for? Downloads nothing. */
+async function checkText() {
+  const ask = ++textChecks;
+  fit = null;
+  ui.textGate.textContent = t('text.checking');
+  shell.setReady(false);
+  let est;
+  try { est = await gen.estimate(textOptions(), { registry: shell.registry, model: textModel, store: shell.store }); }
+  catch (err) { if (ask === textChecks && mode === 'text') { ui.textGate.textContent = ''; shell.showError(err); } return; }
+  if (ask !== textChecks || mode !== 'text') return;
+  fit = est;
+  const memory = formatSize(est.memoryBytes || 0, shell.lang);
+  ui.textGate.textContent = est.fits ? t('text.fits', { memory }) : t('text.reason.' + est.reason, { memory });
+  if (probe) probe.estimate = { fits: est.fits, reason: est.reason, missingBytes: est.missingBytes, downloadBytes: est.downloadBytes };
+  textReady();
+}
+
+/** Switch between the photo and the text. Nothing runs; a result on screen goes. */
+async function setMode(next) {
+  if (next === mode || (next === 'text' && !gen)) return;
+  if (shell.busy) { for (const r of document.querySelectorAll('main [data-input="mode"]')) r.checked = r.value === mode; return; }
+  mode = next;
+  const text = mode === 'text';
+  forgetResult();
+  if (text) stopPreview();
+  ui.textSettings.hidden = !text; ui.modelText.hidden = !text;
+  ui.settings.hidden = text; ui.modelImage.hidden = text;
+  if (shell.els.drop) shell.els.drop.hidden = text;
+  ui.makeImage.hidden = text || !imageHook;
+  ui.preview.hidden = text || !current;
+  for (const r of document.querySelectorAll('main [data-input="mode"]')) r.checked = r.value === mode;
+  shell.useModel(text ? textModel : imageModel, { sizeEl: $(text ? '[data-role="model-size-2"]' : '[data-role="model-size"]') });
+  if (probe) probe.mode = mode;
+  if (text) await checkText();
+  else {
+    if (current && scene?.forFile === current.file) startPreview(scene.value);
+    shell.setReady(Boolean(current) && !shell.busy);
+  }
+}
+
+/** The text mode's run: one video from the description, then the model is released. */
+async function runText(signal) {
+  const opts = textOptions();
+  forgetResult();
+  ui.cancel.hidden = false;
+  const task = new gen.TextToVideo(shell.taskOptions({ device: 'webgpu', model: textModel, onProgress: p => { shell.onProgress(p); stage(p); } }));
+  try {
+    const result = await task.run(null, { ...opts, signal });
+    if (mode === 'text') showText(result, opts);
+  } finally {
+    ui.cancel.hidden = true;
+    await task.dispose().catch(() => {});
+  }
+}
+
+function showText(r, opts) {
+  const section = shell.showResult();
+  const url = URL.createObjectURL(r.blob);
+  shown = { url };
+  const ext = /webm/.test(r.mime) ? 'webm' : 'mp4';
+  const name = `${t('text.file')}-${r.seed}.${ext}`;
+  const download = el('button', { class: 'ghost', type: 'button', 'data-action': 'download' }, t('download.video'));
+  download.addEventListener('click', () => shell.download(r.blob, name));
+  const player = el('video', { src: url, controls: true, loop: true, playsinline: true, muted: true, 'data-role': 'player' });
+  section.append(el('article', { class: 'card', 'data-role': 'video' },
+    el('h3', {}, name),
+    el('p', { class: 'actions' }, download),
+    player,
+    el('p', { class: 'muted', 'data-role': 'result-meta' }, t('text.meta', { width: r.width, height: r.height, seconds: Number(r.seconds).toFixed(1), container: ext.toUpperCase(), size: (r.blob.size / 1e6).toFixed(1), seed: r.seed })),
+    ...(ext === 'webm' ? [el('p', { 'data-role': 'note' }, t('result.webm'))] : [])));
+  download.scrollIntoView?.({ block: 'nearest' });
+  if (probe) probe.text = { runs: (probe.text?.runs || 0) + 1, width: r.width, height: r.height, frames: r.frames, seed: r.seed, steps: r.steps, mime: r.mime, bytes: r.blob.size, prompt: opts.prompt };
+}
+
 shell.onPrimary(async ({ signal }) => {
+  if (mode === 'text') { await runText(signal); return; }
   if (!current) return;
   const job = { ...current, sound: soundtrack };
   forgetResult();
@@ -192,7 +297,7 @@ shell.onPrimary(async ({ signal }) => {
   } finally {
     ui.cancel.hidden = true;
   }
-});
+}, { after: textReady });
 
 // Settings: the preview follows them at once.
 for (const c of [ui.preset, ui.aspect, ui.strength, ui.dof]) c.addEventListener('input', replan);
@@ -233,17 +338,35 @@ integration('music').then(music => {
 });
 integration('image').then(make => {
   if (!make) return;
-  ui.makeImage.hidden = false;
+  imageHook = true;
+  ui.makeImage.hidden = mode === 'text';
   ui.makeImage.querySelector('button').addEventListener('click', async () => {
     const blob = blobOf(await make({ aspect: ui.aspect.value }));
     if (blob) choose(new File([blob], `${t('file.name')}.png`, { type: blob.type || 'image/png' })).catch(err => shell.showError(err));
   });
 });
-integration('textToVideo').then(gen => { if (gen) ui.modes.hidden = false; });
+integration('textToVideo').then(async fn => {
+  if (!fn || !textModel) return;
+  try { gen = await import('./sdk/video-gen/index.js'); } catch { return; }
+  const opt = (sel, values, def, label) => { for (const v of values) sel.append(new Option(label(v), String(v), false, String(v) === String(def))); };
+  opt(ui.size, gen.SIZES, gen.SIZES[0], v => v.replace('x', ' × '));
+  const range = ({ min, max }) => Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  opt(ui.genSeconds, range(gen.SECONDS), gen.SECONDS.default, n => t('text.secondsValue', { n }));
+  opt(ui.steps, range(gen.STEPS), gen.STEPS.default, n => String(n));
+  for (const c of [ui.size, ui.genSeconds, ui.steps, ui.seed]) c.addEventListener('change', () => { if (mode === 'text') checkText(); });
+  ui.prompt.addEventListener('input', textReady);
+  for (const r of document.querySelectorAll('main [data-input="mode"]')) r.addEventListener('change', () => { if (r.checked) setMode(r.value).catch(err => shell.showError(err)); });
+  ui.modes.hidden = false;
+  if (probe) probe.modes = true;
+});
 
 if (PRESETS.length !== ui.preset.options.length || LOOPS.some(p => !PRESETS.includes(p))) shell.setStatus(t('unsupported'));
-const fit = await Video.estimate({ registry: shell.registry, model: shell.modelId, quality }, shell.requested).catch(() => null);
-if (fit && !fit.fits && fit.reason !== 'webgpu-unavailable' && fit.reason !== 'device-unsupported') shell.setStatus(t('unsupported'));
-shell.bindInput({ onFiles: files => { if (files[0]) choose(files[0]).catch(err => shell.showError(err)); }, paste: true });
+const photoFit = await Video.estimate({ registry: shell.registry, model: imageModel, quality }, shell.requested).catch(() => null);
+if (photoFit && !photoFit.fits && photoFit.reason !== 'webgpu-unavailable' && photoFit.reason !== 'device-unsupported') shell.setStatus(t('unsupported'));
+shell.bindInput({ onFiles: async files => {
+  if (!files[0]) return;
+  if (mode === 'text') await setMode('image'); // a photo dropped or pasted on the text mode: back to the photo
+  choose(files[0]).catch(err => shell.showError(err));
+}, paste: true });
 ui.cancel.addEventListener('click', () => shell.cancel());
 shell.setReady(false);

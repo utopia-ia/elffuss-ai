@@ -35,7 +35,11 @@ export const DENY_REPOS = [/Depth-Anything-V2-(Base|Large|Giant)/i, /RMBG/i];
 export const DENY_LICENSES = [/^cc-by-nc/i, /^openrail/i, /^lfm/i, /^gemma/i, /^llama/i, /^other$/i];
 const SPDX = { 'apache-2.0': 'Apache-2.0', mit: 'MIT', 'bsd-2-clause': 'BSD-2-Clause', 'bsd-3-clause': 'BSD-3-Clause' };
 export const normLicense = l => SPDX[String(l || '').toLowerCase()] || String(l || '');
-const WEIGHT = /\.onnx(_data(_\d+)?)?$/;
+// Weights: ONNX graphs and their external data, and the original checkpoints a
+// repository may also hold (PyTorch, safetensors). Those no variant uses stay out
+// of the registry: nothing downloads them, and a source repository of several
+// gigabytes (SANA-Sprint, Wan 2.1) would otherwise be pinned whole.
+const WEIGHT = /\.(onnx(_data(_\d+)?)?|safetensors|pth|pt|ckpt)$/;
 export const MAX_KEY = 180;
 
 async function getJSON(url, headers = {}) {
@@ -191,6 +195,7 @@ export async function generate(source) {
       redistributes: m.redistributes,
       runtime: m.runtime,
       pipeline: m.pipeline,
+      ...(m.sampler ? { sampler: m.sampler } : {}),
       parts,
       devices,
       notes: m.notes,

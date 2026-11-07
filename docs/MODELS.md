@@ -12,6 +12,7 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | ocr | `ocr/pp-ocrv6-small` | [PP-OCRv6](https://github.com/PaddlePaddle/PaddleOCR), by PaddlePaddle | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 31 MB<br>WASM fp32 · 31 MB |
 | text-to-image | `text-to-image/sana-sprint-0.6b` | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0) | WebGPU q4f16 (with shader-f16) · 3172 MB |
 | image-to-video | `image-to-video/depth-parallax` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything<br>[MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN), by Picsart AI Research | Apache-2.0 AND MIT (base: Apache-2.0, MIT) | WebGPU fp16 (with shader-f16) · 79 MB<br>WebGPU fp32 · 129 MB<br>WASM q8 · 57 MB |
+| text-to-video | `text-to-video/wan2.1-t2v-1.3b-rcm` | [Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), by Wan-AI<br>[rCM Wan2.1 T2V 1.3B 480p](https://huggingface.co/worstcoder/rcm-Wan), by worstcoder (rCM, NVlabs/Tsinghua)<br>[lighttaew2_1 (TAEHV)](https://huggingface.co/lightx2v/Autoencoders), by lightx2v / madebyollin | Apache-2.0 (base: Apache-2.0, Apache-2.0, Apache-2.0) | WebGPU q8f16 (with shader-f16) · 5236 MB |
 
 ## `remove-bg/ben2`
 
@@ -80,3 +81,17 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | WebGPU | fp16 (shader-f16) | `depth:preprocessor_config.json`, `depth:onnx/model_fp16.onnx`, `inpaint:migan.onnx` | 79 MB |
 | WebGPU | fp32 | `depth:preprocessor_config.json`, `depth:onnx/model.onnx`, `inpaint:migan.onnx` | 129 MB |
 | WASM | q8 | `depth:preprocessor_config.json`, `depth:onnx/model_quantized.onnx`, `inpaint:migan.onnx` | 57 MB |
+
+## `text-to-video/wan2.1-t2v-1.3b-rcm`
+
+- Base model (part `tok`): [Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), by Wan-AI, Apache-2.0.
+- Base model (part `web`): [rCM Wan2.1 T2V 1.3B 480p](https://huggingface.co/worstcoder/rcm-Wan), by worstcoder (rCM, NVlabs/Tsinghua), Apache-2.0.
+- Base model (part `web`): [lighttaew2_1 (TAEHV)](https://huggingface.co/lightx2v/Autoencoders), by lightx2v / madebyollin, Apache-2.0.
+- Part `tok`: [Wan-AI/Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B/tree/37ec512624d61f7aa208f7ea8140a131f93afc9a) at `37ec512624d61f7aa208f7ea8140a131f93afc9a`, Apache-2.0.
+- Part `web`: [UtopiaIA/Wan2.1-T2V-1.3B-web](https://huggingface.co/UtopiaIA/Wan2.1-T2V-1.3B-web/tree/3dbd66ddf838b03a751576500ed6b5e72c53a972) at `3dbd66ddf838b03a751576500ed6b5e72c53a972`, Apache-2.0.
+- Redistributed: a conversion of the original weights published by UtopiaIA, with the original licence and a NOTICE.
+- Note: The text encoder runs in 4 bits and the transformer in 8 bits: the video of a seed is not the one of the original model, but it follows the prompt as well.
+
+| Backend | Variant | Files | Download |
+|---|---|---|---|
+| WebGPU | q8f16 (shader-f16) | `tok:google/umt5-xxl/tokenizer.json`, `web:dit/ctx.onnx`, `web:dit/part0.onnx`, `web:dit/part1.onnx`, `web:dit/part2.onnx`, `web:t5/embed_q4.bin`, `web:t5/encoder_0.onnx`, `web:t5/encoder_1.onnx`, `web:t5/encoder_2.onnx`, `web:t5/encoder_3.onnx`, `web:vae/taew2_1_light.onnx`, `web:dit/ctx.onnx_data`, `web:dit/part0.onnx_data`, `web:dit/part1.onnx_data`, `web:dit/part2.onnx_data`, `web:t5/encoder_0.onnx_data`, `web:t5/encoder_1.onnx_data`, `web:t5/encoder_2.onnx_data`, `web:t5/encoder_3.onnx_data` | 5236 MB |

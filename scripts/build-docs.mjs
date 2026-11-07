@@ -149,7 +149,7 @@ export function moduleTable(root = ROOT) {
   for (const task of Object.keys(reg.tasks)) {
     const site = apps.find(s => s.task === task);
     const mod = reg.tasks[task].module || task;
-    const what = { 'remove-bg': 'Remove the background of an image (transparent PNG)', depth: 'Depth map of a photo', detect: 'Object detection, 80 COCO classes', ocr: 'Text from images and PDFs', 'text-to-image': 'Pictures from a text description (PNG)', 'image-to-video': 'A video from a photo: a 3D camera move over its depth, as MP4' }[task] || task;
+    const what = { 'remove-bg': 'Remove the background of an image (transparent PNG)', depth: 'Depth map of a photo', detect: 'Object detection, 80 COCO classes', ocr: 'Text from images and PDFs', 'text-to-image': 'Pictures from a text description (PNG)', 'image-to-video': 'A video from a photo: a 3D camera move over its depth, as MP4', 'text-to-video': 'A video from a text description, as MP4 (WebGPU)' }[task] || task;
     const has = existsSync(join(root, 'sdk', mod, 'index.js')) && pkg.exports[`./${mod}`];
     rows.push(`| \`@elffuss/ai/${mod}\` | ${what} | ${site ? `[${site.host}](https://${site.host}/)` : ''} | ${has ? 'in use' : 'to be written (`./' + mod + '/sizes` exists)'} |`);
   }
@@ -190,7 +190,7 @@ export function modelsDoc(root = ROOT) {
 export function llmsTxt(root = ROOT) {
   const reg = JSON.parse(readFileSync(join(root, 'registry', 'tasks.json'), 'utf8'));
   const sites = readSites(root);
-  const lines = ['# Elffuss tools', '', '> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, make depth maps, create images from a text, and turn a photo into a video. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from a Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool\'s own site. Files the user opens never leave the device.', ''];
+  const lines = ['# Elffuss tools', '', '> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, make depth maps, create images from a text, and make a video from a photo or from a text. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from a Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool\'s own site. Files the user opens never leave the device.', ''];
   lines.push('## Tools', '');
   for (const s of sites.filter(x => !x.catalog)) {
     const t = mergeStrings(root, s.dir).en;

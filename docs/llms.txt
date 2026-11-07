@@ -1,6 +1,6 @@
 # Elffuss tools
 
-> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, make depth maps, create images from a text, and turn a photo into a video. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from a Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool's own site. Files the user opens never leave the device.
+> Small tools that run in the browser: remove the background of a photo, read the text of images and PDFs, detect objects, make depth maps, create images from a text, and make a video from a photo or from a text. Each runs its model in the browser with WebGPU or WebAssembly. What a tool downloads is its model, from a Hugging Face repository at a pinned revision, the first time and then kept in that browser, and the software that runs it, from the tool's own site. Files the user opens never leave the device.
 
 ## Tools
 
@@ -9,7 +9,7 @@
 - [Detect objects](https://detect.elffuss.com/en/): Finds people, cars, animals and up to 80 kinds of objects, also with your camera. Model: RF-DETR Nano by Roboflow (Apache-2.0). Model download: 29 MB, the first time; it is then kept in that browser.
 - [Create images](https://image.elffuss.com/en/): Creates images from a text, in your browser, with shapes, a seed to repeat them and PNG downloads. Model: SANA-Sprint 0.6B by NVlabs (Apache-2.0). Model download: 3172 MB, the first time; it is then kept in that browser.
 - [Read text](https://ocr.elffuss.com/en/): Gets the text out of photos, scans and PDFs, even whole folders. Model: PP-OCRv6 by PaddlePaddle (Apache-2.0). Model download: 31 MB, the first time; it is then kept in that browser.
-- [Photo to video](https://video.elffuss.com/en/): A photo becomes a video with a 3D camera move and a soundtrack, as MP4. Models: Depth Anything V2 Small by depth-anything (Apache-2.0) and MI-GAN by Picsart AI Research (MIT). Model download: 57 to 129 MB, the first time; it is then kept in that browser.
+- [Photo to video](https://video.elffuss.com/en/): A photo becomes a video with a 3D camera move and a soundtrack, as MP4. Or make one from a text. Models: Depth Anything V2 Small by depth-anything (Apache-2.0) and MI-GAN by Picsart AI Research (MIT). Model download: 57 to 129 MB, the first time; it is then kept in that browser.
 - [Every tool](https://tools.elffuss.com/en/): the catalog.
 
 ## Modules
@@ -21,6 +21,7 @@
 - `@elffuss/ai/ocr` and `@elffuss/ai/ocr/sizes`: the ocr task and the download size of each of its variants.
 - `@elffuss/ai/text-to-image` and `@elffuss/ai/text-to-image/sizes`: the text-to-image task and the download size of each of its variants.
 - `@elffuss/ai/video` and `@elffuss/ai/video/sizes`: the image-to-video task and the download size of each of its variants.
+- `@elffuss/ai/video-gen` and `@elffuss/ai/video-gen/sizes`: the text-to-video task and the download size of each of its variants.
 
 ## Notes
 
