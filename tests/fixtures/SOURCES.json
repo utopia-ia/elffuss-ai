@@ -643,6 +643,16 @@
       "purpose": "video-gen: the JavaScript tokenizer must give the same ids for every text."
     },
     {
+      "path": "tests/fixtures/video-gen/control.json",
+      "sha256": "03e9620e1ca15a63de8332fbb78b4b4427d4ab200b64ad391767a2d7bf6a219b",
+      "license": "own-work",
+      "source": {
+        "script": "scripts/storyboard/control_fixture.py",
+        "how": "The 64-channel mask of a 9-frame clip of 48 × 32 (frame 0 known only in a rectangle, frame 8 known whole) folded by diffusers WanVACEPipeline.prepare_masks, and the control tokens of small seeded latents in the order of scripts/wan/export_vace.control_tokens (the exported graph)."
+      },
+      "purpose": "video-gen storyboard: the browser must fold VACE's mask and order its control tokens as diffusers and the graph do."
+    },
+    {
       "path": "tests/fixtures/audio/moss-spm-ids.json",
       "sha256": "f79a3dfe5e652d9a769dda8c6c7c5e988fdf905a8fd23a5f76d7dd3cc9a53373",
       "license": "own-work",

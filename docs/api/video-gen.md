@@ -30,6 +30,14 @@ Downloads nothing. Without a store, `missingBytes` is the whole download.
 
 Returns `Promise<{ fits: boolean, reason: string\|null, downloadBytes: number, missingBytes: number, memoryBytes: number, width: number, height: number, frames: number, seconds: number, tokens: number }>`.
 
+### `deviceReason(env, need, peak)`
+
+Why this device cannot run a video model, or null when it can: a real WebGPU
+adapter with shader-f16, buffers of `need` bytes, and `peak` bytes of memory
+(probed unless `env.probeMemory` is false).
+
+Returns `Promise<string\|null>`.
+
 ### `probeGpuMemory(adapter, bytes)`
 
 True when the adapter's device gives `bytes` of buffers (in pieces no larger
@@ -272,6 +280,75 @@ Default model of this task.
 
 Download size in bytes of every variant of this task's models, by model id and
 backend, in the registry's order of preference.
+
+## `sdk/video-gen/story-impl.js`
+
+The storyboard video where the models run (a Worker), in two operations the page calls one after the other, so the person can look at the keyframes first:
+
+ The transformer is the T2V one (its published weights) with the VACE blocks woven in (vpart graphs that read both weight files). SANA is released before Wan loads; UMT5 runs shard by shard for every clip's prompt at once.
+
+### `FILES`
+
+The files of the model, by role (references of the registry).
+
+### `placePhoto(img, W, H)`
+
+A photo in a W × H frame without cropping it: contained and centred, the bands
+around it filled with its own edges stretched and blurred (SDEdit and VACE paint
+them over; VACE is told only the photo's rectangle is known).
+
+| Parameter | Type | |
+|---|---|---|
+| `img` | `{ rgba: Uint8ClampedArray, width: number, height: number }` |  |
+
+### `run(state, input, opts = {}, ctx)`
+
+input.op: 'keyframes' (plan, size, start?, end?, keyframes?, only?) or 'clips'
+(plan, size, keyframes, start?, end?, carry?, steps?, colorMatch?). Photos and
+keyframes are { rgba: ArrayBuffer, width, height }.
+
+## `sdk/video-gen/story.js`
+
+A video that does what it is asked, in the browser: a storyboard of keyframes every three seconds (SANA-Sprint), then the clip between each pair (Wan 2.1 VACE 1.3B, few-step), stitched into one MP4. Two calls, so the page can show the keyframes and let the person change one before the long part:
+
+ Progress events (`onProgress`) say where it is and carry previews to draw: Pictures are { width, height, rgba } (RGBA bytes).
+
+### `STORY_MODEL`
+
+The model of storyboards in the registry.
+
+### `class StoryVideo`
+
+Storyboard video. Runs in a Worker; the first call downloads the models into the
+store (several gigabytes, once; most of them shared with text-to-video and
+text-to-image).
+
+- `.constructor(options = {})`
+- `.keyframes({ signal, ...o })`: The keyframes of a plan (all, or `only` one again).
+- `.clips({ signal, audio, ...o })`: The clips between the keyframes, stitched into one video.
+
+### Type `Picture`
+
+```ts
+{ width: number, height: number, rgba: ArrayBuffer }
+```
+
+### `storyPeakBytes({ tokens, clips }, { ditBytes, sanaBytes, encoderShardBytes, embedBytes })`
+
+Bytes a storyboard run holds at its peak, by phase. Keyframes: SANA's three
+models and the DC-AE encoder. Clips: the transformer with its VACE blocks, the
+keys and values of every clip's prompt (45 blocks), and per token the residual
+stream, the VACE state and the attention's and feed-forward's widest tensors.
+
+### `estimateStory({ seconds = 9, size = '832x480' } = {}, env = {})`
+
+Can this device make a storyboard video of `seconds` at `size`, and what would it
+download? Downloads nothing.
+
+| Parameter | Type | |
+|---|---|---|
+| `[opts]` | `{ seconds?: number, size?: string }` |  |
+| `[env]` | `{ registry?: object, registryUrl?: string, model?: string, store?: { has(url: string, bytes: number): Promise<boolean> }, gpu?: any, probeMemory?: boolean }` |  |
 
 ## `sdk/video-gen/t5.js`
 
