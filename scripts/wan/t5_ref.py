@@ -3,7 +3,7 @@
 #
 # Reference UMT5-XXL embeddings with the official Wan 2.1 code: token ids, fp32
 # compute (bf16 weights upcast) and bf16 compute (what the official pipeline does
-# on GPU). Saves one .npz per prompt.
+# on a graphics card). Saves one .npz per prompt.
 import json, sys, time, pathlib
 import os as _os
 WORK = pathlib.Path(_os.environ.get('WAN_WORK') or pathlib.Path(__file__).resolve().parents[2] / 'tmp')  # scratch: ref/, wan_base/, out/, onnx/

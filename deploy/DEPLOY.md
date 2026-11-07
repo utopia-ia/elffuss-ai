@@ -246,10 +246,10 @@ PRE, in this order.
 
 1. **The converted weights on the Hub.** Two models have no conversion for the browser
    on the Hub, so the registry pins ones UtopiaIA publishes there (registry/source.mjs),
-   each with the original licence and a NOTICE:
-   `UtopiaIA/sana-sprint-0.6b-1024px-onnx-web` at `762399d3a10e6ec06afeffbdf7dd425c83004fb3`
+   each with the original licence and a NOTICE, in the UtopiaIA account on the Hub: the
+   repository sana-sprint-0.6b-1024px-onnx-web at `762399d3a10e6ec06afeffbdf7dd425c83004fb3`
    (SANA-Sprint 0.6B, made with `scripts/text-to-image/`; its NOTICE carries the Gemma
-   Terms of Use of `text_encoder/`) and `UtopiaIA/Wan2.1-T2V-1.3B-web` at
+   Terms of Use of `text_encoder/`) and the repository Wan2.1-T2V-1.3B-web at
    `3dbd66ddf838b03a751576500ed6b5e72c53a972` (Wan 2.1 T2V 1.3B with the rCM student and
    the TAEHV decoder, made with `scripts/wan/`). Both are pushed;
    `node scripts/build-registry.mjs --check` checks them with the rest.

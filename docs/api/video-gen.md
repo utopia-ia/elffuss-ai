@@ -61,7 +61,7 @@ The files of the model, by role (references of registry/tasks.json).
 
 ## `sdk/video-gen/index.js`
 
-Video from text in the browser, with Wan 2.1 T2V 1.3B (Wan-AI, Apache-2.0) distilled to a few steps, on WebGPU. Heavy: it downloads gigabytes once and needs a capable GPU, so ask `estimate()` first; it never pretends to run where it cannot. The model comes through the Elffuss model store, at pinned revisions; nothing of the prompt or the video leaves the browser.
+Video from text in the browser, with Wan 2.1 T2V 1.3B (Wan-AI, Apache-2.0) distilled to a few steps, on WebGPU. Heavy: it downloads gigabytes once and needs a capable graphics card, so ask `estimate()` first; it never pretends to run where it cannot. The model comes through the Elffuss model store, at pinned revisions; nothing of the prompt or the video leaves the browser.
 
 ### `supported()`
 
@@ -91,7 +91,7 @@ await t2v.dispose();
 `{ prompt, seconds, size, seed, steps, audio }`, every field JSON except
 `audio` (`{ sampleRate, channels: Float32Array[] }`, fitted to the video).
 Cancel with the `signal` of the constructor or of `run()`: the Worker is
-stopped and every GPU buffer goes with it.
+stopped and every WebGPU buffer goes with it.
 
 - `.constructor(options = {})`
 
@@ -133,7 +133,7 @@ Sizes of a generation: pixels, frames, latent and tokens.
 
 ### `framesFor(seconds)`
 
-Frames of a video of about `seconds` at 16 fps: 1 + 4k, at least 5.
+Frames of a video of about `seconds` (FPS frames a second): 1 + 4k, at least 5.
 
 ### `patchify(z, g, f0 = 0, nf = g.f - f0)`
 
@@ -198,7 +198,7 @@ A seed for a generation when the caller gives none: 31 random bits.
 
 ## `sdk/video-gen/options.js`
 
-What a text-to-video run may ask for, checked before anything loads: the sizes the model was trained near (832 × 480 and its portrait, plus a lighter 640 × 368), 1 to 5 seconds at 16 frames per second, 1 to 4 steps, a seed. The same shape is the chat tool's arguments: {"prompt", "seconds", "size", "seed", "steps"}.
+What a text-to-video run may ask for, checked before anything loads: the sizes the model was trained near (832 × 480 and its portrait, plus a lighter 640 × 368), a length in whole seconds from 1 to 5 (FPS frames each), 1 to 4 steps, a seed. The same shape is the chat tool's arguments: {"prompt", "seconds", "size", "seed", "steps"}.
 
 ### `SIZES`
 
