@@ -132,7 +132,7 @@ export async function estimateStory({ seconds = 9, size = '832x480' } = {}, env 
   const sizeOf = p => files.filter(f => p.test(`${f.part}:${f.path}`)).reduce((s, f) => s + f.size, 0);
   const shards = files.filter(f => /t5\/encoder_\d+\.onnx$/.test(f.path)).length || 1;
   const mem = storyPeakBytes({ tokens: g.tokens, clips }, {
-    ditBytes: sizeOf(/^(web|vace):dit\//), sanaBytes: sizeOf(/^(sanaw:|vace:sana\/)/),
+    ditBytes: sizeOf(/^(web|vace):dit\//), sanaBytes: sizeOf(/^sanaw:/),
     encoderShardBytes: sizeOf(/^web:t5\/encoder_/) / shards, embedBytes: sizeOf(/^web:t5\/embed/),
   });
   const base = { downloadBytes, missingBytes, memoryBytes: mem.peak, width, height, clips, seconds: clips * 3, tokens: g.tokens };

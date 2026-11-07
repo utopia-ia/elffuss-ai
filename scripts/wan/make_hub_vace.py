@@ -6,8 +6,10 @@
 # storyboard model (text-to-video/wan2.1-vace-1.3b-rcm) with a placeholder revision: the published
 # registry plus that model, for the test page. With --cache, lay the staged files out in a weight
 # cache ($cache/hf/<repo>/<placeholder>/…) for the test servers.
-#   python make_hub_vace.py <vace onnx dir> <tae encoder .onnx> <sana encoder .onnx> <registry/tasks.json>
-#                           <hub dir> <out registry.json> [--cache <dir>] [--vbits 8]
+#   python make_hub_vace.py <vace onnx dir> <tae encoder .onnx> <registry.json> <hub dir> <out registry.json>
+#                           [--cache <dir>] [--vbits 8]
+# The registry given must have SANA's image encoder (scripts/text-to-image/stage_encoder.py writes
+# one with it at a placeholder revision): the keyframes use it.
 import argparse, hashlib, json, os, pathlib, shutil
 
 PLACEHOLDER = '0' * 40
@@ -63,7 +65,6 @@ decoder.
 | `dit/vctx.onnx` (+ `.onnx_data`) | The prompt graph of the 15 VACE blocks: text states in, their cross-attention keys and values out (also reads `ctx.onnx_data`) |
 | `dit/vpart0…2.onnx` (+ `.onnx_data`) | The transformer in three runs with the VACE blocks woven in; each also reads the T2V repository's `part<i>.onnx_data`. VACE linear layers with {vbits}-bit weights (MatMulNBits) |
 | `vae/lighttaew2_1_encoder.onnx` | The lighttaew2_1 encoder, 4 frames at a time with its memories: the known frames to latents |
-| `sana/vae_encoder_fp16.onnx` | The DC-AE encoder of SANA-Sprint 0.6B, for keyframes made from a picture (SDEdit) |
 
 New bytes: {sizes / 1e6:.0f} MB. The sampler is the rCM one of the T2V repository (4 steps, no
 guidance). Because of the quantised weights, a seed does not give the video of the original model.
@@ -87,24 +88,21 @@ Derived from:
   (its weights are read from UtopiaIA/Wan2.1-T2V-1.3B-web, not repeated here).
 - {s['tae'][0]} (revision {s['tae'][1]}), lighttaew2_1 by
   lightx2v on TAEHV by madebyollin, Apache License 2.0: the encoder.
-- {s['sana'][0]} (revision {s['sana'][1]}), SANA-Sprint by
-  NVIDIA (Efficient-Large-Model), Apache License 2.0: the DC-AE image encoder.
 """
 
 
 def main():
     ap = argparse.ArgumentParser()
-    for a in ('vace', 'tae', 'sana', 'tasks', 'hub', 'out'):
+    for a in ('vace', 'tae', 'tasks', 'hub', 'out'):
         ap.add_argument(a)
     ap.add_argument('--cache'); ap.add_argument('--vbits', type=int, default=8)
     ap.add_argument('--license', default=None, help='an Apache-2.0 LICENSE file to copy')
     a = ap.parse_args()
     vace, hub = pathlib.Path(a.vace), pathlib.Path(a.hub)
     if hub.exists():
-        shutil.rmtree(hub)
+        shutil.rmtree(hub, ignore_errors=True)  # exFAT: its ._ files go with their file
     links = {f'dit/{n}': vace / n for n in ['vctx.onnx', 'vctx.onnx_data'] + [f'vpart{i}.onnx{e}' for i in range(3) for e in ('', '_data')]}
     links['vae/lighttaew2_1_encoder.onnx'] = pathlib.Path(a.tae)
-    links['sana/vae_encoder_fp16.onnx'] = pathlib.Path(a.sana)
     for rel, src in links.items():
         dst = hub / rel; dst.parent.mkdir(parents=True, exist_ok=True)
         os.symlink(os.path.abspath(src), dst)
@@ -136,6 +134,8 @@ def main():
         'sanaw': pick(sana['parts']['onnx'], {r.split(':', 1)[1] for r in sanaw_refs}),
     }
     refs = [r for r in refs if r.split(':', 1)[1] in parts[r.split(':', 1)[0]]['files']]
+    if 'sanaw:vae_encoder/model_fp16.onnx' not in refs:
+        raise SystemExit('the registry given has no SANA image encoder (run scripts/text-to-image/stage_encoder.py first)')
     bytes_ = sum(parts[r.split(':', 1)[0]]['files'][r.split(':', 1)[1]]['size'] for r in refs)
     model = {
         'task': 'text-to-video', 'name': {'es': 'Wan 2.1 VACE 1.3B (rCM) y SANA-Sprint', 'en': 'Wan 2.1 VACE 1.3B (rCM) and SANA-Sprint'},
@@ -157,7 +157,7 @@ def main():
     if a.cache:
         root = pathlib.Path(a.cache) / 'hf' / REPO / PLACEHOLDER
         if root.exists():
-            shutil.rmtree(root)
+            shutil.rmtree(root, ignore_errors=True)
         for rel in files:
             dst = root / rel; dst.parent.mkdir(parents=True, exist_ok=True)
             os.symlink(os.path.realpath(hub / rel), dst)

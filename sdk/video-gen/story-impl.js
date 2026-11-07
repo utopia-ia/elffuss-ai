@@ -52,7 +52,7 @@ export const FILES = Object.freeze({
     tokenizer: 'sana:tokenizer/tokenizer.json', tokenizerConfig: 'sana:tokenizer/tokenizer_config.json',
     transformerConfig: 'sana:transformer/config.json', vaeConfig: 'sana:vae/config.json', schedulerConfig: 'sana:scheduler/scheduler_config.json',
     encoder: 'sanaw:text_encoder/model_q4.onnx', embed: 'sanaw:text_encoder/embed_tokens_q4.bin', embedScales: 'sanaw:text_encoder/embed_tokens_q4_scales.bin',
-    transformer: 'sanaw:transformer/model_fp16.onnx', decoder: 'sanaw:vae_decoder/model_fp16.onnx', imageEncoder: 'vace:sana/vae_encoder_fp16.onnx',
+    transformer: 'sanaw:transformer/model_fp16.onnx', decoder: 'sanaw:vae_decoder/model_fp16.onnx', imageEncoder: 'sanaw:vae_encoder/model_fp16.onnx',
   },
 });
 /** The guidance value SANA-Sprint was distilled for (as text-to-image). */

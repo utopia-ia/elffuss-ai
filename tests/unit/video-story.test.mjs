@@ -4,7 +4,7 @@
 // The storyboard video's pure parts: the plan (template and check), the sizes from a
 // photo's shape and where it sits without cropping, VACE's control against diffusers
 // (tests/fixtures/video-gen/control.json, from scripts/storyboard/control_fixture.py),
-// the colour match, SANA's SDEdit schedule and start, and the estimate.
+// the colour match and the estimate (SANA's SDEdit: image-from-image.test.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -15,8 +15,6 @@ import {
 import { foldMask, controlTokens, knownFrames, maskFrameIndex, CONTROL_VALUES } from '../../sdk/video-gen/story/control.js';
 import { colorStats, colorTransform, applyTransform, matchClip, blendStats } from '../../sdk/video-gen/story/color.js';
 import { grid } from '../../sdk/video-gen/latent.js';
-import { sdeditTimes, timesteps, MAX_TIME } from '../../sdk/text-to-image/schedule.js';
-import { generate } from '../../sdk/text-to-image/pipeline.js';
 import { estimateStory, storyPeakBytes, STORY_MODEL } from '../../sdk/video-gen/story.js';
 import { placePhoto } from '../../sdk/video-gen/story-impl.js';
 
@@ -152,35 +150,6 @@ test('colour: a frame matched to itself does not change; a drifted one comes bac
   const s0 = colorStats(a), s1 = { mean: s0.mean.map(v => v + 10), std: s0.std.map(v => v * 2) };
   assert.deepEqual(blendStats(s0, s1, 0, 5), s0);
   assert.deepEqual(blendStats(s0, s1, 4, 5), s1);
-});
-
-test('SDEdit: the two-step schedule scaled to start at t; the picture noised there', async () => {
-  const s = sdeditTimes(1.45);
-  assert.equal(s.length, 3); assert.equal(s[2], 0);
-  assert.ok(Math.abs(s[0] - 1.45) < 1e-6 && Math.abs(s[1] - 1.45 * 1.3 / MAX_TIME) < 1e-5);
-  assert.deepEqual([...sdeditTimes(MAX_TIME)], [...timesteps(2)].map((v, i) => (i === 1 ? Math.fround(MAX_TIME * 1.3 / MAX_TIME) : v)));
-  assert.throws(() => sdeditTimes(0)); assert.throws(() => sdeditTimes(2));
-  // stand-in models: what the first step is given, from a start near 0, is the picture itself
-  const n = 4 * 2 * 2;
-  const init = Float32Array.from({ length: n }, (_, i) => (i % 5) - 2);
-  const seen = [];
-  const m = {
-    encode: () => [1, 2], embed: () => new Float32Array(2 * 4), hidden: 4,
-    runEncoder: async () => new Float32Array(2 * 4),
-    runTransformer: async o => { seen.push(Float32Array.from(o.latents)); return new Float32Array(o.latents.length); },
-    runDecoder: async (z, h, w) => ({ data: new Float32Array(3 * h * 32 * w * 32), height: h * 32, width: w * 32 }),
-    config: { channels: 4, factor: 32, scaling: 1, guidance: 4.5, sigmaData: 0.5 },
-  };
-  const req = { prompt: 'x', seed: 1, steps: 2, width: 64, height: 64, genWidth: 64, genHeight: 64 };
-  const x0s = [];
-  await generate(m, { ...req, init: { latents: init, t: 0.05 } }, { onX0: x0 => { x0s.push(Float32Array.from(x0)); } });
-  assert.equal(seen.length, 2, 'two steps'); assert.equal(x0s.length, 1, 'one preview, after the first step');
-  const close = seen[0].every((v, i) => Math.abs(v - init[i]) < 0.15 * (1 + Math.abs(init[i])));
-  assert.ok(close, `near t = 0 the model is given the picture (${[...seen[0].slice(0, 4)]} vs ${[...init.slice(0, 4)]})`);
-  const far = []; m.runTransformer = async o => { far.push(Float32Array.from(o.latents)); return new Float32Array(o.latents.length); };
-  await generate(m, { ...req, init: { latents: init, t: MAX_TIME } });
-  assert.ok(far[0].some((v, i) => Math.abs(v - init[i]) > 0.3), 'at π/2 the picture is all noise');
-  await assert.rejects(generate(m, { ...req, init: { latents: new Float32Array(3), t: 1 } }), /latents have 3 values/);
 });
 
 test('estimate: the storyboard model\'s download and memory, honest reasons', async () => {
