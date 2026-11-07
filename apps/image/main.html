@@ -2,6 +2,23 @@
   <p>{{t:intro}}</p>
   <div class="studio">
     <div class="composer" data-role="composer">
+      <fieldset class="from-image" data-role="from-image" hidden>
+        <legend>{{t:fromImage.title}}</legend>
+        <label class="drop">
+          <span>{{t:drop}}</span>
+          <input class="visually-hidden" type="file" accept="{{v:accept}}" data-input="image">
+        </label>
+        <figure class="chosen" data-role="image-chosen" hidden>
+          <img data-role="image-thumb" alt="{{t:fromImage.alt}}">
+          <figcaption><span data-role="image-name"></span> <button class="ghost" type="button" data-action="remove-image">{{t:fromImage.remove}}</button></figcaption>
+        </figure>
+        <label class="field" data-role="strength" hidden>
+          <span>{{t:fromImage.strength}}</span>
+          <input type="range" min="0" max="100" step="5" value="60" data-input="strength" aria-describedby="strength-ends">
+          <span class="ends muted" id="strength-ends"><span>{{t:fromImage.close}}</span><span>{{t:fromImage.free}}</span></span>
+        </label>
+        <p class="muted" data-role="image-note" hidden>{{t:fromImage.note}}</p>
+      </fieldset>
       <label class="field" for="prompt">
         <span>{{t:prompt.label}}</span>
         <textarea id="prompt" name="prompt" rows="4" maxlength="2000" placeholder="{{t:prompt.placeholder}}" data-input="prompt" required></textarea>

@@ -40,5 +40,16 @@
   "error.device-unsupported": "This graphics card does not offer WebGPU with 16-bit numbers, which the model needs.",
   "unsupported.webgpu-unavailable": "This browser does not offer WebGPU, which the model needs. Try Chrome or Edge on a computer.",
   "unsupported.shader-f16": "This graphics card does not offer WebGPU with 16-bit numbers, which the model needs. Try another computer.",
-  "unsupported.memory": "It does not fit on a phone: the model needs more memory than the browser gives one tab. Open it on a computer."
+  "unsupported.memory": "It does not fit on a phone: the model needs more memory than the browser gives one tab. Open it on a computer.",
+  "fromImage.title": "From a picture (optional)",
+  "fromImage.alt": "The picture to start from",
+  "fromImage.remove": "Remove the picture",
+  "fromImage.strength": "How much it may change",
+  "fromImage.close": "Close to the original",
+  "fromImage.free": "Freer",
+  "fromImage.note": "The new picture takes the shape of yours. Write how you want it: “as a watercolour”, “at night”, “in the snow”. It cannot remove or add one precise thing: it changes the whole picture.",
+  "fromImage.bad": "This browser cannot open that picture.",
+  "fromImage.result": "Made from your picture ({name}), changing {pct} %.",
+  "stage.encode-image": "Reading your picture…",
+  "drop": "Drop a photo here, paste it or click to choose it"
 }

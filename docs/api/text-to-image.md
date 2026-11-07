@@ -54,6 +54,21 @@ What `generate()` gives: the picture as a PNG `blob` and everything needed to ma
 { fits: boolean, reason: null|'webgpu-unavailable'|'shader-f16'|'memory'|'store-unavailable', device: 'webgpu'|null, downloadBytes: number, missingBytes: number|null }
 ```
 
+### `pixelsOf(src)`
+
+RGBA pixels of a picture to start from: a Blob or File, an ImageBitmap, an ImageData,
+or `{ width, height, rgba }` already. Larger than 2048 px on its long side, it is scaled.
+
+Returns `Promise<{ width: number, height: number, rgba: ArrayBuffer }>`.
+
+### `canStartFromImage(model)`
+
+Whether a model of this task can start from a picture (its variant has the image encoder).
+
+| Parameter | Type | |
+|---|---|---|
+| `model` | `object` | a registry model |
+
 ### `estimate({ store, registry, model, probe, mobile } = {}, device = 'auto')`
 
 See `TextToImage.estimate`. Phones are refused for memory: the models alone are
@@ -171,13 +186,35 @@ The number of steps when none is asked: the two-step schedule the model was dist
 
 Longest prompt accepted, in characters (the model reads at most 300 tokens of it).
 
+### `DEFAULT_STRENGTH`
+
+How far a picture made from another may move from it when none is asked (0 close … 1 free).
+
+### `strengthTime(strength)`
+
+The SDEdit start time of a strength (TrigFlow time, π/2 is all noise). What a picture
+keeps changes fast near π/2, so the scale is even in log(tan t): t = atan(2·30^strength).
+0 → 1.11 (the picture barely moves), 0.3 → 1.39 (small changes of pose and detail),
+0.6 → 1.51 (a new light or style, the same layout: "at night", "as a watercolour"),
+1 → 1.55 (the text leads, the picture only hints). Measured on SANA-Sprint 0.6B.
+
+| Parameter | Type | |
+|---|---|---|
+| `strength` | `number` | 0 to 1 |
+
+### `sizeFromImage(w, h)`
+
+The size of a picture made from one of w × h: about a megapixel, its shape, multiples of 8.
+
+Returns `{ width: number, height: number }`.
+
 ### Type `ImageRequest`
 
 ```ts
 { prompt: string, aspect?: '1:1'|'4:3'|'3:2'|'16:9'|'3:4'|'2:3'|'9:16', width?: number, height?: number, seed?: number, steps?: 1|2|3|4 }
 ```
 
-`aspect` (default 1:1) picks a trained size of about a megapixel; `width` and `height` (256 to 2048) ask for an exact size instead, generated at the nearest trained shape and scaled and cropped to it. `seed` (0 to 4294967295) repeats a picture: the same prompt, seed, steps and size give the same image; without one, a random seed is used and returned. `steps` 1 to 4 (default 2).
+`aspect` (default 1:1) picks a trained size of about a megapixel; `width` and `height` (256 to 2048) ask for an exact size instead, generated at the nearest trained shape and scaled and cropped to it. `seed` (0 to 4294967295) repeats a picture: the same prompt, seed, steps and size give the same image; without one, a random seed is used and returned. `steps` 1 to 4 (default 2). `image` (optional): a picture to start from, `{ width, height, rgba }` (RGBA bytes; TextToImage turns a Blob or an ImageBitmap into one); the result keeps its shape (about a megapixel) and `strength` (0 to 1, default 0.6) says how far it may move from it: low keeps the picture and changes its look, high follows the text more.
 
 ## `sdk/text-to-image/rng.js`
 
@@ -240,6 +277,19 @@ Two steps use the distilled middle time 1.3; the others are evenly spaced.
 | Parameter | Type | |
 |---|---|---|
 | `steps` | `number` | 1 to 4 |
+
+Returns `Float32Array`.
+
+### `sdeditTimes(t)`
+
+The schedule of SDEdit (a picture from another picture) starting at time `t`
+(π/2 is all noise): the two-step schedule scaled to start there,
+[t, t·1.3/(π/2), 0], as diffusers' Sprint img2img runs with
+max_timesteps = t and intermediate_timesteps = t·1.3/(π/2).
+
+| Parameter | Type | |
+|---|---|---|
+| `t` | `number` | in (0, π/2] |
 
 Returns `Float32Array`.
 

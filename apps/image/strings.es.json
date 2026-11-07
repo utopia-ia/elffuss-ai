@@ -40,5 +40,16 @@
   "error.device-unsupported": "Esta tarjeta gráfica no ofrece WebGPU con números de 16 bits, que el modelo necesita.",
   "unsupported.webgpu-unavailable": "Este navegador no ofrece WebGPU, y el modelo lo necesita. Prueba con Chrome o Edge en un ordenador.",
   "unsupported.shader-f16": "Esta tarjeta gráfica no ofrece WebGPU con números de 16 bits, que el modelo necesita. Prueba en otro ordenador.",
-  "unsupported.memory": "En un móvil no cabe: el modelo ocupa más memoria de la que el navegador da a una pestaña. Ábrelo en un ordenador."
+  "unsupported.memory": "En un móvil no cabe: el modelo ocupa más memoria de la que el navegador da a una pestaña. Ábrelo en un ordenador.",
+  "fromImage.title": "Desde una imagen (opcional)",
+  "fromImage.alt": "La imagen de partida",
+  "fromImage.remove": "Quitar la imagen",
+  "fromImage.strength": "Cuánto puede cambiar",
+  "fromImage.close": "Parecido a la original",
+  "fromImage.free": "Más libre",
+  "fromImage.note": "La nueva imagen tendrá la forma de la tuya. Escribe cómo la quieres: «en acuarela», «de noche», «nevando». Para quitar o añadir una cosa concreta no sirve: cambia la imagen entera.",
+  "fromImage.bad": "Esa imagen no se puede abrir en este navegador.",
+  "fromImage.result": "Hecha desde tu imagen ({name}), cambiando un {pct} %.",
+  "stage.encode-image": "Leyendo tu imagen…",
+  "drop": "Suelta aquí una foto, pégala o pulsa para elegirla"
 }

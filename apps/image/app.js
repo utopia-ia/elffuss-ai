@@ -10,7 +10,7 @@
 // its size; a browser that cannot run the model is told so before anything is
 // downloaded.
 import { createShell } from './shared/shell.js';
-import { TextToImage, estimate, normalizeRequest, MAX_SEED } from './sdk/text-to-image/index.js';
+import { TextToImage, estimate, normalizeRequest, MAX_SEED, ASPECTS, canStartFromImage, sizeFromImage } from './sdk/text-to-image/index.js';
 import { openHistory } from './history.js';
 
 /** Longest side of the previews kept in the history. */
@@ -28,12 +28,20 @@ const unsupported = $('[data-role="unsupported"]');
 const historyBox = $('[data-role="history"]');
 const historyList = $('[data-role="history-list"]');
 const history = openHistory();
+const fromBox = $('[data-role="from-image"]');
+const chosenFig = $('[data-role="image-chosen"]');
+const chosenImg = $('[data-role="image-thumb"]');
+const chosenName = $('[data-role="image-name"]');
+const strengthBox = $('[data-role="strength"]');
+const strengthInput = $('input[data-input="strength"]');
+const imageNote = $('[data-role="image-note"]');
 // Test builds only: what the browser tests read back.
 const probe = shell.config.testHooks ? (shell.diagnostics.image = { runs: 0, stages: [] }) : null;
 
 let task = null; // the SDK task, created on the first run and kept for the next ones
 let shown = null; // blob: URLs on screen
 let blocked = false; // this browser cannot run the model
+let source = null; // the picture to start from: { blob, url, name, width, height }
 
 /** An element with attributes and children, built through the DOM (never from HTML text). */
 function el(tag, attrs = {}, ...children) {
@@ -58,11 +66,43 @@ function readForm() {
   if (!text) { shell.setStatus(t('error.empty-prompt')); prompt.focus(); return null; }
   const raw = seedInput.value.trim();
   if (raw && !(/^\d+$/.test(raw) && Number(raw) <= MAX_SEED)) { shell.setStatus(t('error.bad-seed')); seedInput.focus(); return null; }
-  return normalizeRequest({ prompt: text, aspect: checked('aspect'), steps: Number(checked('steps')), seed: raw === '' ? undefined : Number(raw) });
+  const seed = raw === '' ? undefined : Number(raw);
+  if (source) {
+    // the picture is read in the task (its pixels); here only the size and the strength are checked
+    const size = sizeFromImage(source.width, source.height);
+    normalizeRequest({ prompt: text, seed, ...size });
+    return { prompt: text, seed, image: source.blob, strength: Number(strengthInput.value) / 100 };
+  }
+  return normalizeRequest({ prompt: text, aspect: checked('aspect'), steps: Number(checked('steps')), seed });
+}
+
+/** The named shape nearest to w × h (for the frame while the picture is made). */
+function nearestAspect(w, h) {
+  let best = '1:1', gap = Infinity;
+  for (const [k, a] of Object.entries(ASPECTS)) { const d = Math.abs(Math.log(a.width / a.height) - Math.log(w / h)); if (d < gap) { gap = d; best = k; } }
+  return best;
+}
+
+/** A picture to start from was chosen (or removed): show it, and let it set the shape. */
+async function choose(file) {
+  if (source) URL.revokeObjectURL(source.url);
+  source = null;
+  if (file) {
+    try {
+      const bmp = await createImageBitmap(file);
+      source = { blob: file, url: URL.createObjectURL(file), name: file.name || t('file.name'), width: bmp.width, height: bmp.height };
+      bmp.close();
+    } catch { shell.setStatus(t('fromImage.bad')); }
+  }
+  chosenFig.hidden = !source; strengthBox.hidden = !source; imageNote.hidden = !source;
+  if (source) { chosenImg.src = source.url; chosenImg.width = source.width; chosenImg.height = source.height; chosenName.textContent = source.name; }
+  for (const r of document.querySelectorAll('input[name="aspect"], input[name="steps"]')) r.disabled = Boolean(source);
+  syncFrame();
+  if (probe) probe.source = source ? { width: source.width, height: source.height } : null;
 }
 
 /** The frame takes the chosen shape at once, so the picture lands where the eye already is. */
-function syncFrame() { frame.dataset.aspect = checked('aspect') || '1:1'; }
+function syncFrame() { frame.dataset.aspect = source ? nearestAspect(source.width, source.height) : checked('aspect') || '1:1'; }
 
 /** What the frame says while the model works. */
 function showStage(p) {
@@ -108,10 +148,11 @@ async function show(result) {
       button('keep-seed', t('action.keepSeed'), () => { seedInput.value = String(result.seed); seedInput.focus(); })),
     el('img', { src: url, alt: t('result.alt', { prompt: result.prompt }), width: result.width, height: result.height }),
     el('p', { class: 'muted', 'data-role': 'result-meta' }, t('result.meta', { width: result.width, height: result.height, seed: result.seed, steps: result.steps })),
+    result.fromImage && el('p', { 'data-role': 'from-image-meta' }, t('fromImage.result', { name: source?.name || t('file.name'), pct: Math.round(result.strength * 100) })),
     result.truncated && el('p', { 'data-role': 'truncated' }, t('result.truncated'))));
   frame.hidden = true;
   section.querySelector('.actions')?.scrollIntoView?.({ block: 'nearest' });
-  if (probe) Object.assign(probe, { runs: probe.runs + 1, result: { width: result.width, height: result.height, seed: result.seed, steps: result.steps, device: result.device, bytes: result.blob.size } });
+  if (probe) Object.assign(probe, { runs: probe.runs + 1, result: { width: result.width, height: result.height, seed: result.seed, steps: result.steps, device: result.device, bytes: result.blob.size, fromImage: Boolean(result.fromImage), strength: result.strength ?? null } });
   try {
     await history.add({ prompt: result.prompt, seed: result.seed, steps: result.steps, aspect: result.aspect || '1:1', width: result.width, height: result.height, thumb: await thumbOf(result.blob) });
     await renderHistory();
@@ -188,6 +229,13 @@ prompt.addEventListener('keydown', e => {
 cancel.addEventListener('click', () => shell.cancel());
 $('button[data-action="clear-history"]').addEventListener('click', async () => { await history.clear(); await renderHistory(); });
 shell.onPrimary(primary, { after: () => shell.setReady(!blocked && prompt.value.trim().length > 0) });
+// A picture to start from: offered when the model has the image encoder (drop, paste or choose).
+if (canStartFromImage(shell.model)) {
+  fromBox.hidden = false;
+  shell.bindInput({ onFiles: files => { if (files[0]) choose(files[0]).catch(err => shell.showError(err)); }, paste: true, input: $('input[data-input="image"]') });
+  $('button[data-action="remove-image"]').addEventListener('click', () => choose(null));
+  if (probe) probe.fromImage = true;
+}
 shell.setReady(false);
 syncFrame();
 await checkSupport();

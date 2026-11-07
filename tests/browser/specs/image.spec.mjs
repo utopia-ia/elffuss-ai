@@ -20,6 +20,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { decodePng, encodePngSamples } from '../../../sdk/core/png.js';
+import { canStartFromImage } from '../../../sdk/text-to-image/index.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const GOLDEN = join(ROOT, 'tests', 'fixtures', 'text-to-image', 'golden-astronaut-256.png');
@@ -55,8 +56,9 @@ export function psnr(a, b) {
 async function create(page, { prompt = PROMPT, seed = '42', aspect = '1:1', steps = '2' } = {}) {
   await page.fill('textarea[data-input="prompt"]', prompt);
   await page.fill('input[data-input="seed"]', seed);
-  await page.check(`input[name="aspect"][value="${aspect}"]`, { force: true });
-  await page.check(`input[name="steps"][value="${steps}"]`, { force: true });
+  // null: leave them (a picture to start from sets the shape and the steps)
+  if (aspect) await page.check(`input[name="aspect"][value="${aspect}"]`, { force: true });
+  if (steps) await page.check(`input[name="steps"][value="${steps}"]`, { force: true });
   const runs = await page.evaluate(() => globalThis.__elffuss.image.runs);
   const logs = [];
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') logs.push(m.text().slice(0, 300)); });
@@ -150,6 +152,38 @@ export default [
       t.equal([img.width, img.height], [1344, 768], 'the PNG has that size');
       t.noPageErrors();
       await t.noCsp(page);
+    },
+  },
+  {
+    name: 'from a picture: a photo dropped in keeps its shape and becomes a new picture of it',
+    sites: ['image'],
+    configs: ['A'],
+    async run(t, site) {
+      // Until the model's published variant has the image encoder, the page does not offer it.
+      if (!canStartFromImage(t.registry.models['text-to-image/sana-sprint-0.6b'])) { t.note('the published model has no image encoder yet: nothing to test'); return; }
+      const ctx = await t.newContext();
+      const page = await t.open(ctx, site, '/');
+      await page.waitForSelector('[data-role="from-image"]:not([hidden])');
+      // a CC0 photo of the depth site (4:3 or so): the result keeps its shape
+      await page.setInputFiles('input[data-input="image"]', join(ROOT, 'tests', 'fixtures', 'depth', 'foto.jpg'));
+      await page.waitForSelector('[data-role="image-chosen"]:not([hidden])');
+      t.ok(await page.isDisabled('input[name="aspect"][value="16:9"]'), 'the shape comes from the photo');
+      const src = await page.evaluate(() => globalThis.__elffuss.image.source);
+      await page.fill('input[data-input="strength"]', '60');
+      const d = await create(page, { prompt: 'the same scene as a watercolour painting', seed: '5', aspect: null, steps: null }).catch(err => ({ errors: [String(err)] }));
+      t.equal(d.errors, [], `errors (${JSON.stringify(d.why || [])})`);
+      const r = d.image.result;
+      t.equal([r?.fromImage, r?.strength, r?.steps], [true, 0.6, 2], 'made from the picture, at the strength asked');
+      t.ok(Math.abs(r.width / r.height - src.width / src.height) < 0.03, `the photo's shape (${r.width} × ${r.height} from ${src.width} × ${src.height})`);
+      t.ok(d.image.stages.includes('encode-image'), 'the picture is read first');
+      t.ok((await page.textContent('[data-role="from-image-meta"]')).includes('60'), 'the result says it came from the picture');
+      t.equal(await page.evaluate(() => document.querySelectorAll('[style]').length), 0, 'no inline styles');
+      // Removing the picture gives the shapes back.
+      await page.click('button[data-action="remove-image"]');
+      t.ok(!(await page.isDisabled('input[name="aspect"][value="16:9"]')), 'the shapes are back');
+      t.noPageErrors();
+      await t.noCsp(page);
+      t.networkClean(site);
     },
   },
   {

@@ -7,5 +7,6 @@
   "camera": false,
   "pdfjs": false,
   "transformers": true,
-  "status": "ready"
+  "status": "ready",
+  "accept": "image/*"
 }
