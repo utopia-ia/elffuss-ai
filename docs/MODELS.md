@@ -15,7 +15,7 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 | text-to-sfx | `text-to-sfx/stable-audio-3-small-sfx` | [Stable Audio 3 Small SFX](https://huggingface.co/stabilityai/stable-audio-3-small-sfx), by Stability AI | Stability AI Community License (base: Stability AI Community License) | WebGPU fp16 (with shader-f16) · 1764 MB |
 | text-to-speech | `text-to-speech/kokoro-82m` | [Kokoro 82M](https://huggingface.co/hexgrad/Kokoro-82M), by hexgrad | Apache-2.0 (base: Apache-2.0) | WebGPU fp32 · 339 MB<br>WASM q8 · 106 MB |
 | text-to-speech | `text-to-speech/moss-tts-nano` | [MOSS-TTS-Nano](https://huggingface.co/OpenMOSS-Team/MOSS-TTS-Nano), by OpenMOSS | Apache-2.0 (base: Apache-2.0) | WASM fp32 · 717 MB |
-| text-to-image | `text-to-image/sana-sprint-0.6b` | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0) | WebGPU q4f16 (with shader-f16) · 3172 MB |
+| text-to-image | `text-to-image/sana-sprint-0.6b` | [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs | Apache-2.0 (base: Apache-2.0) | WebGPU q4f16 (with shader-f16) · 3479 MB |
 | image-to-video | `image-to-video/depth-parallax` | [Depth Anything V2 Small](https://huggingface.co/depth-anything/Depth-Anything-V2-Small), by depth-anything<br>[MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN), by Picsart AI Research | Apache-2.0 AND MIT (base: Apache-2.0, MIT) | WebGPU fp16 (with shader-f16) · 79 MB<br>WebGPU fp32 · 129 MB<br>WASM q8 · 57 MB |
 | text-to-video | `text-to-video/wan2.1-t2v-1.3b-rcm` | [Wan2.1-T2V-1.3B](https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B), by Wan-AI<br>[rCM Wan2.1 T2V 1.3B 480p](https://huggingface.co/worstcoder/rcm-Wan), by worstcoder (rCM, NVlabs/Tsinghua)<br>[lighttaew2_1 (TAEHV)](https://huggingface.co/lightx2v/Autoencoders), by lightx2v / madebyollin | Apache-2.0 (base: Apache-2.0, Apache-2.0, Apache-2.0) | WebGPU q8f16 (with shader-f16) · 5236 MB |
 
@@ -117,14 +117,14 @@ Every model a site downloads, from a Hugging Face repository pinned to a commit:
 
 - Base model: [SANA-Sprint 0.6B](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px), by NVlabs, Apache-2.0.
 - Part `main`: [Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers](https://huggingface.co/Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers/tree/aa76e7f4f4928f378716b6716a2130fba3caf5b1) at `aa76e7f4f4928f378716b6716a2130fba3caf5b1`, Apache-2.0.
-- Part `onnx`: [UtopiaIA/sana-sprint-0.6b-1024px-onnx-web](https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/tree/762399d3a10e6ec06afeffbdf7dd425c83004fb3) at `762399d3a10e6ec06afeffbdf7dd425c83004fb3`, Apache-2.0.
+- Part `onnx`: [UtopiaIA/sana-sprint-0.6b-1024px-onnx-web](https://huggingface.co/UtopiaIA/sana-sprint-0.6b-1024px-onnx-web/tree/131c0f31f7607f8e92e7209dfeb968e8b7f44374) at `131c0f31f7607f8e92e7209dfeb968e8b7f44374`, Apache-2.0.
 - Redistributed: a conversion of the original weights published by UtopiaIA, with the original licence and a NOTICE.
 - Licence note: the text encoder is Gemma 2 2B IT, by Google, provided under and subject to the Gemma Terms of Use (ai.google.dev/gemma/terms) and the Gemma Prohibited Use Policy, as in the original repository.
 - Note: It understands descriptions in English best.
 
 | Backend | Variant | Files | Download |
 |---|---|---|---|
-| WebGPU | q4f16 (shader-f16) | `main:tokenizer/tokenizer.json`, `main:tokenizer/tokenizer_config.json`, `main:transformer/config.json`, `main:vae/config.json`, `main:scheduler/scheduler_config.json`, `onnx:text_encoder/model_q4.onnx`, `onnx:text_encoder/embed_tokens_q4.bin`, `onnx:text_encoder/embed_tokens_q4_scales.bin`, `onnx:transformer/model_fp16.onnx`, `onnx:vae_decoder/model_fp16.onnx` | 3172 MB |
+| WebGPU | q4f16 (shader-f16) | `main:tokenizer/tokenizer.json`, `main:tokenizer/tokenizer_config.json`, `main:transformer/config.json`, `main:vae/config.json`, `main:scheduler/scheduler_config.json`, `onnx:text_encoder/model_q4.onnx`, `onnx:text_encoder/embed_tokens_q4.bin`, `onnx:text_encoder/embed_tokens_q4_scales.bin`, `onnx:transformer/model_fp16.onnx`, `onnx:vae_decoder/model_fp16.onnx`, `onnx:vae_encoder/model_fp16.onnx` | 3479 MB |
 
 ## `image-to-video/depth-parallax`
 

@@ -91,7 +91,7 @@ export default [
       const ctx = await t.newContext();
       const page = await t.open(ctx, site, '/');
       const label = await page.textContent('main button.primary');
-      t.ok(/Descargar el modelo \(3,2 GB\) y crear la imagen/.test(label), `the first click names the download: ${label}`);
+      t.ok(/Descargar el modelo \(3,5 GB\) y crear la imagen/.test(label), `the first click names the download: ${label}`);
       const d = await create(page);
       t.equal(d.errors, [], `errors (${JSON.stringify(d.why || [])})`);
       t.equal(d.device, null, 'the page does not use the WASM retry runner');

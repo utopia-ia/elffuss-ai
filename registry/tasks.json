@@ -982,7 +982,7 @@
         },
         "onnx": {
           "repo": "UtopiaIA/sana-sprint-0.6b-1024px-onnx-web",
-          "revision": "762399d3a10e6ec06afeffbdf7dd425c83004fb3",
+          "revision": "131c0f31f7607f8e92e7209dfeb968e8b7f44374",
           "license": "Apache-2.0",
           "author": "UtopiaIA",
           "files": {
@@ -995,8 +995,8 @@
               "gitOid": "ac1eeeabe1ada66ab5d624d7f58c82d9826ff09f"
             },
             "README.md": {
-              "size": 1958,
-              "gitOid": "4dbf134c4c9e22ebf855879d547b4f1358ff5cbf"
+              "size": 2392,
+              "gitOid": "ac176ba29c9dde212d22f191ea3193c4d0860614"
             },
             "text_encoder/embed_tokens_q4_scales.bin": {
               "size": 36864000,
@@ -1017,6 +1017,10 @@
             "vae_decoder/model_fp16.onnx": {
               "size": 318818869,
               "sha256": "a1c88900bbbdc80f876ca8f7dc2735829fe16615d7acccafc4ba8eff3e6b0591"
+            },
+            "vae_encoder/model_fp16.onnx": {
+              "size": 306441950,
+              "sha256": "32ce0774a4a1d3eb2a41783f0062609822d05f66538e939b1c96db83e527d191"
             }
           }
         }
@@ -1036,9 +1040,10 @@
               "onnx:text_encoder/embed_tokens_q4.bin",
               "onnx:text_encoder/embed_tokens_q4_scales.bin",
               "onnx:transformer/model_fp16.onnx",
-              "onnx:vae_decoder/model_fp16.onnx"
+              "onnx:vae_decoder/model_fp16.onnx",
+              "onnx:vae_encoder/model_fp16.onnx"
             ],
-            "bytes": 3172452977
+            "bytes": 3478894927
           }
         ]
       },

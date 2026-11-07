@@ -281,10 +281,11 @@ export default {
       // states exists on the Hub. Published by UtopiaIA at the pinned commit.
       parts: {
         main: { repo: 'Efficient-Large-Model/Sana_Sprint_0.6B_1024px_diffusers', revision: 'aa76e7f4f4928f378716b6716a2130fba3caf5b1' },
-        onnx: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '762399d3a10e6ec06afeffbdf7dd425c83004fb3' },
+        onnx: { repo: 'UtopiaIA/sana-sprint-0.6b-1024px-onnx-web', revision: '131c0f31f7607f8e92e7209dfeb968e8b7f44374' },
       },
       // WebGPU only, with float16 shaders: the transformer and the decoder are float16,
-      // and the 4-bit text model needs WebGPU's speed for its prompt.
+      // and the 4-bit text model needs WebGPU's speed for its prompt. The DC-AE encoder
+      // (a picture made from another) is read only when a picture is given.
       devices: {
         webgpu: [
           {
@@ -294,7 +295,7 @@ export default {
               'main:tokenizer/tokenizer.json', 'main:tokenizer/tokenizer_config.json', 'main:transformer/config.json',
               'main:vae/config.json', 'main:scheduler/scheduler_config.json',
               'onnx:text_encoder/model_q4.onnx', 'onnx:text_encoder/embed_tokens_q4.bin', 'onnx:text_encoder/embed_tokens_q4_scales.bin',
-              'onnx:transformer/model_fp16.onnx', 'onnx:vae_decoder/model_fp16.onnx',
+              'onnx:transformer/model_fp16.onnx', 'onnx:vae_decoder/model_fp16.onnx', 'onnx:vae_encoder/model_fp16.onnx',
             ],
           },
         ],
