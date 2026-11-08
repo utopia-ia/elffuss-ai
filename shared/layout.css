@@ -10,6 +10,10 @@ header nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; 
 .brand-row .elffuss-mark, .brand-sep { flex: none; }
 .brand-row .elffuss-mark { margin: 1.5px 0 -1.5px; }
 .brand-sep { color: var(--muted); }
+/* Inside the chat on elffuss.com (shared/embed.js): the chat's bar above names the tool, goes back to the chat and
+   opens the tool in a tab, so the page's own header (brand, Elffuss, language, install) is not shown twice. The bar
+   of tools stays. */
+.in-elffuss body > header { display: none; }
 .toolbar { position: relative; display: flex; gap: 0.25rem 0.75rem; padding: 0.375rem 1.5rem; overflow-x: auto; }
 .toolbar ul { display: flex; gap: 0.25rem; margin: 0; padding: 0; flex: none; }
 .toolbar li { display: flex; }

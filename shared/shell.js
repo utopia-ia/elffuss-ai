@@ -24,6 +24,7 @@ import { AiError, isAiError, toAiError } from '../sdk/core/errors.js';
 import { createTaskRunner } from './runner.js';
 import { onInput, runQueued } from './autorun.js';
 import { offerInstall } from './install.js';
+import { embedInElffuss, framed, iOS } from './embed.js';
 import { enhanceControls } from './controls.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -69,6 +70,7 @@ export function testFlags(params, enabled) {
  */
 export async function createShell({ config: cfg = config } = {}) {
   offerInstall();
+  embedInElffuss();
   const lang = document.documentElement.lang === 'en' ? 'en' : 'es';
   const strings = await (await fetch(new URL(`../strings.${lang}.json`, import.meta.url), { credentials: 'same-origin' })).json();
   const t = (key, vars) => fill(strings[key] ?? key, vars);
@@ -334,8 +336,31 @@ export async function createShell({ config: cfg = config } = {}) {
     /** Label of a backend ("With WebGPU" / "With WASM"). */
     deviceLabel(device) { return t('device.' + device); },
 
-    /** Offer a Blob as a file to save, through a temporary blob: URL. */
+    /**
+     * Offer a Blob as a file to save, through a temporary blob: URL. On an
+     * iPhone or iPad inside the chat's frame, the share sheet first (Save Image,
+     * Save to Files…): there a download from a frame, above all in Elffuss
+     * installed as an app, may open the file in a viewer with no way back to the
+     * page. Called from the click, so the sheet may open; if the browser cannot
+     * share the file, the plain download.
+     */
     download(blob, name) {
+      if (framed() && iOS() && typeof navigator.share === 'function') {
+        const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+        let can = false;
+        try { can = !!navigator.canShare?.({ files: [file] }); } catch { can = false; }
+        if (can) {
+          navigator.share({ files: [file] }).catch(err => {
+            if (err?.name === 'AbortError') return;            // the person closed the sheet
+            shell.saveLink(blob, name);
+          });
+          return;
+        }
+      }
+      shell.saveLink(blob, name);
+    },
+    /** The plain download of a Blob: a temporary blob: URL and a link with `download`. */
+    saveLink(blob, name) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
