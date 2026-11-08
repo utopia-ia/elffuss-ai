@@ -1,29 +1,77 @@
-/* Layout only: boxes, grids, spacing and sizes. Colours come from the variables
-   of tokens.css; borders, radii, shadows and type belong to elffuss-look.css. */
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--fg); }
 a { color: var(--accent); }
 .muted { color: var(--muted); }
 
-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; padding: 1rem 1rem; }
-header nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
-/* The Elffuss mark (elffuss-mark.css, the same on every Elffuss site: a link to elffuss.com) and then the site's
-   name, a link to its home. The gap keeps 8 px between the mark's focus ring (6 px out) and the dot; the margins put
-   the mark 1.5 px lower, without making the row taller, so "Elffuss" shares the baseline of the name. */
+/* The header: the mark and the site's name, the links; under it, on the app pages, the bar of every tool. */
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; padding: 0.75rem 1.5rem; }
+header nav { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
 .brand-row { display: flex; align-items: center; gap: 0 .9rem; min-width: 0; }
 .brand-row .elffuss-mark, .brand-sep { flex: none; }
 .brand-row .elffuss-mark { margin: 1.5px 0 -1.5px; }
 .brand-sep { color: var(--muted); }
-main { flex: 1; width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
-footer { width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 2rem; }
+.toolbar { position: relative; display: flex; gap: 0.25rem 0.75rem; padding: 0.375rem 1.5rem; overflow-x: auto; }
+.toolbar ul { display: flex; gap: 0.25rem; margin: 0; padding: 0; flex: none; }
+.toolbar li { display: flex; }
+.toolbar a { display: flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; padding: 0.375rem 0.75rem; }
+.tool-icon { flex: none; width: 1.25rem; height: 1.25rem; }
 
-.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; min-height: 9rem; padding: 1.5rem 1rem; }
+main { flex: 1; width: 100%; max-width: 80rem; margin: 0 auto; padding: 1.5rem 1.5rem 3rem; display: flex; flex-direction: column; gap: 1.5rem; }
+footer { width: 100%; max-width: 80rem; margin: 0 auto; padding: 1.5rem 1.5rem 2.5rem; }
+.intro { display: flex; flex-direction: column; gap: 0.375rem; max-width: 46rem; }
+.intro > * { margin: 0; }
+
+/* The studio: the desk (what goes in, the settings and the action) beside the canvas (what comes out). One
+   column on a phone, the desk first. */
+.studio { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.desk, .canvas { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.desk > p, .canvas > p { margin: 0; }
+.canvas > .placeholder { display: none; }
+@media (min-width: 60rem) {
+  .studio { grid-template-columns: minmax(20rem, 25rem) minmax(0, 1fr); gap: 2rem; }
+  .canvas > .placeholder { display: flex; }
+  .canvas:has(> :not(.placeholder):not([hidden])) > .placeholder { display: none; }
+}
+.placeholder { flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; min-height: 26rem; padding: 2rem; }
+.placeholder > .tool-icon { width: 3rem; height: 3rem; }
+.placeholder > span { max-width: 26rem; }
+
+.field { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; margin: 0; padding: 0; }
+.hint:empty { display: none; }
+.field-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.field textarea, .field select, .field input:not([type="range"]):not([type="checkbox"]):not([type="radio"]) { width: 100%; }
+.field input[type="range"] { width: 100%; margin: 0; }
+.ends { display: flex; justify-content: space-between; gap: 1rem; }
+.options { display: flex; flex-direction: column; gap: 1.25rem; margin: 0; padding: 1rem 1.125rem 1.125rem; min-width: 0; }
+.options > legend { padding: 0 0.375rem; }
+.options > p { margin: 0; }
+.advanced { display: flex; flex-direction: column; }
+.advanced > summary { display: flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; }
+.advanced[open] > summary { margin-bottom: 0.75rem; }
+.advanced > .field + .field, .advanced > .field + .check { margin-top: 1.25rem; }
+.check { display: flex; align-items: center; gap: 0.75rem; min-height: 2.5rem; }
+.go { display: flex; flex-direction: column; gap: 0.75rem; }
+.go > p { margin: 0; }
+.go .actions > .primary { flex: 1 1 auto; }
+
+.segmented { display: flex; gap: 0.25rem; padding: 0.25rem; min-width: 0; }
+.segmented > button, .segmented > label { flex: 1 1 0; min-width: 0; }
+.segmented > label { flex: 1 1 auto; }
+.segmented[data-wrap], .segmented.wrap { flex-wrap: wrap; }
+.segmented[data-wrap] > button, .segmented.wrap > label { flex: 0 1 auto; }
+.segmented > label { position: relative; display: flex; }
+.segmented > label > input:not(.visually-hidden) { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; }
+.segmented > label > span { display: flex; flex: 1; align-items: center; justify-content: center; min-height: 2.25rem; padding: 0.25rem 0.75rem; }
+.segmented > button { min-height: 2.25rem; padding: 0.25rem 0.75rem; }
+
+.drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; min-height: 8rem; padding: 1.25rem 1rem; }
+.drop > .tool-icon { width: 1.75rem; height: 1.75rem; }
 .result { display: flex; flex-direction: column; gap: 1rem; }
-.card { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; }
+.card { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 1rem; padding: 0; margin: 0; }
 .cards > li { display: flex; }
 .cards > li > .card { flex: 1; }
-.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0; }
 .stage { position: relative; margin: 0; max-width: 100%; }
 .stage > img, .stage > video, .stage > canvas { display: block; max-width: 100%; height: auto; }
 .stage > canvas.overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -31,21 +79,34 @@ footer { width: 100%; max-width: 60rem; margin: 0 auto; padding: 1rem 1rem 2rem;
 progress { width: 100%; }
 img, canvas, video { max-width: 100%; }
 
-/* "Install as an app" (shared/install.js): a box at the top of main with the steps or the browser's own dialog. */
 .install { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; }
 .install p { margin: 0; }
 .install .install-how { flex: 1 1 12rem; }
 .install .actions > button:last-child { margin-left: auto; }
 
-.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The catalog: its groups and their cards; the whole card is its link. */
+.group { display: flex; flex-direction: column; gap: 0.75rem; }
+.group > h2, .group > p { margin: 0; }
+.group > .cards { margin-top: 0.5rem; }
+.group > .cards { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.cards.tools[data-group="create"] { grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+.card.tool { position: relative; gap: 0.5rem; padding: 1.25rem; }
+.card.tool h3 a::before { content: ""; position: absolute; inset: 0; }
+.card.tool .credit { margin-top: auto; padding-top: 0.5rem; }
+.tool-tile { display: flex; align-items: center; justify-content: center; width: 3rem; height: 3rem; margin-bottom: 0.5rem; }
+.tool-tile > .tool-icon { width: 1.5rem; height: 1.5rem; }
+.card.tool[data-group="create"] .tool-tile { width: 3.5rem; height: 3.5rem; }
+.card.tool[data-group="create"] .tool-tile > .tool-icon { width: 1.75rem; height: 1.75rem; }
+
+.visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; min-width: 0 !important; min-height: 0 !important; margin: -1px !important; padding: 0 !important; overflow: hidden !important; clip-path: inset(50%); white-space: nowrap; }
 [hidden] { display: none !important; }
 
-/* On a phone the mark is touched: 44 px to touch, given by an empty layer 5 px above and below the link, not by a
-   taller box. The box stays 34 px, so the line does not grow and the focus ring (6 px out) stays inside the header's
-   padding (.6rem on a phone) and off the nav when it wraps under. Under 390 px only the leaf is shown, so the
-   site's name stays on one line with any of the mark's serif fonts ("Remove background" needs 365 px with the first
-   one and some 390 px with Georgia); the link keeps its label. */
 @media (max-width: 600px) {
+  header { padding: 0.5rem 1rem; }
+  header nav { width: 100%; flex-wrap: nowrap; overflow-x: auto; margin: 0 -0.625rem; }
+  .toolbar { padding: 0.25rem 0.75rem; }
+  main { padding: 1rem 1rem 2.5rem; gap: 1.25rem; }
+  footer { padding: 1.25rem 1rem 2rem; }
   .brand-row .elffuss-mark { position: relative; }
   .brand-row .elffuss-mark::before { content: ""; position: absolute; inset: -5px 0; }
 }

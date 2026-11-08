@@ -83,5 +83,12 @@
   "install.other": "Abre el menú del navegador y elige «Instalar app» o «Añadir a pantalla de inicio».",
   "install.later": "Ahora no",
   "licenses.terms": "Condiciones de los modelos",
-  "licenses.termsScope": "se aplica a {scope}"
+  "licenses.termsScope": "se aplica a {scope}",
+  "toolbar.label": "Herramientas de Elffuss",
+  "toolbar.create": "Crear",
+  "toolbar.photo": "Fotos y documentos",
+  "ui.settings": "Ajustes",
+  "ui.advanced": "Ajustes avanzados",
+  "ui.output": "Resultado",
+  "ui.dropHint": "O suéltala en cualquier parte de esta zona."
 }

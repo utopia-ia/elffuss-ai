@@ -24,6 +24,7 @@ import { AiError, isAiError, toAiError } from '../sdk/core/errors.js';
 import { createTaskRunner } from './runner.js';
 import { onInput, runQueued } from './autorun.js';
 import { offerInstall } from './install.js';
+import { enhanceControls } from './controls.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const mb = bytes => (bytes / 1e6 < 10 ? (Math.round(bytes / 1e5) / 10) : Math.round(bytes / 1e6));
@@ -282,11 +283,14 @@ export async function createShell({ config: cfg = config } = {}) {
       const ac = new AbortController();
       busy = ac;
       queued = false;
+      // The page's look follows the work in progress (the canvas shows it); nothing reads this.
+      document.documentElement.dataset.busy = 'true';
       if (els.primary) els.primary.disabled = true;
       try { await fn({ signal: ac.signal }); }
       catch (err) { shell.showError(err); }
       finally {
         busy = null;
+        delete document.documentElement.dataset.busy;
         if (els.primary) els.primary.disabled = false;
         shell.refreshStorage().catch(() => {});
         if (fn === primaryAction) try { afterAction?.(); } catch { /* the page's own */ }
@@ -344,19 +348,26 @@ export async function createShell({ config: cfg = config } = {}) {
     },
 
     /**
-     * Files from the drop zone: its file input, drag and drop on it, and paste
-     * anywhere on the page (pasted images arrive as pegado-1.png / pasted-1.png).
+     * Files from the drop zone: its file input, drag and drop on it (and on any
+     * `main [data-drop]`, such as the empty canvas), and paste anywhere on the page
+     * (pasted images arrive as pegado-1.png / pasted-1.png).
      * @param {{ onFiles: (files: File[], how: 'pick'|'drop'|'paste') => void, paste?: boolean, input?: HTMLInputElement }} opts
      */
     bindInput({ onFiles: given, paste = false, input = $('input[type="file"]', els.drop || document) }) {
       const onFiles = (list, how) => { shell.retryStorage(); given(list, how); };
       input?.addEventListener('change', () => { if (input.files?.length) onFiles([...input.files], 'pick'); input.value = ''; });
-      els.drop?.addEventListener('dragover', e => { e.preventDefault(); });
-      els.drop?.addEventListener('drop', e => {
-        e.preventDefault();
-        const list = [...(e.dataTransfer?.files || [])];
-        if (list.length) onFiles(list, 'drop');
-      });
+      const zones = [els.drop, ...(input === $('input[type="file"]', els.drop || document) ? document.querySelectorAll('main [data-drop]') : [])].filter(Boolean);
+      for (const zone of zones) {
+        // data-over: a file is being dragged over it (the look shows where it will land)
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.dataset.over = 'true'; });
+        zone.addEventListener('dragleave', e => { if (!zone.contains(e.relatedTarget)) delete zone.dataset.over; });
+        zone.addEventListener('drop', e => {
+          e.preventDefault();
+          delete zone.dataset.over;
+          const list = [...(e.dataTransfer?.files || [])];
+          if (list.length) onFiles(list, 'drop');
+        });
+      }
       if (paste) {
         let n = 0;
         document.addEventListener('paste', e => {
@@ -381,6 +392,10 @@ export async function createShell({ config: cfg = config } = {}) {
     primaryLabels = { run: els.primary.dataset.labelRun, download: els.primary.dataset.labelDownload || els.primary.dataset.labelRun };
     if (files.length) els.primary.textContent = fill(primaryLabels.download, { size: formatSize(files.reduce((x, f) => x + f.size, 0), lang) });
   }
+  enhanceControls(document, lang);
+  // On a narrow screen the bar of tools scrolls sideways: this page's own tool in the middle of it.
+  const bar = $('nav.toolbar'), here = $('nav.toolbar [aria-current="page"]');
+  if (bar && here && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = here.offsetLeft - (bar.clientWidth - here.offsetWidth) / 2;
   shell.storageChecked = shell.refreshStorage().catch(() => null);
   lastCheck = shell.storageChecked;
   document.documentElement.dataset.shell = 'ready';

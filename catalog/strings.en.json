@@ -10,5 +10,9 @@
   "card.open": "Open",
   "apps.source": "The Elffuss apps, as elffuss.com describes them.",
   "install.why": "It opens in its own window, and the browser keeps the tools’ models saved instead of clearing them after a few days without use.",
-  "card.modelShort": "{model}, by {author} ({license})"
+  "card.modelShort": "{model}, by {author} ({license})",
+  "section.create": "Create",
+  "section.createLine": "Pictures, video and sound from what you write or from a photo.",
+  "section.photo": "Photos and documents",
+  "section.photoLine": "For working with a photo or a document you already have."
 }

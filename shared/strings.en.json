@@ -83,5 +83,12 @@
   "install.other": "Open the browser menu and choose “Install app” or “Add to Home screen”.",
   "install.later": "Not now",
   "licenses.terms": "Terms of the models",
-  "licenses.termsScope": "applies to {scope}"
+  "licenses.termsScope": "applies to {scope}",
+  "toolbar.label": "Elffuss tools",
+  "toolbar.create": "Create",
+  "toolbar.photo": "Photos and documents",
+  "ui.settings": "Settings",
+  "ui.advanced": "Advanced settings",
+  "ui.output": "Result",
+  "ui.dropHint": "Or drop it anywhere in this area."
 }

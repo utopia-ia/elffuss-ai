@@ -13,6 +13,7 @@ import { modelBases } from '../../sdk/core/registry.js';
 import { runtimeUrls, transformersDir } from '../../sdk/core/runtimes.js';
 import { PINS, VENDOR_DIRS } from '../../sdk/core/runtime-pins.js';
 import { ortVariantFor } from '../../sdk/core/device.js';
+import { groupSites, toolIcon, UPLOAD_ICON } from './tools-nav.mjs';
 
 const LANGS = ['es', 'en'];
 const mb = bytes => (bytes / 1e6 < 10 ? Math.round(bytes / 1e5) / 10 : Math.round(bytes / 1e6));
@@ -208,29 +209,60 @@ function modelCredits(model, t) {
   return lines;
 }
 
-/** Cards of the catalog: the tool sites, then the Elffuss apps. */
+/** The URL of a tool site in a language and channel. */
+function toolUrl(s, lang, channel) {
+  return siteUrl(s, channel) + (lang === 'en' ? 'en/' : '');
+}
+
+/**
+ * Cards of the catalog's tools, by group (`create`: what you make; `photo`: what you
+ * do with a photo or a document): an object with the markup of each group's cards.
+ * The whole card is the link (its h3 a stretches over it); the model and its size
+ * go last, small.
+ */
 export function catalogCards({ sites, registry, t, lang, channel }) {
-  const tools = sites.filter(s => !s.catalog).map(s => {
-    const m = registry.models[s.models[0]];
-    const url = siteUrl(s, channel) + (lang === 'en' ? 'en/' : '');
-    const ms = s.models.map(id => registry.models[id]);
-    const line = ms.length > 1
-      ? ms.map(x => fill(t['card.modelShort'], { model: x.base.name, author: x.base.author, license: x.base.license })).join(' · ')
-      : modelBases(m).length > 1
-        ? fill(t['card.models'], { models: basesText(m, t), size: sizeText(m, t, lang) })
-        : fill(t['card.model'], { model: m.base.name, author: m.base.author, license: m.base.license, size: sizeText(m, t, lang) });
-    return `      <li><article class="card" data-site="${esc(s.site)}" data-model="${esc(s.models[0])}">
-        <h3><a href="${esc(url)}">${esc(s.strings[lang]['catalog.name'])}</a></h3>
+  const out = {};
+  for (const g of groupSites(sites)) {
+    out[g.id] = g.sites.map(s => {
+      const m = registry.models[s.models[0]];
+      const ms = s.models.map(id => registry.models[id]);
+      const line = ms.length > 1
+        ? ms.map(x => fill(t['card.modelShort'], { model: x.base.name, author: x.base.author, license: x.base.license })).join(' · ')
+        : modelBases(m).length > 1
+          ? fill(t['card.models'], { models: basesText(m, t), size: sizeText(m, t, lang) })
+          : fill(t['card.model'], { model: m.base.name, author: m.base.author, license: m.base.license, size: sizeText(m, t, lang) });
+      return `      <li><article class="card tool" data-site="${esc(s.site)}" data-model="${esc(s.models[0])}" data-group="${esc(g.id)}">
+        <span class="tool-tile">${toolIcon(s.site)}</span>
+        <h3><a href="${esc(toolUrl(s, lang, channel))}">${esc(s.strings[lang]['catalog.name'])}</a></h3>
         <p>${esc(s.strings[lang]['catalog.line'])}</p>
-        <p class="muted">${esc(line)}</p>
-        <p data-role="stored" hidden>${esc(t['card.stored'])}</p>
+        <p class="muted credit">${esc(line)}</p>
+        <p class="stored" data-role="stored" hidden>${esc(t['card.stored'])}</p>
       </article></li>`;
+    }).join('\n');
+  }
+  return out;
+}
+
+/**
+ * The tool bar under an app's header: every tool, by group, with its icon and
+ * short name; the page's own marked as the current one. The catalog has none (it
+ * is the full list).
+ */
+export function toolbar({ site, sites, t, lang, channel, home }) {
+  if (site.catalog) return '';
+  const lists = groupSites(sites).map(g => {
+    const items = g.sites.map(s => {
+      const here = s.site === site.site;
+      const name = s.strings[lang]['tool.short'] || s.strings[lang]['catalog.name'];
+      return `    <li><a href="${esc(here ? home : toolUrl(s, lang, channel))}" data-tool="${esc(s.site)}"${here ? ' aria-current="page"' : ''}>${toolIcon(s.site)}<span>${esc(name)}</span></a></li>`;
+    });
+    return `  <ul data-group="${esc(g.id)}" aria-label="${esc(t['toolbar.' + g.id])}">\n${items.join('\n')}\n  </ul>`;
   });
-  return tools.join('\n');
+  return `<nav class="toolbar" aria-label="${esc(t['toolbar.label'])}">\n${lists.join('\n')}\n</nav>\n`;
 }
 
 export function appCards({ apps, lang }) {
-  return apps.map(a => `      <li><article class="card" data-app="${esc(a.id)}">
+  return apps.map(a => `      <li><article class="card app" data-app="${esc(a.id)}">
         <h3><a href="${esc(a.url)}">${esc(a.name[lang])}</a></h3>
         <p>${esc(a.line[lang])}</p>
       </article></li>`).join('\n');
@@ -312,7 +344,8 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
     const script = `<script type="module" src="${esc(base)}${site.catalog ? 'catalog.js' : 'app.js'}"></script>\n`;
     let main, footer;
     if (site.catalog) {
-      main = render(templates.main, { t, v, html: { toolCards: catalogCards({ sites, registry, t, lang, channel }), appCards: appCards({ apps, lang }) } });
+      const cards = catalogCards({ sites, registry, t, lang, channel });
+      main = render(templates.main, { t, v, html: { createCards: cards.create || '', photoCards: cards.photo || '', appCards: appCards({ apps, lang }) } });
       footer = `  <p><a href="${esc(lang === 'es' ? paths.licUrlEs : paths.licUrlEn)}">${esc(t['footer.licenses'])}</a> · <a href="https://elffuss.com/">elffuss.com</a></p>`;
     } else {
       // The first model is the site's own. A second one that is a mode of the page
@@ -323,16 +356,17 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
       // A mode whose model the site does not list gets an empty line (the page keeps it hidden).
       for (let i = models.length; i < 3; i++) lines[`modelLine${i + 1}`] = '';
       const modelLines = models.map((m, i) => `  <p data-role="model" data-model="${esc(m.id)}"${i ? ' hidden' : ''}>${modelLine(m, t, lang)}</p>`).join('\n');
-      main = render(templates.main, { t, v, html: { ...lines, modelLines, storage: storagePanel(models, t, lang) } });
+      main = render(templates.main, { t, v, html: { ...lines, modelLines, storage: storagePanel(models, t, lang), icon: toolIcon(site.site), upload: UPLOAD_ICON } });
       footer = appFooter({ model, models, runtimes, t, lang, licUrl: lang === 'es' ? paths.licUrlEs : paths.licUrlEn, catalogUrl });
     }
     const entry = installEntry(t, t.title);
-    out.set(lang === 'es' ? paths.es : paths.en, render(templates.page, { t, v, html: { cspMeta, appHead: appHead(lang), script, main, footer, installEntry: entry } }));
+    const bar = toolbar({ site, sites, t, lang, channel, home: v.home });
+    out.set(lang === 'es' ? paths.es : paths.en, render(templates.page, { t, v, html: { cspMeta, appHead: appHead(lang), script, main, footer, installEntry: entry, toolbar: bar } }));
     out.set(manifestPath(buildId, channel, lang).slice(1), webManifest({ t, lang, paths, theme }));
     const licT = { ...t, title: t['licenses.title'] };
     const licMain = licensesMain({ site, models, runtimes, t, base });
     const lv = { ...v, canonical: origin + (lang === 'es' ? 'licencias/' : 'en/licenses/'), home: v.home, otherLangUrl: other === 'es' ? paths.licUrlEs : paths.licUrlEn };
-    out.set(lang === 'es' ? paths.licEs : paths.licEn, render(templates.page, { t: licT, v: lv, html: { cspMeta, appHead: appHead(lang), installEntry: '', script: '', main: licMain, footer: `  <p><a href="${esc(v.home)}">${esc(t.title)}</a> · <a href="${esc(catalogUrl)}">${esc(t['footer.catalog'])}</a></p>` } }));
+    out.set(lang === 'es' ? paths.licEs : paths.licEn, render(templates.page, { t: licT, v: lv, html: { cspMeta, appHead: appHead(lang), installEntry: '', toolbar: '', script: '', main: licMain, footer: `  <p><a href="${esc(v.home)}">${esc(t.title)}</a> · <a href="${esc(catalogUrl)}">${esc(t['footer.catalog'])}</a></p>` } }));
   }
   const es = strings.es, en = strings.en;
   const nfMain = `  <h1>${esc(es['notfound.title'])} · <span lang="en">${esc(en['notfound.title'])}</span></h1>
@@ -341,7 +375,7 @@ export function sitePages({ site, sites, registry, manifest, strings, templates,
   out.set(paths.notFound, render(templates.page, {
     t: { ...es, title: es['notfound.title'] },
     v: { lang: 'es', base, css: site.catalog ? 'catalog.css' : 'app.css', canonical: origin, urlEs: origin, urlEn: origin + 'en/', home: paths.urlEs, catalogUrl: siteUrl(tools, channel), otherLang: 'en', otherLangUrl: paths.urlEn },
-    html: { cspMeta, appHead: appHead('es'), installEntry: '', script: '', main: nfMain, footer: '' },
+    html: { cspMeta, appHead: appHead('es'), installEntry: '', toolbar: '', script: '', main: nfMain, footer: '' },
   }));
   if (channel !== 'pre') out.set('robots.txt', 'User-agent: *\nDisallow: /beta/\nDisallow: /v/\nDisallow: /vendor/\n');
   return out;
