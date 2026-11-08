@@ -1,4 +1,6 @@
-/* Layout of the detect site only (see shared/README.md). The stage shrinks to its
-   picture so that the overlay canvas, stretched over it, lines up with it. */
+/* Layout of the detect site only (see shared/README.md). The stage shrinks to its picture so that the overlay
+   canvas, stretched over it, lines up with it. */
 .stage { width: fit-content; }
-.card > ol { margin: 0; padding-left: 1.5rem; }
+.camera { display: flex; flex-direction: column; gap: 0.5rem; }
+.camera > p { margin: 0; }
+.objects { margin: 0; padding-left: 1.5rem; display: flex; flex-direction: column; gap: 0.25rem; }

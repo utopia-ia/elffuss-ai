@@ -54,5 +54,7 @@
   "drop": "Suelta aquí una foto, pégala o pulsa para elegirla",
   "fromImage.used": "Se ha usado: «{prompt}».",
   "fromImage.edit": "Editar",
-  "stage.caption": "Mirando tu imagen…"
+  "stage.caption": "Mirando tu imagen…",
+  "tool.short": "Imagen",
+  "seed.hint": "Vacía, cada imagen es distinta. Con un número, la misma descripción da la misma imagen."
 }

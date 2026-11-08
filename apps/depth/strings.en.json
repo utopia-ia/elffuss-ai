@@ -26,5 +26,7 @@
   "view.hint": "Drag it to turn it, or use the arrow keys. The Home key goes back to the first view.",
   "view.relief": "Relief",
   "view.reset": "Back to the first view",
-  "file.name": "image"
+  "file.name": "image",
+  "tool.short": "Depth",
+  "canvas.idle": "What is near and what is far will appear here"
 }

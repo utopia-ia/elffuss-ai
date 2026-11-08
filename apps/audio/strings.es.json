@@ -81,5 +81,8 @@
   "file.name": "audio",
   "credits.stability": "Powered by Stability AI. Stable Audio 3 se usa bajo la Stability AI Community License; su codificador de texto, T5Gemma, además bajo los Términos de uso de Gemma.",
   "footer.terms.Stability AI Community License": "Powered by Stability AI. Este modelo de Stability AI tiene licencia Stability AI Community License, Copyright © Stability AI Ltd. Todos los derechos reservados.",
-  "footer.terms.Gemma Terms of Use": "El codificador de texto T5Gemma se usa según los Términos de uso de Gemma y su política de uso prohibido."
+  "footer.terms.Gemma Terms of Use": "El codificador de texto T5Gemma se usa según los Términos de uso de Gemma y su política de uso prohibido.",
+  "tool.short": "Audio",
+  "canvas.idle": "Aquí podrás escuchar lo que crees",
+  "canvas.hint": "Elige qué quieres crear, descríbelo y pulsa el botón."
 }

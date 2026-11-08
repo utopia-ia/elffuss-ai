@@ -101,5 +101,9 @@
   "story.continue": "Continue ({s})",
   "story.continueNow": "Continue",
   "story.changed": "Change a picture's text and paint it again. When you like it, continue.",
-  "story.stage.caption": "Looking at your photo…"
+  "story.stage.caption": "Looking at your photo…",
+  "tool.short": "Video",
+  "canvas.idle": "Your video will appear here",
+  "settings.soft": "Gentle",
+  "settings.strong": "Strong"
 }

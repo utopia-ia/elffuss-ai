@@ -12,6 +12,7 @@ import { createPlayer } from './player.js';
 import { createHistory, LIMIT } from './history.js';
 import { canEncodeOgg, encodeOgg } from './ogg.js';
 import { icon } from './icons.js';
+import { reveal } from './shared/controls.js';
 
 const shell = await createShell();
 const { t, lang } = shell;
@@ -190,7 +191,7 @@ async function showClip(clip, { fresh = false } = {}) {
       try { shell.download(await encodeOgg(channels, sampleRate), `${base}.ogg`); } finally { b.disabled = false; }
     }));
   }
-  if (clip.seed != null) actions.append(button('reuse-seed', t('reuse.seed'), () => { els.seed.value = String(clip.seed); els.seed.focus(); }));
+  if (clip.seed != null) actions.append(button('reuse-seed', t('reuse.seed'), () => { els.seed.value = String(clip.seed); reveal(els.seed); els.seed.focus(); }));
   section.append(el('article', { class: 'card', 'data-role': 'clip', 'data-mode': clip.mode },
     el('h3', {}, t(`result.title.${clip.mode}`)),
     el('p', { 'data-role': 'result-meta' }, meta),

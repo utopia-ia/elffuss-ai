@@ -73,5 +73,7 @@
   "export.noText": "Archivos sin texto",
   "export.base": "texto",
   "export.files": "archivos",
-  "paste.name": "pegado"
+  "paste.name": "pegado",
+  "tool.short": "Leer texto",
+  "canvas.idle": "Aquí verás el texto de cada archivo"
 }

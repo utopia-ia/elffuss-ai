@@ -1,10 +1,18 @@
-  <h1>{{t:title}}</h1>
-  <p>{{t:intro}}</p>
+<div class="intro">
+    <h1>{{t:title}}</h1>
+    <p>{{t:intro}}</p>
+  </div>
   <div class="studio">
-    <div class="composer" data-role="composer">
-      <fieldset class="from-image" data-role="from-image" hidden>
-        <legend>{{t:fromImage.title}}</legend>
+    <div class="desk composer" data-role="composer">
+      <div class="field">
+        <label for="prompt">{{t:prompt.label}}</label>
+        <textarea id="prompt" name="prompt" rows="4" maxlength="2000" placeholder="{{t:prompt.placeholder}}" data-input="prompt" required aria-describedby="prompt-hint"></textarea>
+        <p class="hint" id="prompt-hint" data-role="prompt-hint">{{t:prompt.hint}}</p>
+      </div>
+      <fieldset class="from-image field" data-role="from-image" hidden>
+        <legend class="label">{{t:fromImage.title}}</legend>
         <label class="drop">
+          {{html:upload}}
           <span>{{t:drop}}</span>
           <input class="visually-hidden" type="file" accept="{{v:accept}}" data-input="image">
         </label>
@@ -12,54 +20,68 @@
           <img data-role="image-thumb" alt="{{t:fromImage.alt}}">
           <figcaption><span data-role="image-name"></span> <button class="ghost" type="button" data-action="remove-image">{{t:fromImage.remove}}</button></figcaption>
         </figure>
-        <label class="field" data-role="strength" hidden>
-          <span>{{t:fromImage.strength}}</span>
-          <input type="range" min="0" max="100" step="5" value="70" data-input="strength" aria-describedby="strength-ends">
-          <span class="ends muted" id="strength-ends"><span>{{t:fromImage.close}}</span><span>{{t:fromImage.free}}</span></span>
-        </label>
-        <p class="muted" data-role="image-note" hidden>{{t:fromImage.note}}</p>
+        <div class="field" data-role="strength" hidden>
+          <div class="field-head">
+            <label for="strength">{{t:fromImage.strength}}</label>
+            <output for="strength" data-range data-suffix=" %"></output>
+          </div>
+          <input id="strength" type="range" min="0" max="100" step="5" value="70" data-input="strength" aria-describedby="strength-ends">
+          <p class="ends" id="strength-ends"><span>{{t:fromImage.close}}</span><span>{{t:fromImage.free}}</span></p>
+        </div>
+        <p class="hint" data-role="image-note" hidden>{{t:fromImage.note}}</p>
       </fieldset>
-      <label class="field" for="prompt">
-        <span>{{t:prompt.label}}</span>
-        <textarea id="prompt" name="prompt" rows="4" maxlength="2000" placeholder="{{t:prompt.placeholder}}" data-input="prompt" required></textarea>
-        <span class="muted" data-role="prompt-hint">{{t:prompt.hint}}</span>
-      </label>
-      <fieldset class="choices" data-input="aspect">
-        <legend>{{t:aspect.label}}</legend>
-        <label><input class="visually-hidden" type="radio" name="aspect" value="1:1" checked><span>1:1</span></label>
-        <label><input class="visually-hidden" type="radio" name="aspect" value="4:3"><span>4:3</span></label>
-        <label><input class="visually-hidden" type="radio" name="aspect" value="3:2"><span>3:2</span></label>
-        <label><input class="visually-hidden" type="radio" name="aspect" value="16:9"><span>16:9</span></label>
-        <label><input class="visually-hidden" type="radio" name="aspect" value="3:4"><span>3:4</span></label>
-        <label><input class="visually-hidden" type="radio" name="aspect" value="2:3"><span>2:3</span></label>
-        <label><input class="visually-hidden" type="radio" name="aspect" value="9:16"><span>9:16</span></label>
+      <fieldset class="options">
+        <legend>{{t:ui.settings}}</legend>
+        <fieldset class="choices field" data-input="aspect">
+          <legend class="label">{{t:aspect.label}}</legend>
+          <div class="segmented">
+            <label><input class="visually-hidden" type="radio" name="aspect" value="1:1" checked><span>1:1</span></label>
+            <label><input class="visually-hidden" type="radio" name="aspect" value="4:3"><span>4:3</span></label>
+            <label><input class="visually-hidden" type="radio" name="aspect" value="3:2"><span>3:2</span></label>
+            <label><input class="visually-hidden" type="radio" name="aspect" value="16:9"><span>16:9</span></label>
+            <label><input class="visually-hidden" type="radio" name="aspect" value="3:4"><span>3:4</span></label>
+            <label><input class="visually-hidden" type="radio" name="aspect" value="2:3"><span>2:3</span></label>
+            <label><input class="visually-hidden" type="radio" name="aspect" value="9:16"><span>9:16</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="choices field" data-input="steps">
+          <legend class="label">{{t:steps.label}}</legend>
+          <div class="segmented">
+            <label><input class="visually-hidden" type="radio" name="steps" value="1"><span>{{t:steps.1}}</span></label>
+            <label><input class="visually-hidden" type="radio" name="steps" value="2" checked><span>{{t:steps.2}}</span></label>
+            <label><input class="visually-hidden" type="radio" name="steps" value="4"><span>{{t:steps.4}}</span></label>
+          </div>
+        </fieldset>
+        <details class="advanced">
+          <summary>{{t:ui.advanced}}</summary>
+          <div class="field">
+            <label for="seed">{{t:seed.label}}</label>
+            <input id="seed" name="seed" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="{{t:seed.placeholder}}" data-input="seed" aria-describedby="seed-hint">
+            <p class="hint" id="seed-hint">{{t:seed.hint}}</p>
+          </div>
+        </details>
       </fieldset>
-      <fieldset class="choices" data-input="steps">
-        <legend>{{t:steps.label}}</legend>
-        <label><input class="visually-hidden" type="radio" name="steps" value="1"><span>{{t:steps.1}}</span></label>
-        <label><input class="visually-hidden" type="radio" name="steps" value="2" checked><span>{{t:steps.2}}</span></label>
-        <label><input class="visually-hidden" type="radio" name="steps" value="4"><span>{{t:steps.4}}</span></label>
-      </fieldset>
-      <label class="field" for="seed">
-        <span>{{t:seed.label}}</span>
-        <input id="seed" name="seed" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="{{t:seed.placeholder}}" data-input="seed">
-      </label>
-      <p data-role="model">{{html:modelLine}}</p>
-      <p class="muted" data-role="language-note">{{t:note.language}}</p>
-      <p class="actions">
-        <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
-        <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>
-      </p>
-      <progress hidden></progress>
-      <p class="status" role="status" aria-live="polite"></p>
-      <p class="notice" data-role="unsupported" hidden></p>
+      <div class="go">
+        <p class="actions">
+          <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
+          <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>
+        </p>
+        <progress hidden></progress>
+        <p class="status" role="status" aria-live="polite"></p>
+        <p class="notice" data-role="unsupported" hidden></p>
+        <p data-role="model">{{html:modelLine}}</p>
+        <p class="muted" data-role="language-note">{{t:note.language}}</p>
+      </div>
     </div>
-    <section class="result" hidden>
-      <h2>{{t:result.title}}</h2>
-    </section>
-    <figure class="frame" data-role="frame" data-aspect="1:1" aria-hidden="true">
-      <span data-role="frame-stage">{{t:frame.idle}}</span>
-    </figure>
+    <div class="canvas">
+      <section class="result" hidden>
+        <h2>{{t:result.title}}</h2>
+      </section>
+      <figure class="frame" data-role="frame" data-aspect="1:1" aria-hidden="true">
+        {{html:icon}}
+        <span data-role="frame-stage">{{t:frame.idle}}</span>
+      </figure>
+    </div>
   </div>
   <section class="history" data-role="history" hidden>
     <h2>{{t:history.title}}</h2>

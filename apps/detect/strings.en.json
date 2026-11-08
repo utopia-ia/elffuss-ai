@@ -34,5 +34,9 @@
   "action.downloadPng": "Download PNG with the boxes",
   "download.objects": "objects",
   "download.boxes": "boxes",
-  "download.camera": "camera"
+  "download.camera": "camera",
+  "tool.short": "Detect",
+  "canvas.idle": "The objects found will appear here",
+  "threshold.low": "More objects",
+  "threshold.high": "Only the surest"
 }

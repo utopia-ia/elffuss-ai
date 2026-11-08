@@ -26,5 +26,7 @@
   "view.hint": "Arrástrala para girarla, o usa las flechas del teclado. La tecla Inicio vuelve a la vista de partida.",
   "view.relief": "Relieve",
   "view.reset": "Volver a la vista de partida",
-  "file.name": "imagen"
+  "file.name": "imagen",
+  "tool.short": "Profundidad",
+  "canvas.idle": "Aquí verás qué está cerca y qué está lejos"
 }

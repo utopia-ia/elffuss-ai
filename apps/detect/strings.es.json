@@ -34,5 +34,9 @@
   "action.downloadPng": "Descargar PNG con las cajas",
   "download.objects": "objetos",
   "download.boxes": "cajas",
-  "download.camera": "cámara"
+  "download.camera": "cámara",
+  "tool.short": "Detectar",
+  "canvas.idle": "Aquí verás los objetos encontrados",
+  "threshold.low": "Más objetos",
+  "threshold.high": "Solo los más seguros"
 }

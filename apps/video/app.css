@@ -1,14 +1,10 @@
-/* Layout of the video site only (see shared/README.md): the picture first, as large as the window allows; the
-   settings in a grid that becomes one column on a phone; the video of the result as wide as its card. */
-main > figure.stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-main > figure.stage > img, main > figure.stage > canvas { width: auto; max-width: 100%; max-height: 70vh; height: auto; }
-.settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.75rem 1rem; margin: 0; padding: 1rem; }
-.settings > label { display: flex; flex-direction: column; gap: 0.35rem; }
-.settings > label.check { flex-direction: row; align-items: center; }
-.settings > label.wide { grid-column: 1 / -1; }
-.settings > label.wide > textarea { width: 100%; }
-.settings > p { grid-column: 1 / -1; margin: 0; }
-.modes { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin: 0; padding: 0; }
+/* Layout of the video site only (see shared/README.md): the picture and the video in the canvas, as large as
+   the window allows; the settings in the desk; the storyboard as a grid that wraps (one column on a phone). */
+.canvas > figure.stage { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.canvas > figure.stage > img, .canvas > figure.stage > canvas { width: auto; max-width: 100%; max-height: 70vh; height: auto; }
+.modes { display: flex; gap: 0.25rem; padding: 0.25rem; margin: 0; min-width: 0; }
+.modes > label { flex: 1 1 0; }
+.options .field > .field { margin-top: 0.5rem; }
 .actions > label.grow { display: flex; align-items: center; gap: 0.5rem; flex: 1 1 12rem; }
 .actions > label.grow > input { flex: 1; }
 .result .card > video { display: block; width: 100%; max-height: 75vh; }
@@ -33,3 +29,7 @@ main > figure.stage > img, main > figure.stage > canvas { width: auto; max-width
 .story .timeline[data-count="1"] { grid-template-columns: 1fr; }
 .story .timeline[data-count="2"] { grid-template-columns: repeat(2, 1fr); }
 .story .timeline[data-count="3"] { grid-template-columns: repeat(3, 1fr); }
+main > .modes { max-width: 48rem; }
+@media (max-width: 600px) {
+  main > .modes { flex-direction: column; }
+}

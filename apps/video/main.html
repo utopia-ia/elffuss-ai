@@ -1,99 +1,171 @@
-  <h1>{{t:title}}</h1>
-  <p>{{t:intro}}</p>
-  <fieldset class="modes" data-role="modes" hidden>
+<div class="intro">
+    <h1>{{t:title}}</h1>
+    <p>{{t:intro}}</p>
+  </div>
+  <fieldset class="modes segmented" data-role="modes" hidden>
     <legend class="visually-hidden">{{t:mode.legend}}</legend>
-    <label><input type="radio" name="mode" value="image" data-input="mode" checked> {{t:mode.image}}</label>
-    <label><input type="radio" name="mode" value="text" data-input="mode"> {{t:mode.text}}</label>
-    <label data-role="mode-story" hidden><input type="radio" name="mode" value="story" data-input="mode"> {{t:mode.story}}</label>
+    <label><input type="radio" name="mode" value="image" data-input="mode" checked><span>{{t:mode.image}}</span></label>
+    <label><input type="radio" name="mode" value="text" data-input="mode"><span>{{t:mode.text}}</span></label>
+    <label data-role="mode-story" hidden><input type="radio" name="mode" value="story" data-input="mode"><span>{{t:mode.story}}</span></label>
   </fieldset>
-  <fieldset class="settings" data-role="story-settings" hidden>
-    <legend>{{t:story.title}}</legend>
-    <label class="wide">{{t:story.prompt}}
-      <textarea rows="3" maxlength="2000" data-input="story-prompt" placeholder="{{t:story.placeholder}}"></textarea>
-    </label>
-    <label>{{t:story.seconds}} <select data-input="story-seconds">
-      <option value="3">3 s</option><option value="6">6 s</option><option value="9" selected>9 s</option>
-    </select></label>
-    <label>{{t:story.size}} <select data-input="story-size">
-      <option value="832x480">{{t:aspect.wide}}</option><option value="480x832">{{t:aspect.tall}}</option><option value="624x624">{{t:aspect.square}}</option>
-    </select></label>
-    <label>{{t:story.start}} <input type="file" accept="image/*" data-input="story-start"></label>
-    <label>{{t:story.end}} <input type="file" accept="image/*" data-input="story-end"></label>
-    <label>{{t:text.seed}} <input type="number" min="0" max="4294967295" step="1" inputmode="numeric" data-input="story-seed"></label>
-    <p class="muted" data-role="story-photos"></p>
-    <p class="muted" data-role="story-gate"></p>
-  </fieldset>
-  <section data-role="story" hidden></section>
-  <fieldset class="settings" data-role="text-settings" hidden>
-    <legend>{{t:text.title}}</legend>
-    <label class="wide">{{t:text.prompt}}
-      <textarea rows="3" maxlength="2000" data-input="prompt" placeholder="{{t:text.placeholder}}"></textarea>
-    </label>
-    <label>{{t:text.size}} <select data-input="size"></select></label>
-    <label>{{t:text.seconds}} <select data-input="gen-seconds"></select></label>
-    <label>{{t:text.steps}} <select data-input="steps"></select></label>
-    <label>{{t:text.seed}} <input type="number" min="0" max="4294967295" step="1" inputmode="numeric" data-input="seed"></label>
-    <p class="muted" data-role="text-gate"></p>
-  </fieldset>
-  <label class="drop">
-    <span>{{t:drop}}</span>
-    <input class="visually-hidden" type="file" accept="{{v:accept}}" data-input="files">
-  </label>
-  <p class="actions" data-role="make-image" hidden><button class="ghost" type="button" data-action="make-image">{{t:hook.image}}</button></p>
-  <figure class="stage" data-role="preview" hidden>
-    <img data-role="still" alt="{{t:preview.alt}}">
-    <canvas data-role="live" role="img" aria-label="{{t:live.label}}" hidden></canvas>
-    <figcaption data-role="preview-caption"></figcaption>
-  </figure>
-  <p class="actions" data-role="playback" hidden>
-    <button class="ghost" type="button" data-action="play" aria-pressed="true">{{t:live.pause}}</button>
-    <label class="grow">{{t:live.time}} <input type="range" min="0" max="1000" step="1" value="0" data-input="time"></label>
-  </p>
-  <fieldset class="settings" data-role="settings" data-mode="image">
-    <legend>{{t:settings.title}}</legend>
-    <label>{{t:settings.preset}}
-      <select data-input="preset">
-        <option value="dolly-in">{{t:preset.dolly-in}}</option>
-        <option value="orbit">{{t:preset.orbit}}</option>
-        <option value="swing">{{t:preset.swing}}</option>
-        <option value="zoom-pan">{{t:preset.zoom-pan}}</option>
-        <option value="vertigo">{{t:preset.vertigo}}</option>
-      </select>
-    </label>
-    <label>{{t:settings.aspect}}
-      <select data-input="aspect">
-        <option value="16:9">{{t:aspect.wide}}</option>
-        <option value="9:16">{{t:aspect.tall}}</option>
-        <option value="1:1">{{t:aspect.square}}</option>
-      </select>
-    </label>
-    <label>{{t:settings.seconds}} <output data-role="seconds-value">6 s</output>
-      <input type="range" min="2" max="15" step="1" value="6" data-input="seconds">
-    </label>
-    <label>{{t:settings.strength}}
-      <input type="range" min="40" max="160" step="5" value="100" data-input="strength">
-    </label>
-    <label class="check"><input type="checkbox" data-input="dof"> {{t:settings.dof}}</label>
-    <label>{{t:settings.sound}}
-      <select data-input="sound">
-        <option value="none">{{t:sound.none}}</option>
-        <option value="file">{{t:sound.file}}</option>
-        <option value="music" hidden>{{t:sound.music}}</option>
-      </select>
-    </label>
-    <label data-role="sound-file" hidden>{{t:sound.pick}} <input type="file" accept="audio/*" data-input="sound-file"></label>
-    <p class="muted" data-role="sound-name"></p>
-  </fieldset>
-  <p data-role="model">{{html:modelLine}}</p>
-  <p data-role="model-text" hidden>{{html:modelLine2}}</p>
-  <p data-role="model-story" hidden>{{html:modelLine3}}</p>
-  <p class="actions">
-    <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
-    <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>
-  </p>
-  <progress hidden></progress>
-  <p class="status" role="status" aria-live="polite"></p>
-  <section class="result" hidden>
-    <h2>{{t:result.title}}</h2>
-  </section>
+  <div class="studio">
+    <div class="desk">
+      <fieldset class="options" data-role="story-settings" hidden>
+        <legend>{{t:story.title}}</legend>
+        <div class="field">
+          <label for="story-prompt">{{t:story.prompt}}</label>
+          <textarea id="story-prompt" rows="4" maxlength="2000" data-input="story-prompt" placeholder="{{t:story.placeholder}}"></textarea>
+        </div>
+        <div class="field">
+          <span class="label" id="story-seconds-label">{{t:story.seconds}}</span>
+          <select data-input="story-seconds" data-segmented aria-labelledby="story-seconds-label">
+            <option value="3">3 s</option><option value="6">6 s</option><option value="9" selected>9 s</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="label" id="story-size-label">{{t:story.size}}</span>
+          <select data-input="story-size" data-segmented="wrap" aria-labelledby="story-size-label">
+            <option value="832x480">{{t:aspect.wide}}</option><option value="480x832">{{t:aspect.tall}}</option><option value="624x624">{{t:aspect.square}}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="story-start">{{t:story.start}}</label>
+          <input id="story-start" type="file" accept="image/*" data-input="story-start">
+        </div>
+        <div class="field">
+          <label for="story-end">{{t:story.end}}</label>
+          <input id="story-end" type="file" accept="image/*" data-input="story-end">
+        </div>
+        <p class="hint" data-role="story-photos"></p>
+        <details class="advanced">
+          <summary>{{t:ui.advanced}}</summary>
+          <div class="field">
+            <label for="story-seed">{{t:text.seed}}</label>
+            <input id="story-seed" type="number" min="0" max="4294967295" step="1" inputmode="numeric" data-input="story-seed">
+          </div>
+        </details>
+        <p class="hint" data-role="story-gate"></p>
+      </fieldset>
+
+      <fieldset class="options" data-role="text-settings" hidden>
+        <legend>{{t:text.title}}</legend>
+        <div class="field">
+          <label for="text-prompt">{{t:text.prompt}}</label>
+          <textarea id="text-prompt" rows="4" maxlength="2000" data-input="prompt" placeholder="{{t:text.placeholder}}"></textarea>
+        </div>
+        <div class="field">
+          <span class="label" id="size-label">{{t:text.size}}</span>
+          <select data-input="size" data-segmented aria-labelledby="size-label"></select>
+        </div>
+        <div class="field">
+          <span class="label" id="gen-seconds-label">{{t:text.seconds}}</span>
+          <select data-input="gen-seconds" data-segmented aria-labelledby="gen-seconds-label"></select>
+        </div>
+        <details class="advanced">
+          <summary>{{t:ui.advanced}}</summary>
+          <div class="field">
+            <span class="label" id="steps-label">{{t:text.steps}}</span>
+            <select data-input="steps" data-segmented aria-labelledby="steps-label"></select>
+          </div>
+          <div class="field">
+            <label for="text-seed">{{t:text.seed}}</label>
+            <input id="text-seed" type="number" min="0" max="4294967295" step="1" inputmode="numeric" data-input="seed">
+          </div>
+        </details>
+        <p class="hint" data-role="text-gate"></p>
+      </fieldset>
+
+      <label class="drop">
+        {{html:upload}}
+        <span>{{t:drop}}</span>
+        <input class="visually-hidden" type="file" id="file" accept="{{v:accept}}" data-input="files">
+      </label>
+      <p class="actions" data-role="make-image" hidden><button class="ghost" type="button" data-action="make-image">{{t:hook.image}}</button></p>
+
+      <fieldset class="options" data-role="settings" data-mode="image">
+        <legend>{{t:settings.title}}</legend>
+        <div class="field">
+          <span class="label" id="preset-label">{{t:settings.preset}}</span>
+          <select data-input="preset" data-segmented="wrap" aria-labelledby="preset-label">
+            <option value="dolly-in">{{t:preset.dolly-in}}</option>
+            <option value="orbit">{{t:preset.orbit}}</option>
+            <option value="swing">{{t:preset.swing}}</option>
+            <option value="zoom-pan">{{t:preset.zoom-pan}}</option>
+            <option value="vertigo">{{t:preset.vertigo}}</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="label" id="aspect-label">{{t:settings.aspect}}</span>
+          <select data-input="aspect" data-segmented="wrap" aria-labelledby="aspect-label">
+            <option value="16:9">{{t:aspect.wide}}</option>
+            <option value="9:16">{{t:aspect.tall}}</option>
+            <option value="1:1">{{t:aspect.square}}</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-head">
+            <label for="seconds">{{t:settings.seconds}}</label>
+            <output for="seconds" data-role="seconds-value">6 s</output>
+          </div>
+          <input id="seconds" type="range" min="2" max="15" step="1" value="6" data-input="seconds">
+        </div>
+        <div class="field">
+          <span class="label" id="sound-label">{{t:settings.sound}}</span>
+          <select data-input="sound" data-segmented="wrap" aria-labelledby="sound-label">
+            <option value="none">{{t:sound.none}}</option>
+            <option value="file">{{t:sound.file}}</option>
+            <option value="music" hidden>{{t:sound.music}}</option>
+          </select>
+          <div class="field" data-role="sound-file" hidden>
+            <label for="sound-file">{{t:sound.pick}}</label>
+            <input id="sound-file" type="file" accept="audio/*" data-input="sound-file">
+          </div>
+          <p class="hint" data-role="sound-name"></p>
+        </div>
+        <details class="advanced">
+          <summary>{{t:ui.advanced}}</summary>
+          <div class="field">
+            <div class="field-head">
+              <label for="strength">{{t:settings.strength}}</label>
+              <output for="strength" data-range data-suffix=" %"></output>
+            </div>
+            <input id="strength" type="range" min="40" max="160" step="5" value="100" data-input="strength" aria-describedby="strength-ends">
+            <p class="ends" id="strength-ends"><span>{{t:settings.soft}}</span><span>{{t:settings.strong}}</span></p>
+          </div>
+          <label class="check"><input type="checkbox" data-input="dof"> {{t:settings.dof}}</label>
+        </details>
+      </fieldset>
+
+      <div class="go">
+        <p class="actions">
+          <button class="primary" type="button" data-action="start" data-label-run="{{t:action.run}}" data-label-download="{{t:action.downloadAndRun}}" disabled>{{t:action.run}}</button>
+          <button class="ghost" type="button" data-action="cancel" hidden>{{t:action.cancel}}</button>
+        </p>
+        <progress hidden></progress>
+        <p class="status" role="status" aria-live="polite"></p>
+        <p data-role="model">{{html:modelLine}}</p>
+        <p data-role="model-text" hidden>{{html:modelLine2}}</p>
+        <p data-role="model-story" hidden>{{html:modelLine3}}</p>
+      </div>
+    </div>
+    <div class="canvas">
+      <div class="placeholder" aria-hidden="true">
+        {{html:icon}}
+        <strong>{{t:canvas.idle}}</strong>
+      </div>
+      <figure class="stage" data-role="preview" hidden>
+        <img data-role="still" alt="{{t:preview.alt}}">
+        <canvas data-role="live" role="img" aria-label="{{t:live.label}}" hidden></canvas>
+        <figcaption data-role="preview-caption"></figcaption>
+      </figure>
+      <p class="actions playback" data-role="playback" hidden>
+        <button class="ghost" type="button" data-action="play" aria-pressed="true">{{t:live.pause}}</button>
+        <label class="grow">{{t:live.time}} <input type="range" min="0" max="1000" step="1" value="0" data-input="time"></label>
+      </p>
+      <section data-role="story" hidden></section>
+      <section class="result" hidden>
+        <h2>{{t:result.title}}</h2>
+      </section>
+    </div>
+  </div>
 {{html:storage}}

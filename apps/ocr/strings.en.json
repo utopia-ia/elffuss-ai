@@ -73,5 +73,7 @@
   "export.noText": "Files without text",
   "export.base": "text",
   "export.files": "files",
-  "paste.name": "pasted"
+  "paste.name": "pasted",
+  "tool.short": "Read text",
+  "canvas.idle": "The text of each file will appear here"
 }

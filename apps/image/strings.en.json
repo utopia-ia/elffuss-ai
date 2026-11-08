@@ -54,5 +54,7 @@
   "drop": "Drop a photo here, paste it or click to choose it",
   "fromImage.used": "Used: “{prompt}”.",
   "fromImage.edit": "Edit",
-  "stage.caption": "Looking at your picture…"
+  "stage.caption": "Looking at your picture…",
+  "tool.short": "Image",
+  "seed.hint": "Empty, every picture is different. With a number, the same description gives the same picture."
 }

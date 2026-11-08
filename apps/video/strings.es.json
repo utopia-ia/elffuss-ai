@@ -101,5 +101,9 @@
   "story.continue": "Seguir ({s})",
   "story.continueNow": "Seguir",
   "story.changed": "Cambia el texto de una imagen y píntala de nuevo. Cuando te guste, sigue.",
-  "story.stage.caption": "Mirando tu foto…"
+  "story.stage.caption": "Mirando tu foto…",
+  "tool.short": "Vídeo",
+  "canvas.idle": "Aquí verás tu vídeo",
+  "settings.soft": "Suave",
+  "settings.strong": "Intenso"
 }

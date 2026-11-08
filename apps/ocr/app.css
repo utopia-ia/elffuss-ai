@@ -1,5 +1,9 @@
-/* Layout of the ocr site only (see shared/README.md): the list of files and
-   each file's card, its pages, and the page with its boxes. */
+/* Layout of the ocr site only (see shared/README.md): the other ways in and the queue in the desk; the list of
+   files with each file's card, its pages, and the page with its boxes in the canvas. */
+.more-inputs { display: flex; flex-direction: column; gap: 0.5rem; }
+.more-inputs > p { margin: 0; }
+.queue { display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; }
+.queue > h2, .queue > p { margin: 0; }
 .files { display: flex; flex-direction: column; gap: 1rem; margin: 0; padding: 0; }
 .files > li { display: block; }
 .card > section { display: flex; flex-direction: column; gap: 0.5rem; }

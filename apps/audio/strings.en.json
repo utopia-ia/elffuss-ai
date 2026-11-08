@@ -81,5 +81,8 @@
   "file.name": "audio",
   "credits.stability": "Powered by Stability AI. Stable Audio 3 is used under the Stability AI Community License; its text encoder, T5Gemma, also under the Gemma Terms of Use.",
   "footer.terms.Stability AI Community License": "Powered by Stability AI. This Stability AI Model is licensed under the Stability AI Community License, Copyright © Stability AI Ltd. All Rights Reserved.",
-  "footer.terms.Gemma Terms of Use": "The text encoder T5Gemma is used under the Gemma Terms of Use and its Prohibited Use Policy."
+  "footer.terms.Gemma Terms of Use": "The text encoder T5Gemma is used under the Gemma Terms of Use and its Prohibited Use Policy.",
+  "tool.short": "Audio",
+  "canvas.idle": "What you make will play here",
+  "canvas.hint": "Choose what to make, describe it and press the button."
 }

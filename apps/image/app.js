@@ -15,6 +15,7 @@ import { ImageToText } from './sdk/image-to-text/index.js';
 import { eagerFiles, resolveRef } from './sdk/core/registry.js';
 import { chooseVariant } from './sdk/core/device.js';
 import { openHistory } from './history.js';
+import { reveal } from './shared/controls.js';
 
 /** Longest side of the previews kept in the history. */
 const THUMB_SIDE = 192;
@@ -72,7 +73,7 @@ function readForm() {
   const text = prompt.value.trim();
   if (!text) { shell.setStatus(t('error.empty-prompt')); prompt.focus(); return null; }
   const raw = seedInput.value.trim();
-  if (raw && !(/^\d+$/.test(raw) && Number(raw) <= MAX_SEED)) { shell.setStatus(t('error.bad-seed')); seedInput.focus(); return null; }
+  if (raw && !(/^\d+$/.test(raw) && Number(raw) <= MAX_SEED)) { shell.setStatus(t('error.bad-seed')); reveal(seedInput); seedInput.focus(); return null; }
   const seed = raw === '' ? undefined : Number(raw);
   if (source) {
     // the picture is read in the task (its pixels); here only the size and the strength are checked
@@ -173,7 +174,7 @@ async function show(result) {
     el('p', { class: 'actions' },
       button('download', t('action.download'), () => shell.download(result.blob, name)),
       button('variation', t('action.variation'), () => { seedInput.value = ''; shell.act(primary); }),
-      button('keep-seed', t('action.keepSeed'), () => { seedInput.value = String(result.seed); seedInput.focus(); })),
+      button('keep-seed', t('action.keepSeed'), () => { seedInput.value = String(result.seed); reveal(seedInput); seedInput.focus(); })),
     el('img', { src: url, alt: t('result.alt', { prompt: result.prompt }), width: result.width, height: result.height }),
     el('p', { class: 'muted', 'data-role': 'result-meta' }, t('result.meta', { width: result.width, height: result.height, seed: result.seed, steps: result.steps })),
     result.fromImage && el('p', { 'data-role': 'from-image-meta' }, t('fromImage.result', { name: source?.name || t('file.name'), pct: Math.round(result.strength * 100) })),
@@ -201,6 +202,7 @@ async function renderHistory() {
     b.addEventListener('click', () => {
       prompt.value = it.prompt;
       seedInput.value = String(it.seed);
+      reveal(seedInput);
       for (const [name, v] of [['aspect', it.aspect], ['steps', String(it.steps)]]) {
         const input = document.querySelector(`input[name="${name}"][value="${v}"]`);
         if (input) input.checked = true;
