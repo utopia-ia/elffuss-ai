@@ -22,7 +22,7 @@ export const CHAT_ORIGIN = 'https://elffuss.com';
 /** Inside another page's frame. */
 export const framed = () => { try { return window.top !== window; } catch { return true; } };
 
-/** An iPhone or an iPad (an iPad says it is a Mac, with a touch screen). */
+/** A phone or tablet with Apple's mobile browser (the tablet reports a desktop platform with a touch screen). */
 export const iOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 let started = false;
