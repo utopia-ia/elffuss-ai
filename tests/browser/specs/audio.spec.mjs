@@ -168,6 +168,7 @@ export default [
       await page.fill('[data-input="prompt"]', 'Lo-fi hip hop beat with mellow Rhodes chords, soft vinyl crackle and a warm upright bass, 80 BPM');
       await page.fill('[data-input="seconds"]', '8');
       await page.dispatchEvent('[data-input="seconds"]', 'input');
+      await page.evaluate(() => { for (const d of document.querySelectorAll('main details.advanced')) d.open = true; }); // the expert settings are folded (a visual change only)
       await page.fill('[data-input="seed"]', '7');
       const a = await generate(t, page);
       save('music-lofi-seed7-a.wav', a.buf);
@@ -199,6 +200,7 @@ export default [
       await page.fill('[data-input="prompt"]', 'TrackType: SFX, a heavy wooden door creaking open slowly, then slamming shut in a stone hallway');
       await page.fill('[data-input="seconds"]', '5');
       await page.dispatchEvent('[data-input="seconds"]', 'input');
+      await page.evaluate(() => { for (const d of document.querySelectorAll('main details.advanced')) d.open = true; }); // the expert settings are folded (a visual change only)
       await page.fill('[data-input="seed"]', '11');
       const a = await generate(t, page);
       save('sfx-door-seed11.wav', a.buf);
@@ -344,6 +346,7 @@ export default [
         await page.fill('[data-input="prompt"]', prompt);
         await page.fill('[data-input="seconds"]', String(seconds));
         await page.dispatchEvent('[data-input="seconds"]', 'input');
+        await page.evaluate(() => { for (const d of document.querySelectorAll('main details.advanced')) d.open = true; }); // the expert settings are folded (a visual change only)
         await page.fill('[data-input="seed"]', '42');
         if (!(await page.getAttribute('details.advanced', 'open') !== null)) await page.click('details.advanced > summary');
         await page.fill('[data-input="steps"]', String(steps));

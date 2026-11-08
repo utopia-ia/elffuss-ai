@@ -90,5 +90,9 @@
   "ui.settings": "Ajustes",
   "ui.advanced": "Ajustes avanzados",
   "ui.output": "Resultado",
-  "ui.dropHint": "O suéltala en cualquier parte de esta zona."
+  "ui.dropHint": "O suéltala en cualquier parte de esta zona.",
+  "ends.short": "Corto",
+  "ends.long": "Largo",
+  "ends.slower": "Más despacio",
+  "ends.faster": "Más deprisa"
 }

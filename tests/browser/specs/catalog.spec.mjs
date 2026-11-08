@@ -33,7 +33,9 @@ export default [
       t.ok(!(await t.smoke(p)).error, 'depth stores its model');
       const page = await t.open(ctx, site, '/');
       const marks = await page.evaluate(() => globalThis.__elffuss?.marks);
-      t.equal(marks, { audio: false, cutout: false, depth: true, detect: false, image: false, ocr: false, video: false }, 'marks (the video site shares the depth files but also needs MI-GAN)');
+      // The cards follow the catalog's groups, not the alphabet: compare the marks in a fixed order.
+      const sorted = marks && Object.fromEntries(Object.entries(marks).sort(([a], [b]) => a.localeCompare(b)));
+      t.equal(sorted, { audio: false, cutout: false, depth: true, detect: false, image: false, ocr: false, video: false }, 'marks (the video site shares the depth files but also needs MI-GAN)');
       const shown = await page.evaluate(() => [...document.querySelectorAll('article.card[data-site]')].filter(c => !c.querySelector('[data-role="stored"]').hidden).map(c => c.dataset.site));
       t.equal(shown, ['depth'], 'only the depth card says it is already here');
       await t.noCsp(page);

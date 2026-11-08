@@ -2,13 +2,13 @@
     <h1>{{t:title}}</h1>
     <p>{{t:intro}}</p>
   </div>
+  <div class="modes segmented" role="group" aria-label="{{t:mode.label}}">
+    <button class="ghost" type="button" data-mode="music" aria-pressed="true">{{t:mode.music}}</button>
+    <button class="ghost" type="button" data-mode="sfx" aria-pressed="false">{{t:mode.sfx}}</button>
+    <button class="ghost" type="button" data-mode="speech" aria-pressed="false">{{t:mode.speech}}</button>
+  </div>
   <div class="studio">
     <div class="desk">
-      <div class="modes segmented" role="group" aria-label="{{t:mode.label}}">
-        <button class="ghost" type="button" data-mode="music" aria-pressed="true">{{t:mode.music}}</button>
-        <button class="ghost" type="button" data-mode="sfx" aria-pressed="false">{{t:mode.sfx}}</button>
-        <button class="ghost" type="button" data-mode="speech" aria-pressed="false">{{t:mode.speech}}</button>
-      </div>
       <form class="composer" data-role="composer" novalidate>
         <div class="field" data-panel="prompt">
           <label for="prompt" data-role="prompt-label">{{t:prompt.music}}</label>
@@ -28,7 +28,8 @@
               <label for="seconds">{{t:seconds.label}}</label>
               <output data-role="seconds-out" for="seconds"></output>
             </div>
-            <input id="seconds" data-input="seconds" type="range" min="2" max="120" step="1" value="30">
+            <input id="seconds" data-input="seconds" type="range" min="2" max="120" step="1" value="30" aria-describedby="seconds-ends">
+            <p class="ends" id="seconds-ends"><span>{{t:ends.short}}</span><span>{{t:ends.long}}</span></p>
           </div>
           <div class="field" data-panel="speech" hidden>
             <label for="voice">{{t:voice.label}}</label>
@@ -39,7 +40,8 @@
               <label for="speed">{{t:speed.label}}</label>
               <output data-role="speed-out" for="speed"></output>
             </div>
-            <input id="speed" data-input="speed" type="range" min="0.5" max="2" step="0.05" value="1">
+            <input id="speed" data-input="speed" type="range" min="0.5" max="2" step="0.05" value="1" aria-describedby="speed-ends">
+            <p class="ends" id="speed-ends"><span>{{t:ends.slower}}</span><span>{{t:ends.faster}}</span></p>
           </div>
           <details class="advanced" data-panel="prompt">
             <summary>{{t:ui.advanced}}</summary>

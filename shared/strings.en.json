@@ -90,5 +90,9 @@
   "ui.settings": "Settings",
   "ui.advanced": "Advanced settings",
   "ui.output": "Result",
-  "ui.dropHint": "Or drop it anywhere in this area."
+  "ui.dropHint": "Or drop it anywhere in this area.",
+  "ends.short": "Short",
+  "ends.long": "Long",
+  "ends.slower": "Slower",
+  "ends.faster": "Faster"
 }

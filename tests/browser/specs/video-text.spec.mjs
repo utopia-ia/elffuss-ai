@@ -56,6 +56,7 @@ export default [
       await page.fill('main [data-input="prompt"]', 'a red fox running through the snow, cinematic');
       await page.selectOption('main [data-input="size"]', '640x368');
       await page.selectOption('main [data-input="gen-seconds"]', '1');
+      await page.evaluate(() => { for (const d of document.querySelectorAll('main details.advanced')) d.open = true; }); // the expert settings are folded (a visual change only)
       await page.selectOption('main [data-input="steps"]', '2');
       await page.fill('main [data-input="seed"]', '7');
       await page.waitForFunction(() => !document.querySelector('main button.primary').disabled, null, { timeout: 60000 });

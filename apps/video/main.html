@@ -107,11 +107,12 @@
             <label for="seconds">{{t:settings.seconds}}</label>
             <output for="seconds" data-role="seconds-value">6 s</output>
           </div>
-          <input id="seconds" type="range" min="2" max="15" step="1" value="6" data-input="seconds">
+          <input id="seconds" type="range" min="2" max="15" step="1" value="6" data-input="seconds" aria-describedby="seconds-ends">
+          <p class="ends" id="seconds-ends"><span>{{t:ends.short}}</span><span>{{t:ends.long}}</span></p>
         </div>
         <div class="field">
           <span class="label" id="sound-label">{{t:settings.sound}}</span>
-          <select data-input="sound" data-segmented="wrap" aria-labelledby="sound-label">
+          <select data-input="sound" data-segmented aria-labelledby="sound-label">
             <option value="none">{{t:sound.none}}</option>
             <option value="file">{{t:sound.file}}</option>
             <option value="music" hidden>{{t:sound.music}}</option>

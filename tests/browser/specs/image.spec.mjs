@@ -55,6 +55,7 @@ export function psnr(a, b) {
 /** Fill the form and press the primary button; wait for the picture. */
 async function create(page, { prompt = PROMPT, seed = '42', aspect = '1:1', steps = '2' } = {}) {
   await page.fill('textarea[data-input="prompt"]', prompt);
+  await page.evaluate(() => { for (const d of document.querySelectorAll('main details.advanced')) d.open = true; }); // the expert settings are folded (a visual change only)
   await page.fill('input[data-input="seed"]', seed);
   // null: leave them (a picture to start from sets the shape and the steps)
   if (aspect) await page.check(`input[name="aspect"][value="${aspect}"]`, { force: true });
