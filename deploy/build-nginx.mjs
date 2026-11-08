@@ -17,7 +17,7 @@ import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { sites as readSites } from './sites.mjs';
-import { commonHeaders, csp, permissionsPolicy, CACHE, TYPES } from './headers.mjs';
+import { commonHeaders, frameHeaders, csp, permissionsPolicy, CACHE, TYPES } from './headers.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'deploy', 'nginx');
@@ -47,10 +47,10 @@ export function commonSnippet() {
   return HEAD + commonHeaders().map(([k, v]) => `add_header ${k} ${q(v)} always;`).join('\n') + '\n';
 }
 
-/** Headers of one site: the common ones, its CSP and its Permissions-Policy. */
+/** Headers of one site: the common ones, who may frame it, its CSP and its Permissions-Policy. */
 export function siteSnippet(site) {
   return `${HEAD}include snippets/elffuss-ai-common-headers.conf;
-add_header Content-Security-Policy ${q(csp(site))} always;
+${frameHeaders(site).map(([k, v]) => `add_header ${k} ${q(v)} always;\n`).join('')}add_header Content-Security-Policy ${q(csp(site))} always;
 add_header Permissions-Policy ${q(permissionsPolicy(site))} always;
 `;
 }

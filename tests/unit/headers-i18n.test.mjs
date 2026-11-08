@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { check as nginxCheck } from '../../deploy/build-nginx.mjs';
-import { csp, permissionsPolicy, headersFor, STORE_ORIGIN } from '../../deploy/headers.mjs';
+import { csp, permissionsPolicy, headersFor, STORE_ORIGIN, EMBEDDERS } from '../../deploy/headers.mjs';
 import { sites as readSites } from '../../deploy/sites.mjs';
 import { mergeStrings } from '../../scripts/build.mjs';
 import { ERROR_CODES } from '../../sdk/core/errors.js';
@@ -32,7 +32,8 @@ test('every policy has every directive, the store as the only frame, nothing uns
     const d = Object.fromEntries(p.split('; ').map(x => [x.split(' ')[0], x.split(' ').slice(1).join(' ')]));
     assert.deepEqual(Object.keys(d).sort(), [...need].sort(), s.site);
     assert.doesNotMatch(p, /'unsafe-inline'|'unsafe-eval'|'unsafe-hashes'|\*/, s.site);
-    for (const k of ['object-src', 'base-uri', 'form-action', 'frame-ancestors']) assert.equal(d[k], "'none'", `${s.site} ${k}`);
+    for (const k of ['object-src', 'base-uri', 'form-action']) assert.equal(d[k], "'none'", `${s.site} ${k}`);
+    assert.equal(d['frame-ancestors'], s.embed ? 'https://elffuss.com' : "'none'", `${s.site} frame-ancestors`);
     assert.equal(d['frame-src'], STORE_ORIGIN, `${s.site} frame-src`);
     assert.equal(d['connect-src'], "'self'", `${s.site} connect-src`);
     assert.equal(d['require-trusted-types-for'], "'script'", s.site);
@@ -50,8 +51,20 @@ test('only detect may use the camera; nothing else is allowed anywhere', () => {
     const h = Object.fromEntries(headersFor(s, { kind: 'beta' }));
     assert.equal(h['X-Robots-Tag'], 'noindex');
     assert.equal(h['Cross-Origin-Resource-Policy'], 'same-origin');
-    assert.equal(h['X-Frame-Options'], 'DENY');
+    assert.equal(h['X-Frame-Options'], s.embed ? undefined : 'DENY', `${s.site} X-Frame-Options`);
     assert.equal(Object.fromEntries(headersFor(s, { kind: 'vendor' }))['Cache-Control'], 'public, max-age=31536000, immutable');
+  }
+});
+
+test('only the chat on elffuss.com may frame a site, and only image, video and audio', () => {
+  assert.deepEqual([...EMBEDDERS], ['https://elffuss.com']);
+  assert.deepEqual(sites.filter(s => s.embed).map(s => s.site).sort(), ['audio', 'image', 'video']);
+  for (const s of sites) {
+    const fa = csp(s).split('; ').find(x => x.startsWith('frame-ancestors '));
+    assert.ok(fa, s.site);
+    if (!s.embed) { assert.equal(fa, "frame-ancestors 'none'", s.site); continue; }
+    assert.equal(fa, 'frame-ancestors https://elffuss.com', s.site);
+    assert.doesNotMatch(fa, /\*|http:|'self'/, s.site);
   }
 });
 

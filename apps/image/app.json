@@ -1,6 +1,7 @@
 {
   "site": "image",
   "host": "image.elffuss.com",
+  "embed": true,
   "testPort": 8795,
   "task": "text-to-image",
   "models": ["text-to-image/sana-sprint-0.6b", "image-to-text/florence-2-base-ft"],

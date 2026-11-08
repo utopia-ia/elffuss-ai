@@ -1,6 +1,7 @@
 {
   "site": "audio",
   "host": "audio.elffuss.com",
+  "embed": true,
   "testPort": 8796,
   "task": "audio",
   "models": [

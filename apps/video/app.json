@@ -1,6 +1,7 @@
 {
   "site": "video",
   "host": "video.elffuss.com",
+  "embed": true,
   "testPort": 8798,
   "task": "image-to-video",
   "models": [
