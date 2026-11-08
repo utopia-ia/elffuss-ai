@@ -36,7 +36,7 @@
 //                                                    engine (ELFFUSS_ENGINE_GIT, else
 //                                                    ../elffuss-engine): the commit must
 //                                                    be on its public branch; the files are
-//                                                    the import closure of the entry
+//                                                    the import closure of the entries
 // --fetch reads each pinned blob from that clone, else from the public repository
 // on GitHub by its blob hash, and checks both hashes either way.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync, renameSync } from 'node:fs';
@@ -58,7 +58,8 @@ export const ENGINE = Object.freeze({
   name: 'elffuss-engine',
   github: 'utopia-ia/elffuss-engine',
   branch: 'public-clean',
-  entry: 'js/moss.js',
+  // The MOSS-TTS-Nano port on WebGPU, and on the CPU (WebAssembly kernels).
+  entries: ['js/moss.js', 'js/moss-cpu.js'],
   licenses: ['LICENSE'],
 });
 
@@ -170,7 +171,8 @@ export function check(manifest = readManifest(), engine = readEngine()) {
     const dir = engineDir(engine);
     if (!/^[0-9a-f]{40}$/.test(engine.commit || '')) problems.push('engine.json: the commit is not a full hash');
     if (engine.name !== ENGINE.name || engine.branch !== ENGINE.branch) problems.push('engine.json: not the engine\'s public branch');
-    if (!engine.files?.[engine.entry]) problems.push('engine.json: the entry is not among the files');
+    for (const en of engine.entries || []) if (!engine.files?.[en]) problems.push(`engine.json: the entry ${en} is not among the files`);
+    if (!engine.entries?.length) problems.push('engine.json: no entries');
     for (const [path, meta] of Object.entries(engine.files || {})) {
       const rel = `${dir}/${path}`;
       expected.add(rel);
@@ -221,18 +223,19 @@ const gitShow = (dir, commit, path) => execFileSync(GIT, ['-C', dir, 'cat-file',
 
 /**
  * Relative module specifiers of a JavaScript file: static imports and re-exports
- * (`from './x.js'`) and dynamic imports of a literal (`import('./x.js')`).
+ * (`from './x.js'`), dynamic imports of a literal (`import('./x.js')`) and module
+ * URLs beside the file (`new URL('./x.js', import.meta.url)`, a Worker's script).
  */
 export function relativeImports(src) {
   const out = new Set();
-  for (const m of src.matchAll(/\bfrom\s*['"](\.{1,2}\/[^'"]+)['"]|\bimport\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)|\bimport\s*['"](\.{1,2}\/[^'"]+)['"]/g)) out.add(m[1] || m[2] || m[3]);
+  for (const m of src.matchAll(/\bfrom\s*['"](\.{1,2}\/[^'"]+)['"]|\bimport\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)|\bimport\s*['"](\.{1,2}\/[^'"]+)['"]|\bnew\s+URL\s*\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*,\s*import\.meta\.url\s*\)/g)) out.add(m[1] || m[2] || m[3] || m[4]);
   return [...out];
 }
 
-/** The files of the entry's import closure at a commit, with their bytes. */
-export function engineClosure(read, entry) {
+/** The files of the entries' import closure at a commit, with their bytes. */
+export function engineClosure(read, entries) {
   const files = new Map();
-  const queue = [entry];
+  const queue = [].concat(entries);
   while (queue.length) {
     const p = queue.shift();
     if (files.has(p)) continue;
@@ -250,10 +253,10 @@ function pinEngine(commitish) {
   const commit = execFileSync(GIT, ['-C', dir, 'rev-parse', '--verify', `${commitish}^{commit}`], { encoding: 'utf8' }).trim();
   const branches = execFileSync(GIT, ['-C', dir, 'branch', '-a', '--contains', commit, '--format=%(refname:short)'], { encoding: 'utf8' }).split('\n').map(s => s.trim());
   if (!branches.some(b => b === ENGINE.branch || b.endsWith('/' + ENGINE.branch))) throw new Error(`${commit} is not on the engine's ${ENGINE.branch} branch: only the public copy may be shipped`);
-  const bytes = engineClosure(p => gitShow(dir, commit, p), ENGINE.entry);
+  const bytes = engineClosure(p => gitShow(dir, commit, p), ENGINE.entries);
   for (const l of ENGINE.licenses) bytes.set(l, gitShow(dir, commit, l));
   const entry = {
-    schema: 1, name: ENGINE.name, license: 'Apache-2.0', repository: `https://github.com/${ENGINE.github}`, branch: ENGINE.branch, commit, entry: ENGINE.entry,
+    schema: 1, name: ENGINE.name, license: 'Apache-2.0', repository: `https://github.com/${ENGINE.github}`, branch: ENGINE.branch, commit, entries: ENGINE.entries,
     files: Object.fromEntries([...bytes].sort(([a], [b]) => a.localeCompare(b)).map(([p, b]) => [p, { size: b.length, sha256: sha256(b), gitOid: gitOid(b) }])),
   };
   for (const old of readdirSync(VENDOR)) if (old.startsWith(ENGINE.name + '@')) rmSync(join(VENDOR, old), { recursive: true, force: true });

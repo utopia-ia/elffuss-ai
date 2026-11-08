@@ -7,12 +7,13 @@
 // with the settings it was exported with, and the codec's decoder. The voice is
 // a voice prompt shipped as codes (moss-voice-*.js), so no audio is encoded here.
 //
-// Two runtimes for the frames, one result. On WebGPU the token-by-token part (the
-// prefill and every frame) runs on the Elffuss Engine's port of the model, which
-// reads its weights from the same two .data files and samples as the official
-// graph does, with the same uniform numbers: the frames are the same as on
-// WebAssembly, where ONNX Runtime runs the official graphs. The codec is ONNX
-// Runtime's WebAssembly on both.
+// The token-by-token part (the prefill and every frame) runs on the Elffuss
+// Engine's port of the model: on WebGPU, or without it on the engine's
+// WebAssembly kernels. It reads its weights from the same two .data files and
+// samples as the official graph does, with the same uniform numbers, so the frames
+// are those of the official graphs, which ONNX Runtime runs only where the
+// engine's kernels cannot (no WebAssembly SIMD). The codec is ONNX Runtime's
+// WebAssembly always.
 
 import { AiError } from '../core/errors.js';
 import { parseModel, createTokenizer, nmtNfkc } from './spm.js';
@@ -26,6 +27,26 @@ export const task = 'text-to-speech';
 export const MAX_TEXT = 20000;
 /** Frames the engine queues per submit (one readback each): the rest of a batch past the end is dropped. */
 export const ENGINE_BATCH = 8;
+/** Rows of a request the engine's CPU workspace takes at first; a longer request gets a larger one. */
+export const CPU_ROWS = 512;
+
+// The smallest module with a WebAssembly SIMD instruction (i8x16.popcnt of a v128 constant).
+const SIMD_PROBE = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11]);
+/** True when this realm runs WebAssembly SIMD, which the engine's CPU kernels need. */
+export function hasWasmSimd(W = globalThis.WebAssembly) {
+  try { return Boolean(W?.validate(SIMD_PROBE)); } catch { return false; }
+}
+
+/**
+ * Threads for the engine's CPU kernels, by the engine's own rule (cpu.js,
+ * hilosDisponibles): half the cores, at most 8, only with shared memory (a
+ * cross-origin isolated page) and only inside a Worker, where its pool may wait
+ * with Atomics.wait. Otherwise one.
+ */
+export function cpuThreads({ isolated = Boolean(globalThis.crossOriginIsolated), inWorker = typeof globalThis.WorkerGlobalScope !== 'undefined' && globalThis instanceof globalThis.WorkerGlobalScope, shared = typeof SharedArrayBuffer !== 'undefined', cores = globalThis.navigator?.hardwareConcurrency || 4 } = {}) {
+  if (!isolated || !inWorker || !shared) return 1;
+  return Math.max(1, Math.min(8, Math.floor(cores / 2)));
+}
 
 const FILES = Object.freeze({
   manifest: 'tts:browser_poc_manifest.json',
@@ -89,25 +110,49 @@ async function gpuDevice() {
   }
 }
 
-/** The engine's port of the model, its weights read tensor by tensor from the stored .data files. */
-async function loadEngine(ctx) {
-  const eng = await ctx.engine();
+const loadFailed = err => new AiError(/memory|allocat|OOM/i.test(String(err?.message)) ? 'out-of-memory' : 'run-failed', 'the engine could not load MOSS-TTS-Nano', { cause: err });
+
+/**
+ * The engine's source of weights: each tensor read from the stored .data files. The
+ * engine may keep the source alive as long as the model; the files behind it (whole in
+ * memory the first time they are checked) are let go by `release` once the weights are up.
+ */
+async function weights(ctx, eng) {
   const revision = ctx.model.parts?.tts?.revision || '';
   if (!eng.MOSS_ONNX_REVISION || !revision.startsWith(eng.MOSS_ONNX_REVISION)) {
     throw new AiError('model-mismatch', `the engine maps the weights of revision ${eng.MOSS_ONNX_REVISION}, the registry pins ${revision.slice(0, 8)}`);
   }
-  // The engine may keep its weight source alive as long as the model; the files behind it
-  // (whole in memory the first time they are checked) are let go once the weights are up.
   const live = { [nameOf(FILES.global)]: await ctx.ranged(FILES.global), [nameOf(FILES.local)]: await ctx.ranged(FILES.local) };
   const files = Object.fromEntries(Object.entries(live).map(([k, f]) => [k, { size: f.size, slice: (o, n) => live[k].slice(o, n) }]));
+  return { source: eng.fuenteOnnx(files, eng.MOSS_ONNX_MAPA), release() { for (const k of Object.keys(live)) delete live[k]; } };
+}
+
+/** The engine's port of the model on WebGPU. */
+async function loadEngine(ctx) {
+  const eng = await ctx.engine('gpu');
+  const w = await weights(ctx, eng);
   const device = await gpuDevice();
   try {
-    return { eng, device, model: await eng.cargaMoss(eng.fuenteOnnx(files, eng.MOSS_ONNX_MAPA), device) };
+    return { eng, device, model: await eng.cargaMoss(w.source, device) };
   } catch (err) {
     device.destroy();
-    throw new AiError(/memory|allocat|OOM/i.test(String(err?.message)) ? 'out-of-memory' : 'run-failed', 'the engine could not load MOSS-TTS-Nano', { cause: err });
+    throw loadFailed(err);
   } finally {
-    for (const k of Object.keys(live)) delete live[k];
+    w.release();
+  }
+}
+
+/** The engine's port of the model on its WebAssembly kernels, with room for requests of `rows` rows. */
+async function loadCpu(ctx, rows = CPU_ROWS) {
+  const [cpu, eng] = [await ctx.engine('cpu'), await ctx.engine('gpu')];   // the reader of the .data files lives in moss.js
+  const w = await weights(ctx, eng);
+  try {
+    const model = await cpu.cargaMossCpu(w.source, { hilos: cpuThreads(), maxFilas: rows, maxContexto: rows + MAX_FRAMES });
+    return { model, rows, ctx };
+  } catch (err) {
+    throw loadFailed(err);
+  } finally {
+    w.release();
   }
 }
 
@@ -117,15 +162,17 @@ export async function load(ctx) {
   const meta = JSON.parse(await ctx.text(FILES.meta));
   const codecMeta = JSON.parse(await ctx.text(FILES.codecMeta));
   const tok = createTokenizer(parseModel(await ctx.bytes(FILES.tokenizer)), { normalize: nmtNfkc });
-  const state = { ort, manifest, meta, codecMeta, tok, prefill: null, decode: null, frame: null, codec: null, engine: null, ran: 'wasm' };
+  const state = { ort, manifest, meta, codecMeta, tok, prefill: null, decode: null, frame: null, codec: null, engine: null, cpu: null, ran: 'wasm' };
   try {
     if (ctx.device === 'webgpu') {
       state.engine = await loadEngine(ctx);
       state.ran = 'webgpu-engine';
-      // The official graphs are part of the variant: read (and stored) like the rest, so the
-      // model is whole in this browser for either runtime; their sessions are not created.
-      for (const ref of [FILES.prefill, FILES.decode, FILES.frame]) await ctx.bytes(ref);
+    } else if (hasWasmSimd() && !ctx.test?.ortFrames) {
+      // Test builds: `ortFrames` keeps the official graphs on ONNX Runtime, to compare.
+      state.cpu = await loadCpu(ctx);
+      state.ran = 'wasm-engine';
     } else {
+      // No WebAssembly SIMD: the official graphs (lazy files of the variant) on ONNX Runtime.
       const global = new Uint8Array(await ctx.bytes(FILES.global));
       state.prefill = await session(ort, ctx, FILES.prefill, global, nameOf(FILES.global));
       state.decode = await session(ort, ctx, FILES.decode, global, nameOf(FILES.global));
@@ -151,7 +198,21 @@ const lastHidden = (t, ort) => {
  * runtime takes from it the numbers the official runtime takes, no more.
  */
 export async function generateFrames(state, rows, uniform, onFrame, test, max = MAX_FRAMES) {
-  return state.engine ? engineFrames(state.engine, rows, uniform, onFrame, test, max) : ortFrames(state, rows, () => uniform.next(), onFrame, test, max);
+  if (state.engine) return engineFrames(state.engine, rows, uniform, onFrame, test, max);
+  if (state.cpu) return cpuFrames(state, rows, uniform, onFrame, test, max);
+  return ortFrames(state, rows, () => uniform.next(), onFrame, test, max);
+}
+
+/**
+ * The frames on the engine's CPU kernels: a frame at a time, drawing as the official
+ * runtime draws. A request longer than the workspace gets a larger one first.
+ */
+async function cpuFrames(state, rows, uniform, onFrame, test, max) {
+  if (rows.rows > state.cpu.rows && !test) state.cpu = await loadCpu(state.cpu.ctx, rows.rows);
+  const { model, rows: room } = state.cpu;
+  // The test hook: one row more than the workspace has, refused inside the engine.
+  const data = test ? new Int32Array((room + 1) * (rows.data.length / rows.rows)) : rows.data;
+  return model.genera(data, () => uniform.next(), { max, enTrama: n => onFrame?.(n) });
 }
 
 /**
@@ -288,4 +349,5 @@ export async function dispose(state) {
   for (const k of ['prefill', 'decode', 'frame', 'codec']) { await release(state[k]); state[k] = null; }
   try { state.engine?.device.destroy(); } catch { /* gone */ }
   state.engine = null;
+  state.cpu = null;
 }

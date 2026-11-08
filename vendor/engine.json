@@ -4,9 +4,32 @@
   "license": "Apache-2.0",
   "repository": "https://github.com/utopia-ia/elffuss-engine",
   "branch": "public-clean",
-  "commit": "37768aabb596fd4ae7fbc9deb295ee4b5167714f",
-  "entry": "js/moss.js",
+  "commit": "391091059aa6db832a7bc2fa25cc5bb945e6252a",
+  "entries": [
+    "js/moss.js",
+    "js/moss-cpu.js"
+  ],
   "files": {
+    "js/cpu-hilo.js": {
+      "size": 1628,
+      "sha256": "bb07f6b4dd660f69993def81aafb7642a16d1196f6829ce1de7ed1345fb4fee6",
+      "gitOid": "aabd99dbee55df2320fafe409981dd00fe9e81c2"
+    },
+    "js/cpu-kernels.js": {
+      "size": 168261,
+      "sha256": "fdb0cb78d9ab5afb8f9c679ab7e05dc0975e1b30eedeeba9b6f6b3e7c60f571b",
+      "gitOid": "52efa9e51681656929ebab181984869c10abd346"
+    },
+    "js/cpu-trabajo.js": {
+      "size": 4844,
+      "sha256": "41f31389c278ecadede785c70b548ad38b16b61fe1548d2f2046ddaa5f44904a",
+      "gitOid": "8bb3c33bbfe908ae8fcdd6f55532fd6607e9d41a"
+    },
+    "js/cpu.js": {
+      "size": 31451,
+      "sha256": "220931b935b74431d0216665854df68a588b63e402f87113f1c3d493d5655a6a",
+      "gitOid": "b7d89ab2b5df306d617d6bf50a6c1af693381d12"
+    },
     "js/device.js": {
       "size": 15038,
       "sha256": "c2aad5e92fda27b0bcf9673fe2e47fe2b9a407afdc4c5632c2486b151eef279b",
@@ -76,6 +99,11 @@
       "size": 62524,
       "sha256": "e271619d37e51e4d9cdb9718eaf29610b425f75537509468c4753f50469bcb49",
       "gitOid": "d84e5f779c791c22306c888747390687af36cd02"
+    },
+    "js/moss-cpu.js": {
+      "size": 9808,
+      "sha256": "b4e176d98821637e6844d1f5b3c84b837df6edbd0e414460cf9581a2eea3db05",
+      "gitOid": "8791789451738d2fc4934136e34b3a4b4e44160f"
     },
     "js/moss-mapa.js": {
       "size": 25665,

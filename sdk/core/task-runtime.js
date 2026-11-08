@@ -21,15 +21,17 @@ import { loadTransformers, createStoreFetch, createPipeline } from './tf-env.js'
 import { loadOrt, createSession } from './ort-env.js';
 import { rangedFile } from './ranged.js';
 import { PINS, VENDOR_DIRS } from './runtime-pins.js';
+import { ENGINE_ENTRIES, ENGINE_ENTRY } from './runtimes.js';
 
 /**
  * @typedef {{ model?: string, device?: import('./device.js').DeviceRequest, registry?: import('./registry.js').Registry,
  *   registryUrl?: string, runtime: import('./runtimes.js').RuntimeUrls, test?: TestFlags | null }} LoadOptions
- * @typedef {{ pins?: Partial<typeof PINS>, failLoad?: boolean, failRun?: boolean }} TestFlags
+ * @typedef {{ pins?: Partial<typeof PINS>, failLoad?: boolean, failRun?: boolean, ortFrames?: boolean }} TestFlags
  *   Test builds only: `pins` replaces the expected runtime versions (to prove the check fails);
  *   `failLoad` asks impl.load to create a session from bytes that are not a model, and `failRun`
  *   asks impl.run to feed the model an input of an impossible shape, both inside the runtime.
- *   The Task passes each of them to the first load or run only.
+ *   The Task passes each of them to the first load or run only. `ortFrames` has a model that runs on
+ *   the Elffuss Engine run its official graphs on ONNX Runtime instead (to compare the two).
  * @typedef {{ model: string, task: string, device: 'webgpu'|'wasm', dtype: string, fromStore: boolean, bytes: number, files: string[] }} LoadInfo
  */
 
@@ -163,15 +165,20 @@ export class TaskContext {
   }
 
   /**
-   * The Elffuss Engine module this site ships (its pinned copy, same origin), for a
-   * model whose registry entry names a port of it (`engine`).
+   * A module of the Elffuss Engine this site ships (its pinned copy, same origin), for a
+   * model whose registry entry names a port of it (`engine`): `gpu` (WebGPU) or `cpu`
+   * (WebAssembly kernels).
+   * @param {keyof typeof ENGINE_ENTRIES} [which]
    */
-  async engine() {
+  async engine(which = 'gpu') {
+    if (!ENGINE_ENTRIES[which]) throw new AiError('not-in-registry', `no engine module ${which}`);
     const url = this.#runtime?.engine;
     if (!this.model.engine) throw new AiError('not-in-registry', `${this.modelId} does not run on the Elffuss Engine`);
-    if (!url || !url.includes(`/${VENDOR_DIRS.engine}/`)) throw new AiError('runtime-mismatch', 'this site does not ship the pinned Elffuss Engine', { details: { want: VENDOR_DIRS.engine } });
+    if (!url || !url.includes(`/${VENDOR_DIRS.engine}/`) || !url.endsWith(ENGINE_ENTRY)) throw new AiError('runtime-mismatch', 'this site does not ship the pinned Elffuss Engine', { details: { want: VENDOR_DIRS.engine } });
     try {
-      return await import(new URL(url, globalThis.location?.href).href);
+      // The runtime URL names the main module; the engine's directory is what comes before it.
+      const root = new URL(url, globalThis.location?.href).href.slice(0, -ENGINE_ENTRY.length);
+      return await import(root + ENGINE_ENTRIES[which]);
     } catch (err) {
       throw new AiError('run-failed', 'the Elffuss Engine could not be loaded', { cause: err });
     }

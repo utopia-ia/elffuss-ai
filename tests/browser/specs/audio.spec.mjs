@@ -136,6 +136,8 @@ export const MOSS_SENTENCES = [
  * sentence C meets one such tie at its sixth frame (the cumulative probability and the
  * number agree to about one part in a million; checked with the engine's own CPU
  * sampler, which picks what its WebGPU sampler picks). Seed 11 meets none in A, B and C.
+ * The engine's CPU kernels use fused multiply-adds where the browser has relaxed SIMD, so
+ * their last bit can differ between machines: again visible only at such a tie.
  */
 export const AB_SEED = 11;
 
@@ -208,7 +210,7 @@ export default [
     },
   },
   {
-    name: 'speech in Spanish with Elffuss\'s own voice (MOSS-TTS-Nano, the engine on WebGPU, WebAssembly without it): sentences A, B and C, sound and of a plausible length',
+    name: 'speech in Spanish with Elffuss\'s own voice (MOSS-TTS-Nano, the engine on WebGPU, its CPU kernels without it): sentences A, B and C, sound and of a plausible length',
     sites: ['audio'],
     async run(t, site) {
       const ctx = await t.newContext();
@@ -223,7 +225,7 @@ export default [
         const c = await generate(t, page);
         save(`browser-mossnano-design-${k}-${t.config}.wav`, c.buf);
         t.equal(c.last.device, t.config === 'A' ? 'webgpu' : 'wasm', `${k}: backend`);
-        t.equal(c.last.ran, t.config === 'A' ? 'webgpu-engine' : 'wasm', `${k}: runtime of the frames`);
+        t.equal(c.last.ran, t.config === 'A' ? 'webgpu-engine' : 'wasm-engine', `${k}: runtime of the frames (without WebGPU, the engine's CPU kernels)`);
         const m = checkSound(t, `speech es ${k}`, c.wav, { rate: 48000, channels: 1, band: [80, 8000] });
         t.ok(m.seconds > min && m.seconds < max, `speech es ${k}: ${m.seconds} s`);
       }
@@ -234,7 +236,7 @@ export default [
     },
   },
   {
-    name: 'Elffuss\'s own voice: the engine on WebGPU and ONNX Runtime on WebAssembly give the same frames for sentences A, B and C with the same seed',
+    name: 'Elffuss\'s own voice: the engine on WebGPU, the engine\'s CPU kernels and ONNX Runtime\'s official graphs give the same frames for sentences A, B and C with the same seed',
     sites: ['audio'],
     configs: ['A'],
     async run(t, site) {
@@ -257,17 +259,22 @@ export default [
         await ctx.close();
         return out;
       };
-      const engine = await read(`/?test-seed=${AB_SEED}`, 'webgpu', 'webgpu-engine');
-      const ort = await read(`/?device=wasm&test-seed=${AB_SEED}`, 'wasm', 'wasm');
+      const runs = {
+        'the engine on WebGPU': await read(`/?test-seed=${AB_SEED}`, 'webgpu', 'webgpu-engine'),
+        'the engine\'s CPU kernels': await read(`/?device=wasm&test-seed=${AB_SEED}`, 'wasm', 'wasm-engine'),
+      };
+      const ort = await read(`/?device=wasm&test-runtime=ort&test-seed=${AB_SEED}`, 'wasm', 'wasm');
+      const frames = c => (c || []).reduce((s, x) => s + x.length, 0);
+      const flat = c => (c || []).flatMap((chunk, i) => chunk.map((f, j) => `${i}.${j}:${f.join(',')}`));
       for (const [k] of MOSS_SENTENCES) {
-        const a = engine[k].codes, b = ort[k].codes;
-        const frames = c => (c || []).reduce((s, x) => s + x.length, 0);
+        const b = ort[k].codes, fb = flat(b);
         t.ok(frames(b) > 0, `${k}: ONNX Runtime gave frames`);
-        const flat = c => (c || []).flatMap((chunk, i) => chunk.map((f, j) => `${i}.${j}:${f.join(',')}`));
-        const fa = flat(a), fb = flat(b);
-        const first = fa.findIndex((f, i) => f !== fb[i]);
-        t.ok(fa.length === fb.length && first < 0, `${k}: the same frames (${frames(a)} on the engine, ${frames(b)} on ONNX Runtime${first >= 0 ? `; first difference at chunk.frame ${fa[first]?.split(':')[0]}: engine ${fa[first]?.split(':')[1]}, ONNX Runtime ${fb[first]?.split(':')[1]}` : ''})`);
-        t.note(`${k}: ${frames(a)} frames; WAV ${engine[k].wav.equals(ort[k].wav) ? 'identical' : 'different'}; frames ONNX Runtime / engine ${(ort[k].ms / engine[k].ms).toFixed(2)}`);
+        for (const [who, run] of Object.entries(runs)) {
+          const a = run[k].codes, fa = flat(a);
+          const first = fa.findIndex((f, i) => f !== fb[i]);
+          t.ok(fa.length === fb.length && first < 0, `${k}: ${who} gives ONNX Runtime's frames (${frames(a)} and ${frames(b)}${first >= 0 ? `; first difference at chunk.frame ${fa[first]?.split(':')[0]}: ${fa[first]?.split(':')[1]} against ${fb[first]?.split(':')[1]}` : ''})`);
+          t.note(`${k} · ${who}: ${frames(a)} frames; WAV ${run[k].wav.equals(ort[k].wav) ? 'identical' : 'different'}; frames ONNX Runtime / it ${(ort[k].ms / run[k].ms).toFixed(2)}`);
+        }
       }
       t.networkClean(site);
     },

@@ -4,8 +4,8 @@
 // Audio from text in the browser: music and sound effects with Stable Audio 3
 // Small (Stability AI, Stability AI Community License; its text encoder T5Gemma
 // is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with
-// MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebGPU (its frames on the Elffuss
-// Engine) or WebAssembly, in Spanish and English
+// MOSS-TTS-Nano (OpenMOSS, Apache-2.0), its frames on the Elffuss Engine (on
+// WebGPU, or on its WebAssembly kernels), in Spanish and English
 // with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The
 // models come from their Hugging Face repositories at pinned revisions, through
 // the Elffuss model store. Each task class runs its model in a module Worker of
@@ -18,7 +18,7 @@
 
 import { Task, oneShot, TASK_OPTIONS } from '../core/task.js';
 import { AiError, toAiError } from '../core/errors.js';
-import { loadRegistry, getModel, defaultModelId, variantFiles } from '../core/registry.js';
+import { loadRegistry, getModel, defaultModelId, eagerFiles } from '../core/registry.js';
 import { probeWebGPU, chooseVariant } from '../core/device.js';
 import { DURATION, STEPS, MAX_PROMPT } from './stable-audio.js';
 import { MAX_TEXT } from './speech.impl.js';
@@ -59,12 +59,13 @@ export function speechModelFor(input = {}, model) {
 
 /**
  * @typedef {{ blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number,
- *   model: string, device: 'webgpu'|'wasm'|'webgpu-engine', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>} AudioResult
+ *   model: string, device: 'webgpu'|'wasm'|'webgpu-engine'|'wasm-engine', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>} AudioResult
  *   What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and
  *   sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces
  *   a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it. `device` is where the model
- *   ran: Elffuss's own voice on WebGPU gives `webgpu-engine` (its frames on the Elffuss Engine, the codec on
- *   WebAssembly), with the same frames as `wasm` for the same text and seed.
+ *   ran: Elffuss's own voice gives `webgpu-engine` or `wasm-engine` (its frames on the Elffuss Engine, on WebGPU or
+ *   on its WebAssembly kernels; the codec on ONNX Runtime's WebAssembly), or `wasm` where WebAssembly has no SIMD
+ *   (the official graphs on ONNX Runtime): the same frames for the same text and seed.
  * @typedef {{ status: string, stage?: 'download'|'load'|'encode'|'step'|'decode'|'phonemes'|'text'|'chunk'|'frame', step?: number, steps?: number,
  *   chunk?: number, chunks?: number, frames?: number, loaded?: number, total?: number }} AudioProgress
  *   Progress events: `download` (loaded/total bytes), `load`, then for music and sound `encode`, `step` (step of steps)
@@ -112,7 +113,8 @@ export async function estimateTask(task, opts = {}, device = 'auto') {
     const reason = e.code === 'device-unsupported' && probe.available && !probe.shaderF16 && model.devices.webgpu?.every(v => v.when === 'shader-f16') ? 'no-shader-f16' : e.code;
     return { fits: false, reason, device: null, downloadBytes: Math.min(...all), missingBytes: Math.min(...all) };
   }
-  const files = variantFiles(model, choice.variant);
+  // What a load downloads: the variant's eager files (a lazy one is read only when it is needed).
+  const files = eagerFiles(model, choice.variant);
   const downloadBytes = files.reduce((s, f) => s + f.size, 0);
   let missingBytes = downloadBytes;
   if (opts.store) {

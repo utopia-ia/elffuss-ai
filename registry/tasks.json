@@ -897,7 +897,12 @@
               "codec:moss_audio_tokenizer_decode_full.onnx",
               "codec:moss_audio_tokenizer_decode_shared.data"
             ],
-            "bytes": 717414286
+            "lazy": [
+              "tts:moss_tts_prefill.onnx",
+              "tts:moss_tts_decode_step.onnx",
+              "tts:moss_tts_local_fixed_sampled_frame.onnx"
+            ],
+            "bytes": 716368236
           }
         ],
         "wasm": [
@@ -916,7 +921,12 @@
               "codec:moss_audio_tokenizer_decode_full.onnx",
               "codec:moss_audio_tokenizer_decode_shared.data"
             ],
-            "bytes": 717414286
+            "lazy": [
+              "tts:moss_tts_prefill.onnx",
+              "tts:moss_tts_decode_step.onnx",
+              "tts:moss_tts_local_fixed_sampled_frame.onnx"
+            ],
+            "bytes": 716368236
           }
         ]
       },

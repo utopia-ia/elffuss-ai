@@ -38,7 +38,7 @@ What `ctx` (`TaskContext`, `sdk/core/task-runtime.js`) gives:
 | `ctx.pipeline()` | The Transformers.js pipeline of the model and variant, fed only by the store at the pinned commit (remove-bg, depth, detect) |
 | `ctx.transformers()` | The Transformers.js module (for `RawImage`, `Tensor`) |
 | `ctx.ort()`, `ctx.session(ref, { providers })`, `ctx.bytes(ref)`, `ctx.text(ref)` | ONNX Runtime used directly, a session of one registry file, and the checked bytes or text of a file (ocr: `det:inference.onnx`, `det:inference.yml`, `rec:…`) |
-| `ctx.ranged(ref)`, `ctx.engine()` | Ranged reads of one checked file of the variant (a runtime that reads a weights file tensor by tensor), and the pinned Elffuss Engine module for a model whose registry entry names a port of it (`engine`) |
+| `ctx.ranged(ref)`, `ctx.engine(which)` | Ranged reads of one checked file of the variant (a runtime that reads a weights file tensor by tensor), and a module of the pinned Elffuss Engine (`gpu` or `cpu`) for a model whose registry entry names a port of it (`engine`) |
 | `ctx.device`, `ctx.dtype`, `ctx.variant`, `ctx.files`, `ctx.model`, `ctx.modelId` | What was chosen and what it needs |
 | `ctx.report('running' \| 'done')` | Progress statuses during a run |
 | `ctx.test` / `opts.test` | Test builds only, else `null`: honour `failRun` by feeding the model a tensor of an impossible shape **inside the runtime** (that is what leaves Transformers.js unusable and proves the Worker is replaced); `failLoad` by failing the load |

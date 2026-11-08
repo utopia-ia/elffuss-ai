@@ -79,7 +79,7 @@ Returns `number`: how many were rewritten
 
 ## `sdk/audio/index.js`
 
-Audio from text in the browser: music and sound effects with Stable Audio 3 Small (Stability AI, Stability AI Community License; its text encoder T5Gemma is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0) on WebGPU (its frames on the Elffuss Engine) or WebAssembly, in Spanish and English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The models come from their Hugging Face repositories at pinned revisions, through the Elffuss model store. Each task class runs its model in a module Worker of this module (its URL is relative to this file, so the module can be served from any origin together with the core and the runtimes).
+Audio from text in the browser: music and sound effects with Stable Audio 3 Small (Stability AI, Stability AI Community License; its text encoder T5Gemma is also under the Gemma Terms of Use) on WebGPU, and speech: in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0), its frames on the Elffuss Engine (on WebGPU, or on its WebAssembly kernels), in Spanish and English with Kokoro 82M (hexgrad, Apache-2.0) on WebGPU or WebAssembly. The models come from their Hugging Face repositories at pinned revisions, through the Elffuss model store. Each task class runs its model in a module Worker of this module (its URL is relative to this file, so the module can be served from any origin together with the core and the runtimes).
  The options of run() are plain JSON, so a chat or an agent can pass a tool call straight through: { prompt, seconds, seed } for music and sound effects, { text, voice, lang, speed } for speech. A run gives a WAV Blob and what it is.
 
 ### `SPEECH_MODELS`
@@ -108,10 +108,10 @@ English, else `model` (the task's `model` option) or MOSS-TTS-Nano.
 ### Type `AudioResult`
 
 ```ts
-{ blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number, model: string, device: 'webgpu'|'wasm'|'webgpu-engine', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>
+{ blob: Blob, mime: 'audio/wav', seconds: number, sampleRate: number, channels: number, seed?: number, model: string, device: 'webgpu'|'wasm'|'webgpu-engine'|'wasm-engine', dtype: string, stats: { peakDb: number, rmsDb: number, clipped: number, silent: number } } & Record<string, any>
 ```
 
-What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it. `device` is where the model ran: Elffuss's own voice on WebGPU gives `webgpu-engine` (its frames on the Elffuss Engine, the codec on WebAssembly), with the same frames as `wasm` for the same text and seed.
+What `run()` gives: `blob` is a 16-bit PCM WAV of `seconds` at `sampleRate` (44 100 Hz stereo for music and sound effects, 48 000 Hz mono for speech with Elffuss's own voice, 24 000 Hz mono with Kokoro); `seed` reproduces a music or sound clip, or a reading with Elffuss's own voice; `stats` measures it. `device` is where the model ran: Elffuss's own voice gives `webgpu-engine` or `wasm-engine` (its frames on the Elffuss Engine, on WebGPU or on its WebAssembly kernels; the codec on ONNX Runtime's WebAssembly), or `wasm` where WebAssembly has no SIMD (the official graphs on ONNX Runtime): the same frames for the same text and seed.
 
 ### Type `AudioProgress`
 
@@ -602,7 +602,7 @@ backend, in the registry's order of preference.
 ## `sdk/audio/speech-moss.impl.js`
 
 Speech in Spanish with MOSS-TTS-Nano (OpenMOSS, Apache-2.0), from its official ONNX export: the global transformer (prefill, then one decode step per frame with its key/value cache), the local graph that samples a frame of 16 codes with the settings it was exported with, and the codec's decoder. The voice is a voice prompt shipped as codes (moss-voice-*.js), so no audio is encoded here.
- Two runtimes for the frames, one result. On WebGPU the token-by-token part (the prefill and every frame) runs on the Elffuss Engine's port of the model, which reads its weights from the same two .data files and samples as the official graph does, with the same uniform numbers: the frames are the same as on WebAssembly, where ONNX Runtime runs the official graphs. The codec is ONNX Runtime's WebAssembly on both.
+ The token-by-token part (the prefill and every frame) runs on the Elffuss Engine's port of the model: on WebGPU, or without it on the engine's WebAssembly kernels. It reads its weights from the same two .data files and samples as the official graph does, with the same uniform numbers, so the frames are those of the official graphs, which ONNX Runtime runs only where the engine's kernels cannot (no WebAssembly SIMD). The codec is ONNX Runtime's WebAssembly always.
 
 ### `MAX_TEXT`
 
@@ -611,6 +611,21 @@ Longest text accepted, in characters.
 ### `ENGINE_BATCH`
 
 Frames the engine queues per submit (one readback each): the rest of a batch past the end is dropped.
+
+### `CPU_ROWS`
+
+Rows of a request the engine's CPU workspace takes at first; a longer request gets a larger one.
+
+### `hasWasmSimd(W = globalThis.WebAssembly)`
+
+True when this realm runs WebAssembly SIMD, which the engine's CPU kernels need.
+
+### `cpuThreads({ isolated = Boolean(globalThis.crossOriginIsolated), inWorker = typeof globalThis.WorkerGlobalScope !== 'undefined' && globalThis instanceof globalThis.WorkerGlobalScope, shared = typeof SharedArrayBuffer !== 'undefined', cores = globalThis.navigator?.hardwareConcurrency || 4 } = {})`
+
+Threads for the engine's CPU kernels, by the engine's own rule (cpu.js,
+hilosDisponibles): half the cores, at most 8, only with shared memory (a
+cross-origin isolated page) and only inside a Worker, where its pool may wait
+with Atomics.wait. Otherwise one.
 
 ### `normalizeMossSpeech(input)`
 

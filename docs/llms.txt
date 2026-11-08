@@ -4,7 +4,7 @@
 
 ## Tools
 
-- [Audio](https://audio.elffuss.com/en/): Makes music, sound effects and speech from text, with a player, a history and WAV downloads. Model: MOSS-TTS-Nano by OpenMOSS (Apache-2.0). Model download: 717 MB, the first time; it is then kept in that browser.
+- [Audio](https://audio.elffuss.com/en/): Makes music, sound effects and speech from text, with a player, a history and WAV downloads. Model: MOSS-TTS-Nano by OpenMOSS (Apache-2.0). Model download: 716 MB, the first time; it is then kept in that browser.
 - [Remove background](https://cutout.elffuss.com/en/): Keeps the person or the object and gives you a transparent PNG. Model: BEN2 by PramaLLC (MIT). Model download: 219 MB, the first time; it is then kept in that browser.
 - [Depth map](https://depth.elffuss.com/en/): Works out what is near and what is far in a photo, with a colour map, a 3D view and PNG downloads. Model: Depth Anything V2 Small by depth-anything (Apache-2.0). Model download: 27 to 99 MB, the first time; it is then kept in that browser.
 - [Detect objects](https://detect.elffuss.com/en/): Finds people, cars, animals and up to 80 kinds of objects, also with your camera. Model: RF-DETR Nano by Roboflow (Apache-2.0). Model download: 29 MB, the first time; it is then kept in that browser.

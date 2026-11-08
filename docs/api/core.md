@@ -670,11 +670,16 @@ Files of each ONNX Runtime Web variant, relative to its package directory.
 
 Files of PDF.js that the OCR site serves, relative to its package directory.
 
+### `ENGINE_ENTRIES`
+
+The modules of the Elffuss Engine that a site imports, relative to the engine's
+directory: its MOSS-TTS-Nano port (the token-by-token part of the speech) on
+WebGPU and on the CPU. Only the import closure of these is vendored
+(vendor/engine.json).
+
 ### `ENGINE_ENTRY`
 
-The module of the Elffuss Engine that a site imports, relative to the engine's
-directory: its MOSS-TTS-Nano port (the token-by-token part of the speech on
-WebGPU). Only the import closure of this file is vendored (vendor/engine.json).
+The engine module a site's runtime URLs point at; the others are beside it.
 
 ### `transformersDir(variant)`
 
@@ -766,10 +771,10 @@ What runs where the model runs (a Worker, or the page with worker: false): read 
 ### Type `TestFlags`
 
 ```ts
-{ pins?: Partial<typeof PINS>, failLoad?: boolean, failRun?: boolean }
+{ pins?: Partial<typeof PINS>, failLoad?: boolean, failRun?: boolean, ortFrames?: boolean }
 ```
 
-Test builds only: `pins` replaces the expected runtime versions (to prove the check fails); `failLoad` asks impl.load to create a session from bytes that are not a model, and `failRun` asks impl.run to feed the model an input of an impossible shape, both inside the runtime. The Task passes each of them to the first load or run only.
+Test builds only: `pins` replaces the expected runtime versions (to prove the check fails); `failLoad` asks impl.load to create a session from bytes that are not a model, and `failRun` asks impl.run to feed the model an input of an impossible shape, both inside the runtime. The Task passes each of them to the first load or run only. `ortFrames` has a model that runs on the Elffuss Engine run its official graphs on ONNX Runtime instead (to compare the two).
 
 ### Type `LoadInfo`
 
@@ -788,7 +793,7 @@ What a task implementation may use. One per load.
 - `.ort()`: ONNX Runtime Web, pinned and set up (direct use).
 - `.bytes(ref)`: The bytes of one file of the variant, from the store, checked against the registry.
 - `.ranged(ref)`: Ranged reads of one file of the variant, from the store, checked against the registry like `bytes` (once per browser): for a runtime that reads a large weights file tensor by tensor. Nothing is downloaded twice.
-- `.engine()`: The Elffuss Engine module this site ships (its pinned copy, same origin), for a model whose registry entry names a port of it (`engine`).
+- `.engine(which = 'gpu')`: A module of the Elffuss Engine this site ships (its pinned copy, same origin), for a model whose registry entry names a port of it (`engine`): `gpu` (WebGPU) or `cpu` (WebAssembly kernels).
 - `.text(ref)`: Text of one small file of the variant (UTF-8).
 - `.session(ref, opts)`: An ONNX Runtime session of one file of the variant, on this load's backend.
 

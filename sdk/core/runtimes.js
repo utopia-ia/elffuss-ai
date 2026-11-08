@@ -66,11 +66,14 @@ export const PDFJS_FILES = Object.freeze({
 });
 
 /**
- * The module of the Elffuss Engine that a site imports, relative to the engine's
- * directory: its MOSS-TTS-Nano port (the token-by-token part of the speech on
- * WebGPU). Only the import closure of this file is vendored (vendor/engine.json).
+ * The modules of the Elffuss Engine that a site imports, relative to the engine's
+ * directory: its MOSS-TTS-Nano port (the token-by-token part of the speech) on
+ * WebGPU and on the CPU. Only the import closure of these is vendored
+ * (vendor/engine.json).
  */
-export const ENGINE_ENTRY = 'js/moss.js';
+export const ENGINE_ENTRIES = Object.freeze({ gpu: 'js/moss.js', cpu: 'js/moss-cpu.js' });
+/** The engine module a site's runtime URLs point at; the others are beside it. */
+export const ENGINE_ENTRY = ENGINE_ENTRIES.gpu;
 
 /**
  * Directory of the Transformers.js copy whose two ONNX Runtime imports point at

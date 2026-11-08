@@ -51,13 +51,13 @@ export const SIZES = Object.freeze({
     "webgpu": [
       {
         "dtype": "fp32",
-        "bytes": 717414286
+        "bytes": 716368236
       }
     ],
     "wasm": [
       {
         "dtype": "fp32",
-        "bytes": 717414286
+        "bytes": 716368236
       }
     ]
   }

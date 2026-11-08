@@ -23,6 +23,9 @@
 const KOKORO_VOICES = ['ef_dora', 'em_alex', 'em_santa', 'af_heart', 'af_bella', 'af_nicole', 'am_michael', 'am_fenrir', 'am_puck'];
 const KOKORO_SHARED = ['main:tokenizer.json', ...KOKORO_VOICES.map(v => `main:voices/${v}.bin`), 'g2p:misaki-en_us-g2p.json', 'g2p:misaki-en_us-g2p.onnx'];
 
+// The official graphs of MOSS-TTS-Nano's token-by-token part: only ONNX Runtime runs
+// them, and only where the engine cannot (no WebAssembly SIMD), so they are read then.
+const MOSS_ORT_GRAPHS = ['tts:moss_tts_prefill.onnx', 'tts:moss_tts_decode_step.onnx', 'tts:moss_tts_local_fixed_sampled_frame.onnx'];
 // The files of MOSS-TTS-Nano: the official ONNX export (its two shared weight files hold
 // every weight) and the codec's decoder.
 const MOSS_FILES = [
@@ -249,10 +252,12 @@ export default {
     // the settings it was exported with, two shared weight files) and the decoder of its
     // codec, MOSS-Audio-Tokenizer-Nano. The voice is a voice prompt shipped as codes in
     // sdk/audio/moss-voice-es.js, so the codec's encoder is never downloaded. fp32, as
-    // published. On WebGPU the token-by-token part (prefill, frames) runs on the Elffuss
-    // Engine's port of the model (`engine`), reading its weights from the same two
-    // .data files, with the same frames; the codec stays on ONNX Runtime's WebAssembly.
-    // WebAssembly alone is the official browser runtime. Both variants are the same files.
+    // published. The token-by-token part (prefill, frames) runs on the Elffuss Engine's
+    // port of the model (`engine`): on WebGPU, or without it on the engine's WebAssembly
+    // kernels, reading its weights from the same two .data files, with the same frames.
+    // The codec stays on ONNX Runtime's WebAssembly. The official graphs of the token
+    // part are lazy: ONNX Runtime runs them only where the engine's kernels cannot run.
+    // Both variants are the same files.
     'text-to-speech/moss-tts-nano': {
       task: 'text-to-speech',
       name: { es: 'MOSS-TTS-Nano', en: 'MOSS-TTS-Nano' },
@@ -266,10 +271,10 @@ export default {
       },
       devices: {
         webgpu: [
-          { dtype: 'fp32', files: MOSS_FILES },
+          { dtype: 'fp32', files: MOSS_FILES, lazy: MOSS_ORT_GRAPHS },
         ],
         wasm: [
-          { dtype: 'fp32', files: MOSS_FILES },
+          { dtype: 'fp32', files: MOSS_FILES, lazy: MOSS_ORT_GRAPHS },
         ],
       },
       notes: {

@@ -6,11 +6,15 @@
 // engine's reader of the official .data files over them, the context members a
 // task uses for it, and the uniform numbers: the engine draws a whole batch of
 // frames ahead, and gives back what the official runtime would not have drawn, so
-// a seed reads a text the same way on both runtimes. The frames themselves are
-// compared in the browser (tests/browser/specs/audio.spec.mjs).
+// a seed reads a text the same way on both runtimes. The engine's CPU kernels
+// draw a frame at a time, like the official runtime. With ELFFUSS_AI_CACHE and the
+// weights cached, the CPU kernels give the official runtime's frames of the
+// fixture here; the WebGPU path is compared in the browser
+// (tests/browser/specs/audio.spec.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, openSync, readSync, closeSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { rangedFile } from '../../sdk/core/ranged.js';
@@ -20,7 +24,8 @@ import { VENDOR_DIRS } from '../../sdk/core/runtime-pins.js';
 import { ENGINE_ENTRY } from '../../sdk/core/runtimes.js';
 import { createRng } from '../../sdk/audio/rng.js';
 import { N_VQ, uniformsDrawn, uniformStream } from '../../sdk/audio/moss.js';
-import { generateFrames, ENGINE_BATCH } from '../../sdk/audio/speech-moss.impl.js';
+import { generateFrames, ENGINE_BATCH, hasWasmSimd, cpuThreads } from '../../sdk/audio/speech-moss.impl.js';
+import { cloneRows } from '../../sdk/audio/moss.js';
 
 const reg = JSON.parse(readFileSync(new URL('../../registry/tasks.json', import.meta.url), 'utf8'));
 const engineUrl = pathToFileURL(new URL(`../../vendor/${VENDOR_DIRS.engine}/${ENGINE_ENTRY}`, import.meta.url).pathname).href;
@@ -97,6 +102,8 @@ test('ctx.ranged reads a checked file of the variant by parts; ctx.engine gives 
       await assert.rejects(ctx.ranged('tts:README.md'), { code: 'not-in-registry' });
       const eng = await ctx.engine();
       assert.equal(typeof eng.generaTramasGPU, 'function');
+      assert.equal(typeof (await ctx.engine('cpu')).cargaMossCpu, 'function', 'the CPU module beside it');
+      await assert.rejects(ctx.engine('nope'), { code: 'not-in-registry' });
       return {};
     },
     async run() { return { value: null }; },
@@ -159,4 +166,62 @@ test('the engine path takes from the run\'s numbers exactly what the official ru
     for (let i = 0; i < uniformsDrawn(got.length, max); i++) ref.uniform();
     for (let i = 0; i < 3 * (N_VQ + 1); i++) assert.equal(stream.next(), ref.uniform(), `end ${end}, max ${max}: number ${i} after the chunk`);
   }
+});
+
+test('the engine\'s CPU kernels: WebAssembly SIMD decides them, threads only in an isolated Worker', () => {
+  assert.equal(hasWasmSimd(), true, 'Node has WebAssembly SIMD');
+  assert.equal(hasWasmSimd({ validate: () => false }), false);
+  assert.equal(hasWasmSimd({ validate: () => { throw new Error('x'); } }), false);
+  assert.equal(hasWasmSimd(null), false, "no WebAssembly at all");
+  assert.equal(cpuThreads({ isolated: true, inWorker: true, shared: true, cores: 8 }), 4);
+  assert.equal(cpuThreads({ isolated: true, inWorker: true, shared: true, cores: 32 }), 8);
+  assert.equal(cpuThreads({ isolated: true, inWorker: true, shared: true, cores: 1 }), 1);
+  assert.equal(cpuThreads({ isolated: false, inWorker: true, shared: true, cores: 8 }), 1, 'not isolated: no shared memory');
+  assert.equal(cpuThreads({ isolated: true, inWorker: false, shared: true, cores: 8 }), 1, 'never on the page: the pool waits with Atomics.wait');
+  assert.equal(cpuThreads(), 1, 'Node: no Worker scope');
+});
+
+test('the CPU path takes a frame\'s numbers at a time; a longer request gets a larger workspace; the test hook fails inside the engine', async () => {
+  const fake = end => ({ async genera(filas, uniforme, { max, enTrama }) {
+    if (filas.length / (N_VQ + 1) > this.rows) throw new Error('moss-cpu: sin sitio');
+    const out = [];
+    for (let n = 0; n < max; n++) {
+      for (let i = 0; i < N_VQ + 1; i++) uniforme();
+      if (n === end) break;
+      out.push(Array(N_VQ).fill(n)); enTrama?.(out.length);
+    }
+    return out;
+  }, rows: 4 });
+  const ref = createRng(3), run = createRng(3);
+  const stream = uniformStream(() => run.uniform());
+  const model = fake(9);
+  const state = { cpu: { model, rows: 4, ctx: null } };
+  const got = await generateFrames(state, { data: new Int32Array(4 * 17), rows: 4 }, stream, null, false, 375);
+  assert.equal(got.length, 9);
+  for (let i = 0; i < uniformsDrawn(9, 375); i++) ref.uniform();
+  assert.equal(stream.next(), ref.uniform());
+  await assert.rejects(generateFrames(state, { data: new Int32Array(4 * 17), rows: 4 }, stream, null, true, 375), /sin sitio/);
+});
+
+/** Ranged reads of a file on disk (the test reads the cached weights without loading them whole). */
+function diskFile(path) {
+  const size = statSync(path).size;
+  return { size, async slice(off, len) { const fd = openSync(path, 'r'); try { const b = Buffer.alloc(len); readSync(fd, b, 0, len, off); return b.buffer.slice(b.byteOffset, b.byteOffset + len); } finally { closeSync(fd); } } };
+}
+
+test('the engine\'s CPU kernels give the official runtime\'s frames of the fixture (needs the weight cache)', async t => {
+  const cache = process.env.ELFFUSS_AI_CACHE;
+  const part = reg.models['text-to-speech/moss-tts-nano'].parts.tts;
+  const dir = cache && join(cache, 'hf', ...part.repo.split('/'), part.revision);
+  if (!dir || !existsSync(join(dir, 'moss_tts_global_shared.data'))) { t.skip('no weight cache'); return; }
+  const gpu = await import(engineUrl);
+  const cpu = await import(engineUrl.replace(/moss\.js$/, 'moss-cpu.js'));
+  const files = Object.fromEntries(['moss_tts_global_shared.data', 'moss_tts_local_shared.data'].map(f => [f, diskFile(join(dir, f))]));
+  const m = await cpu.cargaMossCpu(gpu.fuenteOnnx(files, gpu.MOSS_ONNX_MAPA), { hilos: 1, maxFilas: 512, maxContexto: 512 + 375 });
+  const fx = JSON.parse(readFileSync(new URL('../fixtures/audio/moss-frames.json', import.meta.url), 'utf8'));
+  const voice = await import('../../sdk/audio/moss-voice-es.js');
+  const rows = cloneRows(fx.manifest, voice.CODES, fx.ids);
+  const rng = createRng(fx.seed);
+  const frames = await m.genera(rows.data, () => rng.uniform(), { max: fx.frames.length });
+  assert.deepEqual(frames, fx.frames);
 });

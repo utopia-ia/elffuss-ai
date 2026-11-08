@@ -57,6 +57,8 @@ export function testFlags(params, enabled) {
   if (params.get('test-pin')) t.pins = { transformers: params.get('test-pin'), onnxruntimeWeb: params.get('test-pin') };
   if (params.get('test-fail') === 'load') t.failLoad = true;
   if (params.get('test-fail') === 'run') t.failRun = true;
+  // ?test-runtime=ort: a model that has its own engine runs its official graphs on ONNX Runtime instead (to compare them).
+  if (params.get('test-runtime') === 'ort') t.ortFrames = true;
   return Object.keys(t).length ? t : {};
 }
 
